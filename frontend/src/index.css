@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* Tailwind v4 dark mode via .dark class on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Biometric scan line (vertical sweep) */
+@keyframes scan {
+  0%   { top: 0%; }
+  100% { top: 100%; }
+}
+
+/* Horizontal scan line for EntryGate */
+@keyframes scan-line {
+  0%   { top: 0%; opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.animate-scan-move {
+  position: absolute;
+  animation: scan 3s linear infinite;
+}
+
+.animate-scan-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  animation: scan-line 2.5s linear infinite;
+}
+
+.animate-spin-slow {
+  animation: spin 10s linear infinite;
+}
+
+/* Hide scrollbar but keep scrollable */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── ENTRANCE ANIMATIONS ── */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-left-book {
+  from { opacity: 0; transform: translateX(-40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  50%       { box-shadow: 0 0 20px 4px rgba(59,130,246,0.25); }
+}
+
+.animate-fade-in-up        { animation: fade-in-up 0.5s ease both; }
+.animate-fade-in           { animation: fade-in 0.4s ease both; }
+.animate-slide-in-left     { animation: slide-in-left 0.35s ease both; }
+.animate-slide-in-right    { animation: slide-in-right 0.25s ease both; }
+.animate-slide-in-left-book { animation: slide-in-left-book 0.25s ease both; }
+.animate-scale-in          { animation: scale-in 0.4s ease both; }
+.animate-float             { animation: float 3s ease-in-out infinite; }
+.animate-glow-pulse        { animation: glow-pulse 2s ease-in-out infinite; }
+
+/* Staggered delays */
+.delay-75  { animation-delay: 75ms;  }
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }

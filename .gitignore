@@ -1,0 +1,56 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+.venv/
+venv/
+backend/.venv/
+
+# Build output
+dist/
+frontend/dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.python311/
+.python-installer/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+backend/*.sqlite3
+
+# Runtime uploads and generated artifacts
+uploads/
+backend/uploads/
+output/
+backend/logs/
+*.log
+
+# Local AI/model caches
+.insightface/
+models/buffalo_l/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local agent/tooling state
+CLAUDE.md
+.claude/
+.agents/
+.worktrees/
