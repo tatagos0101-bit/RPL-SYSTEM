@@ -1,4 +1,5 @@
 import json
+import math
 
 import pytest
 
@@ -130,6 +131,36 @@ def test_face_lookup_prefers_insightface_embedding_over_dlib(client, db_session,
     assert body["name"] == "Insight Member"
     assert body["engine"] == "insightface"
     assert body["score"] == pytest.approx(0.0)
+
+
+def test_insightface_matching_uses_cosine_distance(db_session):
+    import services.face_engine_service as face_engine_service
+
+    user = _member(db_session, name="Cosine Member", member_id="RPL-COSINE")
+    db_session.add(
+        FaceEmbedding(
+            user_id=user.id,
+            engine="insightface",
+            dimension=2,
+            embedding=json.dumps([1.0, 0.0]),
+            quality_score=0.9,
+            source="enrollment",
+            is_active=True,
+        )
+    )
+    db_session.commit()
+
+    live_encoding = [0.7, math.sqrt(1 - 0.7**2)]
+    match = face_engine_service.find_best_match(
+        db_session,
+        live_encoding,
+        "insightface",
+        threshold=0.40,
+    )
+
+    assert match is not None
+    assert match.user.id == user.id
+    assert match.score == pytest.approx(0.30)
 
 
 def test_face_lookup_falls_back_to_legacy_dlib_when_insightface_embedding_missing(client, db_session, monkeypatch):

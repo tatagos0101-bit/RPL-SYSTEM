@@ -170,12 +170,34 @@ def detect_faces(image: str, max_faces: int = 4, engines: Optional[Iterable[str]
     return []
 
 
-def _distance(live_encoding: list[float], stored_encoding: list[float]) -> float:
+def _euclidean_distance(live_encoding: list[float], stored_encoding: list[float]) -> float:
     live = np.asarray(live_encoding, dtype=float)
     stored = np.asarray(stored_encoding, dtype=float)
     if live.shape != stored.shape:
         return float("inf")
     return float(np.linalg.norm(live - stored))
+
+
+def _cosine_distance(live_encoding: list[float], stored_encoding: list[float]) -> float:
+    live = np.asarray(live_encoding, dtype=float)
+    stored = np.asarray(stored_encoding, dtype=float)
+    if live.shape != stored.shape:
+        return float("inf")
+
+    live_norm = np.linalg.norm(live)
+    stored_norm = np.linalg.norm(stored)
+    if live_norm == 0 or stored_norm == 0:
+        return float("inf")
+
+    similarity = float(np.dot(live, stored) / (live_norm * stored_norm))
+    similarity = max(-1.0, min(1.0, similarity))
+    return 1.0 - similarity
+
+
+def _distance(live_encoding: list[float], stored_encoding: list[float], engine: str) -> float:
+    if engine == "insightface":
+        return _cosine_distance(live_encoding, stored_encoding)
+    return _euclidean_distance(live_encoding, stored_encoding)
 
 
 def _stored_embedding_rows(
@@ -216,7 +238,7 @@ def find_best_match(
             if not user.face_encoding:
                 continue
             try:
-                candidates.append((_distance(encoding, json.loads(user.face_encoding)), user))
+                candidates.append((_distance(encoding, json.loads(user.face_encoding), engine), user))
             except Exception:
                 continue
     else:
@@ -224,7 +246,7 @@ def find_best_match(
             if not row.user:
                 continue
             try:
-                candidates.append((_distance(encoding, json.loads(row.embedding)), row.user))
+                candidates.append((_distance(encoding, json.loads(row.embedding), engine), row.user))
             except Exception:
                 continue
 

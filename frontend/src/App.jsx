@@ -30,7 +30,7 @@ const LibDueBooks = lazy(() => import('./pages/lib/LibDueBooks'));
 const LibReservations = lazy(() => import('./pages/lib/LibReservations'));
 const LibReports = lazy(() => import('./pages/lib/LibReports'));
 
-const NAVBAR_HIDDEN_PATHS = ['/librarian', '/entry-station'];
+const NAVBAR_HIDDEN_PATHS = ['/librarian', '/entry-station', '/entry-gate'];
 const NAVBAR_HIDDEN_PREFIXES = ['/user/', '/librarian/', '/lib/'];
 
 const LegacyLibRedirect = () => {
@@ -67,6 +67,7 @@ const AppContent = () => {
           <Route path="/user/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/librarian" element={<LibrarianLanding />} />
           <Route path="/librarian/login" element={<LoginPage expectedRole="librarian" />} />
+          <Route path="/entry-gate" element={<Navigate to="/entry-station" replace />} />
           <Route path="/entry-station" element={<EntryGate />} />
           <Route path="/lib/*" element={<LegacyLibRedirect />} />
 
