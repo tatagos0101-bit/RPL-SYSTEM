@@ -1,16 +1,52 @@
-# React + Vite
+# RPL frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19, Vite 7, and Tailwind CSS 4 frontend for the Rizal Provincial Library
+System. See the [system README](../README.md) for features, backend setup,
+authentication, tests, and known limitations, and the
+[deployment guide](../docs/DEPLOYMENT.md) for Vercel and Supabase configuration.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Use Node.js 22.12 or newer. From this `frontend` directory:
 
-## React Compiler
+```powershell
+npm ci
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Start the FastAPI backend separately using the root README instructions. Vite
+serves `http://localhost:5173`; API requests default to `http://localhost:8000` in
+development. Set `VITE_API_URL` in an ignored `.env` file for a different API
+address, then restart Vite. Never put database passwords or Supabase secret keys
+in frontend environment variables.
 
-## Expanding the ESLint configuration
+## Application structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `src/App.jsx`: React Router routes for public, member, librarian, and station pages.
+- `src/components/`: layouts, navigation, shared catalogue components, and server-validated role guards.
+- `src/pages/public/`: landing pages, public catalogue, login, and password-recovery help.
+- `src/pages/user/`: dashboard, catalogue, reservations, and profile.
+- `src/pages/lib/`: inventory, registration, borrowing/returns, reports, and entrance station.
+- `src/api/`: Axios clients, upload helpers, shared data transformations, and Node tests.
+
+Member reservations use the authenticated session. Face scanning is used for
+login, enrollment, staff member lookup, and entrance logging. The current face
+liveness heuristic can accept static photos; see the system README before
+relying on face-only authentication.
+
+## Checks and production build
+
+```powershell
+node --test src/api/*.test.js
+npm run build
+```
+
+`npm run preview` serves the built frontend locally. `npm run lint` runs the
+configured ESLint checks; the build and Node tests are separate commands.
+
+The production Vercel project uses repository root `.` and builds `frontend/dist`
+through the root `vercel.json`. Leave `VITE_API_URL` unset to use the website's
+same-origin API proxy and HttpOnly login cookie. If the backend domain changes,
+run `scripts/configure_vercel.py` from repository root as described in the
+deployment guide. Supabase access is authorized by FastAPI, rather than by a
+browser service-role key.
