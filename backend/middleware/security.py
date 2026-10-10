@@ -9,10 +9,11 @@ Responsibilities:
   5. Anomaly flagging   — 401/403/5xx and probe-style URLs written to security.log
 """
 import time
+import ipaddress
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import RedirectResponse, Response
+from starlette.responses import RedirectResponse, Response, JSONResponse
 
 from config import ENVIRONMENT, HTTPS_ONLY
 from logger import get_logger, security_logger
@@ -45,30 +46,38 @@ _PROBE_SIGNALS = (
 def _client_ip(request: Request) -> str:
     """Return the real client IP, respecting X-Forwarded-For from a trusted proxy."""
     forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    candidate = forwarded_for.split(",")[0].strip() if forwarded_for else (request.client.host if request.client else "unknown")
+    try:
+        return str(ipaddress.ip_address(candidate))
+    except ValueError:
+        return "unknown"
+
+
+def _log_path(request: Request) -> str:
+    # Prefer the route template: arbitrary path text may itself contain secrets.
+    route = request.scope.get("route")
+    return getattr(route, "path", "<unmatched>")
 
 
 class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next) -> Response:
         ip   = _client_ip(request)
-        path = request.url.path
+        path = _log_path(request)
 
         # ── 1. HTTPS enforcement ──────────────────────────────────────────────
         if HTTPS_ONLY:
             proto = request.headers.get("X-Forwarded-Proto", "http")
             if proto != "https":
                 https_url = str(request.url).replace("http://", "https://", 1)
-                security_logger.info("HTTPS_REDIRECT ip=%s url=%s", ip, request.url)
+                security_logger.info("HTTPS_REDIRECT ip=%s", ip)
                 return RedirectResponse(url=https_url, status_code=301)
 
         # ── 2. Probe / scanning detection ─────────────────────────────────────
         raw_url = str(request.url).lower()
         if any(sig in raw_url for sig in _PROBE_SIGNALS):
             security_logger.warning(
-                "PROBE_DETECTED ip=%s method=%s url=%s",
-                ip, request.method, str(request.url),
+                "PROBE_DETECTED ip=%s method=%s",
+                ip, request.method,
             )
 
         # ── 3. Process the request and measure wall-clock time ────────────────
@@ -77,11 +86,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             response: Response = await call_next(request)
         except Exception as exc:
             logger.error(
-                "UNHANDLED_EXCEPTION ip=%s method=%s path=%s error=%r",
-                ip, request.method, path, exc,
-                exc_info=True,
+                "UNHANDLED_EXCEPTION ip=%s method=%s path=%s error_type=%s",
+                ip, request.method, _log_path(request), type(exc).__name__,
             )
-            raise
+            # Avoid host tracebacks containing SQL parameters or credentials.
+            response = JSONResponse(status_code=500, content={"detail": "Internal server error."})
+
+        path = _log_path(request)
 
         elapsed_ms = (time.perf_counter() - start) * 1000
         status     = response.status_code

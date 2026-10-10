@@ -5,6 +5,7 @@ from timezone_utils import now_ph
 from typing import Optional
 import random
 import string
+import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from jose import jwt
@@ -17,6 +18,7 @@ from database import get_db
 from dependencies import get_current_user, require_librarian
 from limiter import limiter
 from logger import security_logger
+from middleware.security import _client_ip
 from models.user import User
 from models.entry_log import EntryLog
 from services.auth_cookie import clear_auth_cookie, set_auth_cookie
@@ -66,17 +68,17 @@ def _generate_member_id(db) -> str:
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("7/minute")
 def login(request: Request, response: Response, body: LoginRequest, db: Session = Depends(get_db)):
-    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
+    ip = _client_ip(request)
     identifier = body.email.strip()
     user = (
         db.query(User).filter(User.email == identifier.lower()).first()
         or db.query(User).filter(User.member_id == identifier.upper()).first()
     )
     if not user or not _verify(body.password, user.password_hash):
-        security_logger.warning("LOGIN_FAILED ip=%s identifier=%s", ip, identifier)
+        security_logger.warning("LOGIN_FAILED ip=%s", ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email/Member ID or password")
     if user.status == "suspended":
-        security_logger.warning("LOGIN_SUSPENDED ip=%s user_id=%d email=%s", ip, user.id, user.email)
+        security_logger.warning("LOGIN_SUSPENDED ip=%s user_id=%d", ip, user.id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended. Contact librarian.")
     security_logger.info("LOGIN_SUCCESS ip=%s user_id=%d role=%s", ip, user.id, user.role)
     token = _make_token(user.id)
@@ -95,15 +97,15 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 def signup(request: Request, response: Response, body: SignupRequest, db: Session = Depends(get_db)):
-    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
-    if db.query(User).filter(User.email == body.email).first():
-        security_logger.info("SIGNUP_DUPLICATE ip=%s email=%s", ip, body.email)
-        raise HTTPException(status_code=400, detail="Email already registered")
-
+    ip = _client_ip(request)
     if body.role == "librarian":
-        if not LIBRARIAN_AUTH_CODE or body.auth_code != LIBRARIAN_AUTH_CODE:
-            security_logger.warning("SIGNUP_BAD_LIBCODE ip=%s email=%s", ip, body.email)
+        if not LIBRARIAN_AUTH_CODE or not secrets.compare_digest((body.auth_code or "").encode(), LIBRARIAN_AUTH_CODE.encode()):
+            security_logger.warning("SIGNUP_BAD_LIBCODE ip=%s", ip)
             raise HTTPException(status_code=403, detail="Invalid librarian authorization code")
+
+    if db.query(User).filter(User.email == body.email).first():
+        security_logger.info("SIGNUP_DUPLICATE ip=%s", ip)
+        raise HTTPException(status_code=400, detail="Unable to register. Contact the librarian for assistance.")
 
     user = User(
         name=body.name,
@@ -111,8 +113,8 @@ def signup(request: Request, response: Response, body: SignupRequest, db: Sessio
         password_hash=_hash(body.password),
         role=body.role,
         phone=body.phone,
-        email_verified=bool(body.email),
-        phone_verified=bool(body.phone),
+        email_verified=False,
+        phone_verified=False,
         location=body.location,
         member_id=_generate_member_id(db),
     )
@@ -139,6 +141,14 @@ def request_password_reset(
     body: PasswordResetRequest,
     db: Session = Depends(get_db),
 ):
+    if ENVIRONMENT != "test":
+        # Delivery is not configured yet. Give every identifier the same response;
+        # never disclose account existence, recovery contacts, or reset codes.
+        return PasswordResetRequestResponse(
+            success=True,
+            message="Please visit the librarian to reset your password.",
+            requires_librarian_help=True,
+        )
     user = find_user_by_identifier(db, body.identifier)
     if not user:
         return PasswordResetRequestResponse(
@@ -160,7 +170,7 @@ def request_password_reset(
         message=f"Reset code prepared for {channel}. It expires in {RESET_CODE_MINUTES} minutes.",
         delivery_channel=channel,
     )
-    if ENVIRONMENT != "production":
+    if ENVIRONMENT == "test":
         response_body.debug_code = code
     return response_body
 
@@ -244,7 +254,7 @@ def _legacy_process_entry_face(
     from models.security_alert import SecurityAlert
     from sqlalchemy import desc as _desc, func, text
 
-    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
+    ip = _client_ip(request)
 
     # ── Liveness check ────────────────────────────────────────────────────────
     hint, real_prob = check_liveness(image)
@@ -285,7 +295,7 @@ def _legacy_process_entry_face(
     try:
         live_encoding = encode_face(image)
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail="Face recognition is temporarily unavailable.") from None
 
     if live_encoding is None:
         _close_idle_session(ip, db)
@@ -297,7 +307,7 @@ def _legacy_process_entry_face(
     enrolled_users = db.query(User).filter(User.face_encoding.isnot(None)).all()
     matched_user = find_match(live_encoding, enrolled_users)
 
-    if matched_user is None:
+    if matched_user is None or matched_user.status == "suspended":
         security_logger.info("FACE_UNRECOGNIZED entry_gate")
         unknown_cutoff = now - timedelta(minutes=1)
         existing = (
@@ -352,7 +362,7 @@ def _legacy_process_entry_face(
 
     _last_seen_by_ip[ip] = {"user_id": matched_user.id, "ts": time()}
 
-    security_logger.info("FACE_ENTRY_SUCCESS user_id=%d name=%s", matched_user.id, matched_user.name)
+    security_logger.info("FACE_ENTRY_SUCCESS user_id=%d", matched_user.id)
     token = _make_token(matched_user.id) if issue_token else None
     if issue_token and response is not None and token:
         set_auth_cookie(response, token)
@@ -388,7 +398,7 @@ def process_entry_face(
     from services.liveness_service import check_liveness
     from sqlalchemy import desc as _desc
 
-    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
+    ip = _client_ip(request)
 
     hint, real_prob = check_liveness(image)
     if hint == "too_dark":
@@ -423,7 +433,7 @@ def process_entry_face(
         max_faces = 2 if issue_token else ENTRY_MAX_FACES_PER_FRAME
         detected_faces = face_engine_service.detect_faces(image, max_faces=max_faces)
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail="Face recognition is temporarily unavailable.") from None
 
     if not detected_faces:
         return FaceAuthResponse(matched=False, message="no_face")
@@ -471,7 +481,7 @@ def process_entry_face(
 
     for face in detected_faces:
         match = face_engine_service.find_match_for_face(db, face, purpose="login" if issue_token else "gate")
-        if match is None:
+        if match is None or match.user.status == "suspended":
             log_unknown_face_once()
             faces.append({
                 "matched": False,
@@ -514,7 +524,7 @@ def process_entry_face(
 
     matched_user, first_face = first_match
     _last_seen_by_ip[ip] = {"user_id": matched_user.id, "ts": time()}
-    security_logger.info("FACE_ENTRY_SUCCESS user_id=%d name=%s", matched_user.id, matched_user.name)
+    security_logger.info("FACE_ENTRY_SUCCESS user_id=%d", matched_user.id)
 
     token = _make_token(matched_user.id) if issue_token else None
     if issue_token and response is not None and token:
@@ -554,7 +564,7 @@ def face_lookup(
     from models.transaction import Transaction
     from services.loan_policy import sync_overdue_loans
 
-    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
+    ip = _client_ip(request)
 
     # ── Liveness check ────────────────────────────────────────────────────────
     hint, real_prob = check_liveness(body.image)
@@ -580,7 +590,7 @@ def face_lookup(
     try:
         detected_faces = face_engine_service.detect_faces(body.image, max_faces=2)
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail="Face recognition is temporarily unavailable.") from None
 
     if not detected_faces:
         return FaceLookupResponse(matched=False, message="no_face")
@@ -627,7 +637,7 @@ def enroll_face(
     from services.liveness_service import check_liveness
     from models.security_alert import SecurityAlert
 
-    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
+    ip = _client_ip(request)
 
     # ── Liveness check ────────────────────────────────────────────────────────
     hint, real_prob = check_liveness(body.image)
@@ -656,7 +666,7 @@ def enroll_face(
     try:
         detected_faces = face_engine_service.detect_faces(body.image, max_faces=2)
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail="Face recognition is temporarily unavailable.") from None
 
     if not detected_faces:
         raise HTTPException(status_code=422, detail="No face detected in the image. Please try again with better lighting.")

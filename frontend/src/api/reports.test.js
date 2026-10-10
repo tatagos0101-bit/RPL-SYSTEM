@@ -10,6 +10,15 @@ import {
   getReportFilename,
 } from './reports.js';
 
+test('CSV treats spreadsheet formulas as literal text and preserves numbers', () => {
+  const columns = [{ key: 'value', label: 'Value' }];
+  for (const value of ['=HYPERLINK("https://example.test")', '+SUM(1)', '-SUM(1)', '@SUM(1)', '\tformula', '  =SUM(1)']) {
+    const csv = buildCsv(columns, [{ value }]);
+    assert.ok(csv.split('\r\n')[1].replace(/^"/, '').startsWith("'"));
+  }
+  assert.equal(buildCsv(columns, [{ value: -5 }, { value: 'Rizal Library' }]), 'Value\r\n-5\r\nRizal Library');
+});
+
 const transactions = [
   {
     id: 1,

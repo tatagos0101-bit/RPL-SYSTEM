@@ -191,8 +191,8 @@ async def bulk_upload(
         raise HTTPException(status_code=400, detail="File contents do not match a valid Excel format")
     try:
         rows = parse_excel(raw)
-    except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Failed to parse file: {e}")
+    except Exception:
+        raise HTTPException(status_code=422, detail="Unable to read this workbook. Check its format and column headers.") from None
 
     added   = 0
     skipped = 0
@@ -211,9 +211,9 @@ async def bulk_upload(
             book.qr_code = make_qr_code(book.id)
             added += 1
 
-        except Exception as e:
+        except Exception:
             db.rollback()
-            errors.append(f"Row {i} ({row.get('title', '?')}): {e}")
+            errors.append(f"Row {i}: Unable to import. Check the values and required fields.")
             continue
 
     db.commit()

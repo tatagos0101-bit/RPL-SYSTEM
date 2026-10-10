@@ -525,7 +525,7 @@ def librarian_enroll_face(
     try:
         detected_faces = face_engine_service.detect_faces(body.image, max_faces=2)
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise HTTPException(status_code=503, detail="Face recognition is temporarily unavailable.") from None
 
     if not detected_faces:
         raise HTTPException(

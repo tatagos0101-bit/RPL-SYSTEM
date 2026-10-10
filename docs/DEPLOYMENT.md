@@ -107,7 +107,9 @@ For a separate fresh installation, create a librarian through `/api/auth/signup`
 using the private registration code and a strong password.
 
 Import actual library books through Inventory. Do not run `seed.py` against
-production: it creates demo data and known demo credentials.
+production: it creates demo data. The script now refuses production or remote
+databases and requires unique `SEED_LIBRARIAN_PASSWORD` and
+`SEED_MEMBER_PASSWORD` values for local use. It never prints credentials.
 
 A Git clone contains application source, not the original library database or
 runtime uploads. Existing local records/files are not automatically moved by
@@ -131,7 +133,9 @@ npm run build --prefix frontend
 
 The existing password-recovery code has no email/SMS delivery provider. Librarian
 password resets work; self-service email/SMS recovery needs a delivery integration
-before it can send real codes. Biometric accuracy still requires on-device camera
+before it can send real codes. Until then, all public recovery requests give the
+same librarian-help response; reset codes are exposed only in the automated test
+environment. Biometric accuracy still requires on-device camera
 testing with enrolled members; deployment does not establish biometric accuracy.
 
 Sources: [Supabase SQLAlchemy connections](https://supabase.com/docs/guides/troubleshooting/using-sqlalchemy-with-supabase-FUqebT),

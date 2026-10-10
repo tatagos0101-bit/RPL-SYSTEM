@@ -272,7 +272,7 @@ export default function ForgotPasswordPage() {
                   </p>
                   <h2 className="mt-1 text-2xl font-black tracking-tight">Visit the librarian desk</h2>
                   <p className="mt-3 text-sm font-medium leading-7 text-slate-500 dark:text-slate-400">
-                    This account has no verified email or phone number. A librarian can verify your ID and create a temporary password for you.
+                    A librarian can verify your ID and create a temporary password for you.
                   </p>
                 </div>
                 <button

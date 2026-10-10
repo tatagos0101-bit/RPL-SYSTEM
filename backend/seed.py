@@ -1,7 +1,8 @@
 """
 seed.py — Bootstrap the Rizal Provincial Library database.
 
-Run once after setting up the database:
+Local demo use only. Set SEED_LIBRARIAN_PASSWORD and SEED_MEMBER_PASSWORD
+in your ignored environment file before running:
     python seed.py
 
 Creates:
@@ -19,6 +20,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from passlib.context import CryptContext
 from database import SessionLocal, init_db
+from config import DATABASE_URL, ENVIRONMENT
+from sqlalchemy.engine import make_url
 from models.user import User
 from models.book import Book
 from models.reading_goal import ReadingGoal
@@ -33,14 +36,14 @@ pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 LIBRARIAN = {
     "name":          "Head Librarian",
     "email":         "librarian@rizallib.gov.ph",
-    "password":      "Librarian@2025",
+    "password":      os.getenv("SEED_LIBRARIAN_PASSWORD", ""),
     "role":          "librarian",
 }
 
 TEST_MEMBER = {
     "name":          "Juan Dela Cruz",
     "email":         "juan@example.com",
-    "password":      "Member@2025",
+    "password":      os.getenv("SEED_MEMBER_PASSWORD", ""),
     "role":          "member",
     "phone":         "+63 912 345 6789",
     "location":      "Taytay, Rizal",
@@ -347,7 +350,19 @@ DEFAULT_GOALS = [
 
 # ── Seeding logic ─────────────────────────────────────────────────────────────
 
+def validate_seed_target():
+    """Demo data belongs only in an explicitly configured local test database."""
+    url = make_url(DATABASE_URL)
+    if ENVIRONMENT not in {"development", "test"} or (url.get_backend_name() != "sqlite" and url.host not in {"localhost", "127.0.0.1", "::1"}):
+        raise RuntimeError("Demo seeding is permitted only in a local development/test database.")
+    for account in (LIBRARIAN, TEST_MEMBER):
+        password = account["password"]
+        if len(password) < 16 or len(password.encode("utf-8")) > 72:
+            raise RuntimeError("Set both SEED_LIBRARIAN_PASSWORD and SEED_MEMBER_PASSWORD to unique passwords of 16-72 bytes.")
+
+
 def seed():
+    validate_seed_target()
     print("Initializing database tables...")
     init_db()
     print("[OK] Tables ready")
@@ -365,7 +380,7 @@ def seed():
             )
             db.add(lib)
             db.commit()
-            print(f"[OK] Librarian created — email: {LIBRARIAN['email']}  password: {LIBRARIAN['password']}")
+            print("[OK] Local demo librarian created")
         else:
             print(f"  Librarian already exists — skipping")
 
@@ -384,7 +399,7 @@ def seed():
             db.add(member)
             db.commit()
             db.refresh(member)
-            print(f"[OK] Test member created — email: {TEST_MEMBER['email']}  password: {TEST_MEMBER['password']}")
+            print("[OK] Local demo member created")
         else:
             print(f"  Test member already exists — skipping")
 
@@ -451,9 +466,9 @@ def seed():
         print("  Seed complete! You can now start the server:")
         print("  cd backend && uvicorn main:app --reload")
         print("-------------------------------------------------")
-        print(f"\n  Librarian login : {LIBRARIAN['email']} / {LIBRARIAN['password']}")
-        print(f"  Member login    : {TEST_MEMBER['email']}  / {TEST_MEMBER['password']}")
-        print(f"  Librarian code  : LIB-RPL-2025  (for sign-up page)\n")
+        print("\n  Use the credentials you configured in the seed environment variables.")
+        print("  Passwords are never printed or written to source files.")
+        print("  Librarian sign-up uses the separately configured authorization code.\n")
 
     finally:
         db.close()

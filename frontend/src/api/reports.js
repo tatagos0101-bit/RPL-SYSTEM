@@ -94,7 +94,11 @@ export const filterEntryLogs = (logs = [], filters = {}) => {
 };
 
 const csvCell = (value) => {
-  const text = value == null ? '' : String(value);
+  let text = value == null ? '' : String(value);
+  // Treat untrusted strings as text when spreadsheets open exported CSV files.
+  if (typeof value === 'string' && (/^\s*[=+\-@]/.test(text) || /^[\t\r\n]/.test(text))) {
+    text = `'${text}`;
+  }
   if (!/[",\r\n]/.test(text)) return text;
   return `"${text.replaceAll('"', '""')}"`;
 };

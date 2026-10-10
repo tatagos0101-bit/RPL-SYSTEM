@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from config import ALLOWED_ORIGINS, ENVIRONMENT, STORAGE_BACKEND, AUTO_MIGRATE, validate_deployment_config
 from database import engine
@@ -25,10 +27,22 @@ app = FastAPI(
     # Hide interactive docs in production — remove this block if docs are needed in prod
     docs_url=None if ENVIRONMENT == "production" else "/docs",
     redoc_url=None if ENVIRONMENT == "production" else "/redoc",
+    openapi_url=None if ENVIRONMENT == "production" else "/openapi.json",
 )
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(RequestValidationError)
+async def safe_validation_error(request, exc):
+    # Pydantic's default response includes raw inputs (passwords, PINs, images).
+    # Keep field locations and error types without reflecting submitted data.
+    return JSONResponse(status_code=422, content={"detail": [
+        {"loc": list(error["loc"]), "type": error["type"],
+         "msg": "Field required" if error["type"] == "missing" else "Invalid value"}
+        for error in exc.errors()
+    ]})
 
 # ── CORS — must be inner layer so preflight responses carry CORS headers ──────
 app.add_middleware(
@@ -60,7 +74,9 @@ app.include_router(uploads.router)
 # ── Static files — uploaded book covers ──────────────────────────────────────
 if STORAGE_BACKEND == "local":
     os.makedirs("uploads/covers", exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+    app.mount("/uploads/covers", StaticFiles(directory="uploads/covers"), name="covers")
+
+app.include_router(uploads.local_router)
 
 
 # ── Startup ───────────────────────────────────────────────────────────────────
