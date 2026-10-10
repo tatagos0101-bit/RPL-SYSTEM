@@ -5,6 +5,21 @@
   "framework": "vite",
   "installCommand": "npm --prefix frontend ci",
   "rewrites": [
-    { "source": "/((?!api(?:/|$)|uploads(?:/|$)|health(?:/|$)).*)", "destination": "/index.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "https://rpl-system-api.vercel.app/api/:path*"
+    },
+    {
+      "source": "/uploads/:path*",
+      "destination": "https://rpl-system-api.vercel.app/uploads/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://rpl-system-api.vercel.app/health"
+    },
+    {
+      "source": "/((?!api(?:/|$)|uploads(?:/|$)|health(?:/|$)).*)",
+      "destination": "/index.html"
+    }
   ]
 }

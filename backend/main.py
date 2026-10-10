@@ -89,4 +89,5 @@ def health():
             conn.execute(text("SELECT 1"))
     except Exception:
         raise HTTPException(503, "Database unavailable.") from None
-    return {"status": "ok", "database": "connected", "storage": STORAGE_BACKEND}
+    from services.face_service import FACE_LIB_AVAILABLE
+    return {"status": "ok", "database": "connected", "storage": STORAGE_BACKEND, "dlib_available": FACE_LIB_AVAILABLE}

@@ -26,6 +26,8 @@ def get_current_user(
         if not auth_token:
             raise credentials_error
         payload = jwt.decode(auth_token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        if payload.get("scope") == "upload":
+            raise credentials_error
         user_id_str = payload.get("sub")
         if user_id_str is None:
             raise credentials_error

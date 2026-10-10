@@ -159,6 +159,7 @@ def test_direct_avatar_uses_storage_content_validation(client, db_session, cloud
     client.post("/api/auth/login", json={"email": user.email, "password": "Password1"})
     prepared = client.post("/api/uploads/prepare", json={"category": "avatars", "filename": "avatar.png", "size": len(PNG)})
     assert prepared.status_code == 200
+    assert client.get("/api/user/profile", headers={"Authorization": f"Bearer {prepared.json()['upload_ticket']}"}).status_code == 401
     response = client.post("/api/user/avatar", data={"upload_ticket": prepared.json()["upload_ticket"]})
     assert response.status_code == 200
     db_session.refresh(user)
