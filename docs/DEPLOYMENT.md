@@ -99,10 +99,15 @@ Add any custom frontend domain to the API's `ALLOWED_ORIGINS`, then redeploy.
 
 ## 4. First librarian and library data
 
-Register the first librarian through the librarian signup screen using the private
-`LIBRARIAN_AUTH_CODE` from the API project's settings. Import actual library books
-through Inventory. Do not run `seed.py` against production: it creates demo data
-and known demo credentials.
+This deployment has an initial librarian with Member ID `RPL-ADMIN`. Its temporary
+password, entrance station PIN, and librarian signup code are in the ignored local
+file `.tools/deployment-access.txt`. Sign in at `/librarian/login` and choose a new
+password when prompted. Keep that file private; it is not uploaded or committed.
+For a separate fresh installation, create a librarian through `/api/auth/signup`
+using the private registration code and a strong password.
+
+Import actual library books through Inventory. Do not run `seed.py` against
+production: it creates demo data and known demo credentials.
 
 A Git clone contains application source, not the original library database or
 runtime uploads. Existing local records/files are not automatically moved by
