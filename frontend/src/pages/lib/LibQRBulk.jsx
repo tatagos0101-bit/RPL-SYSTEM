@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Download, Printer, RefreshCw, Search } from 'lucide-react';
 import { bulkCopyQRPdf, getBookCopies, getCopyQRImage } from '../../api/librarian';
+import { API_BASE_URL } from '../../api/urls';
 
 export default function LibQRBulk() {
   const [copies, setCopies] = useState([]);
@@ -148,7 +149,7 @@ export default function LibQRBulk() {
                       : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 group-hover:border-blue-200'
                   }`}>
                     <img
-                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/inventory/book-copies/${copy.id}/qr`}
+                      src={`${API_BASE_URL}/api/inventory/book-copies/${copy.id}/qr`}
                       alt={copy.qr_code}
                       className="w-full h-full object-contain"
                     />

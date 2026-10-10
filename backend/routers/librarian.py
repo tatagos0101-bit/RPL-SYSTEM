@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from timezone_utils import PH_TZ, now_ph
 from decimal import Decimal
 
-import os
 import uuid
 import random
 import secrets
@@ -27,6 +26,8 @@ from sqlalchemy import func, desc, and_, or_
 
 from database import get_db
 from dependencies import require_librarian
+from services.storage_service import save_upload, resolve_upload_url
+from services.cloud_uploads import read_upload
 from models.book import Book
 from models.entry_log import EntryLog
 from models.face_embedding import FaceEmbedding
@@ -374,7 +375,8 @@ async def register_member(
     email:    str | None       = Form(None),
     phone:    str | None       = Form(None),
     location: str              = Form(...),
-    id_image: UploadFile       = File(...),
+    id_image: UploadFile | None = File(None),
+    upload_ticket: str | None = Form(None),
     db:       Session          = Depends(get_db),
     _:        User             = Depends(require_librarian),
 ):
@@ -390,20 +392,17 @@ async def register_member(
     if email and db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
-    content  = await id_image.read()
+    content, original_filename, reference = await read_upload(folder="ids", user_id=_.id, file=id_image, ticket=upload_ticket)
     ext = validate_upload_bytes(
         content=content,
-        filename=id_image.filename,
+        filename=original_filename,
         allowed_exts=ID_EXTS,
         max_bytes=10 * 1024 * 1024,
         human_label="ID image",
     )
 
-    os.makedirs("uploads/ids", exist_ok=True)
     filename = f"{uuid.uuid4().hex}{ext}"
-    filepath = os.path.join("uploads", "ids", filename)
-    with open(filepath, "wb") as f:
-        f.write(content)
+    id_reference = reference or save_upload("ids", filename, content)
 
     temporary_password = _generate_temporary_password()
     new_user = User(
@@ -417,7 +416,7 @@ async def register_member(
         phone         = phone.strip() if phone else None,
         location      = location.strip(),
         status        = "active",
-        id_image_url  = f"/uploads/ids/{filename}",
+        id_image_url  = id_reference,
         member_id     = _generate_member_id(db),
     )
     db.add(new_user)
@@ -434,6 +433,18 @@ async def register_member(
         "phone_verified":   bool(new_user.phone_verified),
         "temporary_password": temporary_password,
     }
+
+
+@router.get("/users/{user_id}/id-document")
+def get_member_id_document(
+    user_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_librarian),
+):
+    member = db.query(User).filter(User.id == user_id).first()
+    if not member or not member.id_image_url:
+        raise HTTPException(404, "ID document not found.")
+    return {"url": resolve_upload_url(member.id_image_url)}
 
 
 @router.post("/users/{user_id}/reset-password")

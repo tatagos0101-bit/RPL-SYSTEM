@@ -1,9 +1,8 @@
 from datetime import datetime
 
-import os
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -15,6 +14,11 @@ from models.face_embedding import FaceEmbedding
 from models.user import User
 from schemas.user import UserProfile, UserProfileUpdate, BiometricStatus, ChangePasswordRequest
 from services.upload_validation import IMAGE_EXTS, validate_upload_bytes
+from services.storage_service import save_upload, resolve_upload_url, delete_upload
+from services.cloud_uploads import read_upload
+from logger import get_logger
+
+logger = get_logger("users")
 
 router = APIRouter(prefix="/api/user", tags=["User"])
 
@@ -45,7 +49,7 @@ def _build_profile(user: User, db: Session) -> UserProfile:
         face_enrolled=_face_enrolled(db, user),
         member_since=user.created_at,
         member_id=user.member_id or f"RPL-{user.id:05d}",
-        avatar_url=user.avatar_url,
+        avatar_url=resolve_upload_url(user.avatar_url),
     )
 
 
@@ -93,34 +97,30 @@ def change_password(
 
 @router.post("/avatar")
 async def upload_avatar(
-    file: UploadFile = File(...),
+    file: UploadFile | None = File(None),
+    upload_ticket: str | None = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    content = await file.read()
+    content, original_filename, reference = await read_upload(folder="avatars", user_id=current_user.id, file=file, ticket=upload_ticket)
     ext = validate_upload_bytes(
         content=content,
-        filename=file.filename,
+        filename=original_filename,
         allowed_exts=IMAGE_EXTS,
         max_bytes=5 * 1024 * 1024,
         human_label="Avatar",
     )
 
-    os.makedirs("uploads/avatars", exist_ok=True)
-
-    # Delete old avatar file if exists
-    if current_user.avatar_url:
-        old = current_user.avatar_url.lstrip("/")
-        if os.path.exists(old):
-            os.remove(old)
-
+    old_avatar = current_user.avatar_url
     filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
-    with open(os.path.join("uploads", "avatars", filename), "wb") as f:
-        f.write(content)
-
-    current_user.avatar_url = f"/uploads/avatars/{filename}"
+    current_user.avatar_url = reference or save_upload("avatars", filename, content)
     db.commit()
-    return {"avatar_url": current_user.avatar_url}
+    # Keep the previous avatar until the new reference is committed successfully.
+    try:
+        delete_upload(old_avatar, folder="avatars")
+    except HTTPException:
+        logger.warning("Could not delete previous avatar for user_id=%s", current_user.id)
+    return {"avatar_url": resolve_upload_url(current_user.avatar_url)}
 
 
 @router.get("/biometric-status", response_model=BiometricStatus)

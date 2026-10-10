@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { clearStoredAuth, loginForPath } from './authRoutes';
+import { API_BASE_URL } from './urls';
 
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-  timeout: 10000,
+  baseURL: API_BASE_URL,
+  timeout: 30000,
   withCredentials: true,
 });
 

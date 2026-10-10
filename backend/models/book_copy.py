@@ -16,7 +16,7 @@ class BookCopy(Base):
     copy_number = Column(Integer, nullable=False)
     qr_code     = Column(String(40), unique=True, nullable=False, index=True)
     status      = Column(
-        Enum("available", "borrowed", "damaged", "lost", "retired"),
+        Enum("available", "borrowed", "damaged", "lost", "retired", name="book_copy_status", native_enum=False, create_constraint=True),
         nullable=False,
         default="available",
     )

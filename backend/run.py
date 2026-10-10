@@ -85,26 +85,7 @@ def main():
         if idx + 1 < len(sys.argv):
             port = int(sys.argv[idx + 1])
 
-    # Init DB tables
-    from database import init_db
-    print("Initializing database tables...")
-    try:
-        init_db()
-    except Exception as e:
-        print(f"ERROR: Could not connect to database.\n  {e}")
-        print("\n  Make sure MySQL is running and .env DATABASE_URL is correct.")
-        sys.exit(1)
-    print("[OK] Database tables ready")
-
-    # Run schema migrations (safe to run on every startup — skips existing columns)
-    from migrate import run as run_migrations
-    try:
-        run_migrations()
-    except Exception as e:
-        print(f"WARNING: Migration failed — {e}")
-        print("  The server will still start but some features may not work correctly.")
-    print()
-
+    # FastAPI startup validates configuration and database readiness exactly once.
     from config import ENVIRONMENT
     is_prod = ENVIRONMENT == "production"
 

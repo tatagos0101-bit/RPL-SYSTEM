@@ -14,3 +14,8 @@ PH_TZ = timezone(timedelta(hours=8), name="PHT")
 def now_ph() -> datetime:
     """Return the current datetime in Philippines Standard Time (UTC+8)."""
     return datetime.now(PH_TZ)
+
+
+def as_ph(value: datetime) -> datetime:
+    """Keep library dates in PHT when Postgres returns UTC-aware timestamps."""
+    return value.astimezone(PH_TZ) if value.tzinfo else value.replace(tzinfo=PH_TZ)

@@ -97,14 +97,17 @@ def activity_heatmap(
     db:           Session = Depends(get_db),
 ):
     since = _now() - timedelta(days=days)
+    day_expression = func.date(EntryLog.accessed_at)
+    if db.get_bind().dialect.name == "postgresql":
+        day_expression = func.date(func.timezone("Asia/Manila", EntryLog.accessed_at))
 
     logs = (
         db.query(
-            func.date(EntryLog.accessed_at).label("day"),
+            day_expression.label("day"),
             func.count(EntryLog.id).label("cnt"),
         )
         .filter(EntryLog.user_id == current_user.id, EntryLog.accessed_at >= since)
-        .group_by(func.date(EntryLog.accessed_at))
+        .group_by(day_expression)
         .all()
     )
 
@@ -132,6 +135,8 @@ def reading_goals(
     db:           Session = Depends(get_db),
 ):
     year   = _now().year
+    year_start = _now().replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+    year_end = year_start.replace(year=year + 1)
     goals  = db.query(ReadingGoal).filter(
         ReadingGoal.user_id == current_user.id,
         ReadingGoal.year    == year,
@@ -148,7 +153,8 @@ def reading_goals(
                 .filter(
                     Transaction.user_id == current_user.id,
                     Transaction.type    == "borrow",
-                    extract('year', Transaction.borrow_date) == year,
+                    Transaction.borrow_date >= year_start,
+                    Transaction.borrow_date < year_end,
                 )
                 .scalar()
             )
@@ -159,7 +165,8 @@ def reading_goals(
                 .filter(
                     Transaction.user_id == current_user.id,
                     Transaction.type    == "borrow",
-                    extract('year', Transaction.borrow_date) == year,
+                    Transaction.borrow_date >= year_start,
+                    Transaction.borrow_date < year_end,
                 )
                 .scalar()
             )
@@ -168,7 +175,8 @@ def reading_goals(
                 db.query(func.count(EntryLog.id))
                 .filter(
                     EntryLog.user_id == current_user.id,
-                    extract('year', EntryLog.accessed_at) == year,
+                    EntryLog.accessed_at >= year_start,
+                    EntryLog.accessed_at < year_end,
                 )
                 .scalar()
             )

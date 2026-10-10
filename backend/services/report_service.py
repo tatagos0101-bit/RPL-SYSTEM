@@ -7,7 +7,7 @@ PDF report generator using ReportLab.
 import io
 from datetime import datetime
 
-from timezone_utils import now_ph
+from timezone_utils import now_ph, as_ph
 from decimal import Decimal
 
 from reportlab.lib.pagesizes import A4
@@ -210,7 +210,7 @@ def build_transcript(user, transactions: list) -> bytes:
         ["Member Name",  user.name],
         ["Member ID",    user.member_id or f"RPL-{user.id:05d}"],
         ["Email",        user.email],
-        ["Member Since", user.created_at.strftime("%B %d, %Y") if user.created_at else "—"],
+        ["Member Since", as_ph(user.created_at).strftime("%B %d, %Y") if user.created_at else "—"],
         ["Generated",    _now_str()],
     ]
     info_table = Table(info_data, colWidths=[4*cm, 12*cm])
@@ -264,9 +264,9 @@ def build_transcript(user, transactions: list) -> bytes:
             rows.append([
                 str(i),
                 (tx.book.title[:40] + "…") if tx.book and len(tx.book.title) > 40 else (tx.book.title if tx.book else "—"),
-                tx.borrow_date.strftime("%b %d, %Y") if tx.borrow_date else "—",
-                tx.due_date.strftime("%b %d, %Y")    if tx.due_date    else "—",
-                tx.return_date.strftime("%b %d, %Y") if tx.return_date else "Active",
+                as_ph(tx.borrow_date).strftime("%b %d, %Y") if tx.borrow_date else "—",
+                as_ph(tx.due_date).strftime("%b %d, %Y")    if tx.due_date    else "—",
+                as_ph(tx.return_date).strftime("%b %d, %Y") if tx.return_date else "Active",
                 f"₱{float(tx.fine_amount):.2f}"      if tx.fine_amount else "₱0.00",
             ])
 

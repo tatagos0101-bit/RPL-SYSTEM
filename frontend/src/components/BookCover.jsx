@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { BookOpen } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { assetUrl } from '../api/urls';
 
 /**
  * Displays a book cover image with automatic fallback to an icon
@@ -14,7 +13,7 @@ const BookCover = ({ src, alt = '', className = 'w-full h-full object-cover', ic
   const [failed, setFailed] = useState(false);
 
   // Resolve backend-relative paths to an absolute URL
-  const resolvedSrc = src && src.startsWith('/') ? `${API_URL}${src}` : src;
+  const resolvedSrc = assetUrl(src);
 
   if (!resolvedSrc || failed) {
     return (

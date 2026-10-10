@@ -4,12 +4,12 @@ CRUD for books + Excel bulk upload + QR generation.
 """
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, status
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, status
+from fastapi.responses import Response, StreamingResponse
+from io import BytesIO
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from config import BACKEND_URL
 from database import get_db
 from dependencies import require_librarian
 from models.book import Book
@@ -18,8 +18,9 @@ from models.user import User
 from schemas.book import BookCreate, BookUpdate, BookOut, BookCopyLabelOut, BulkUploadResponse, InventoryStats
 from services.qr_service import make_qr_code, generate_qr_png, generate_bulk_pdf
 from services.book_copy_service import copy_label_payload, ensure_book_copies, get_copy_or_404
+from services.storage_service import save_upload, delete_upload
+from services.cloud_uploads import read_upload
 
-COVER_DIR = "uploads/covers"
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 MAX_COVER_SIZE   = 5 * 1024 * 1024   # 5 MB
@@ -126,7 +127,8 @@ def delete_book(
 @router.post("/books/{book_id}/cover", response_model=BookOut)
 async def upload_cover(
     book_id: int,
-    file: UploadFile = File(..., description="Cover image (JPEG, PNG, WebP, or GIF)"),
+    file: UploadFile | None = File(None, description="Cover image (JPEG, PNG, WebP, or GIF)"),
+    upload_ticket: str | None = Form(None),
     db:   Session    = Depends(get_db),
     _:    User       = Depends(require_librarian),
 ):
@@ -134,10 +136,10 @@ async def upload_cover(
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
+    if file and file.content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="Only JPEG, PNG, WebP, or GIF images are accepted")
 
-    contents = await file.read()
+    contents, original_filename, reference = await read_upload(folder="covers", user_id=_.id, file=file, ticket=upload_ticket)
 
     if len(contents) > MAX_COVER_SIZE:
         raise HTTPException(status_code=413, detail="Image file too large (max 5 MB)")
@@ -154,18 +156,12 @@ async def upload_cover(
     if detected == "image/webp" and contents[8:12] != b"WEBP":
         raise HTTPException(status_code=400, detail="File contents do not match a supported image format")
 
-    ext = os.path.splitext(file.filename or "")[1].lower()
+    ext = os.path.splitext(original_filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         ext = "." + (detected.split("/")[-1].replace("jpeg", "jpg"))
 
     filename = f"{book_id}_{uuid.uuid4().hex[:8]}{ext}"
-    save_path = os.path.join(COVER_DIR, filename)
-
-    os.makedirs(COVER_DIR, exist_ok=True)
-    with open(save_path, "wb") as f:
-        f.write(contents)
-
-    book.cover_url = f"{BACKEND_URL}/uploads/covers/{filename}"
+    book.cover_url = reference or save_upload("covers", filename, contents)
     db.commit()
     db.refresh(book)
     return book
@@ -175,17 +171,17 @@ async def upload_cover(
 
 @router.post("/bulk-upload", response_model=BulkUploadResponse)
 async def bulk_upload(
-    file: UploadFile = File(..., description="Excel .xlsx file"),
+    file: UploadFile | None = File(None, description="Excel .xlsx file"),
+    upload_ticket: str | None = Form(None),
     db:   Session    = Depends(get_db),
     _:    User       = Depends(require_librarian),
 ):
-    ext = os.path.splitext(file.filename or "")[1].lower()
+    raw, original_filename, reference = await read_upload(folder="imports", user_id=_.id, file=file, ticket=upload_ticket)
+    ext = os.path.splitext(original_filename)[1].lower()
     if ext not in (".xlsx", ".xls"):
         raise HTTPException(status_code=400, detail="Only .xlsx or .xls files are accepted")
 
     from services.excel_service import parse_excel
-
-    raw = await file.read()
 
     if len(raw) > MAX_EXCEL_SIZE:
         raise HTTPException(status_code=413, detail="Excel file too large (max 10 MB)")
@@ -222,6 +218,12 @@ async def bulk_upload(
 
     db.commit()
     ensure_book_copies(db)
+
+    if reference:
+        try:
+            delete_upload(reference, folder="imports")
+        except HTTPException:
+            pass  # The successful database import must not depend on cleanup.
 
     return BulkUploadResponse(
         added=added,
@@ -307,8 +309,8 @@ def bulk_copy_qr_pdf(
         raise HTTPException(status_code=404, detail="No physical copies found for given IDs")
 
     pdf_bytes = generate_bulk_pdf(copies)
-    return Response(
-        content=pdf_bytes,
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=copy-qr-codes.pdf"},
     )
@@ -332,8 +334,8 @@ def bulk_qr_pdf(
 
     pdf_bytes = generate_bulk_pdf(books)
 
-    return Response(
-        content=pdf_bytes,
+    return StreamingResponse(
+        BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=qr-codes.pdf"},
     )

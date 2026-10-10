@@ -1,8 +1,9 @@
 from dotenv import load_dotenv
 import os
 import sys
+from pathlib import Path
 
-load_dotenv()
+load_dotenv(Path(__file__).with_name(".env"), override=False)
 
 def _require(name: str) -> str:
     """Return env var value or abort with a clear error message."""
@@ -13,7 +14,7 @@ def _require(name: str) -> str:
         sys.exit(1)
     return value
 
-DATABASE_URL            = _require("DATABASE_URL")
+DATABASE_URL            = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or _require("DATABASE_URL")
 JWT_SECRET_KEY          = _require("JWT_SECRET_KEY")
 JWT_ALGORITHM           = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MIN = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "480"))
@@ -56,3 +57,40 @@ HTTPS_ONLY  = os.getenv("HTTPS_ONLY", "false").lower() == "true"
 #   ALLOWED_ORIGINS=https://library.rizalprovince.gov.ph
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
 ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
+# Persistent cloud storage. Production never falls back to local uploads.
+STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "supabase" if ENVIRONMENT == "production" else "local").lower()
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+SUPABASE_COVERS_BUCKET = os.getenv("SUPABASE_COVERS_BUCKET", "rpl-covers")
+SUPABASE_AVATARS_BUCKET = os.getenv("SUPABASE_AVATARS_BUCKET", "rpl-avatars")
+SUPABASE_IDS_BUCKET = os.getenv("SUPABASE_IDS_BUCKET", "rpl-ids")
+STORAGE_SIGNED_URL_SECONDS = int(os.getenv("STORAGE_SIGNED_URL_SECONDS", "3600"))
+AUTO_MIGRATE = os.getenv("AUTO_MIGRATE", "false" if ENVIRONMENT == "production" else "true").lower() == "true"
+AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "lax").lower()
+
+
+def validate_deployment_config() -> None:
+    if STORAGE_BACKEND not in {"local", "supabase"}:
+        raise RuntimeError("STORAGE_BACKEND must be local or supabase.")
+    if AUTH_COOKIE_SAMESITE not in {"lax", "strict", "none"}:
+        raise RuntimeError("AUTH_COOKIE_SAMESITE must be lax, strict, or none.")
+    if AUTH_COOKIE_SAMESITE == "none" and not (HTTPS_ONLY or ENVIRONMENT == "production"):
+        raise RuntimeError("SameSite=None requires HTTPS and secure cookies.")
+    if STORAGE_BACKEND == "supabase":
+        if not SUPABASE_URL.startswith("https://") or not SUPABASE_SERVICE_ROLE_KEY:
+            raise RuntimeError("Supabase Storage requires SUPABASE_URL (HTTPS) and a server-only SUPABASE_SERVICE_ROLE_KEY.")
+    if ENVIRONMENT != "production":
+        return
+    if not DATABASE_URL.startswith(("postgres://", "postgresql://", "postgresql+psycopg://")):
+        raise RuntimeError("Production requires a Supabase PostgreSQL DATABASE_URL.")
+    if STORAGE_BACKEND != "supabase":
+        raise RuntimeError("Production requires Supabase Storage; local uploads are disabled.")
+    if len(JWT_SECRET_KEY) < 32 or JWT_SECRET_KEY.startswith("change-this"):
+        raise RuntimeError("Production requires a random JWT_SECRET_KEY of at least 32 characters.")
+    if not LIBRARIAN_AUTH_CODE or LIBRARIAN_AUTH_CODE in {"change-this-to-a-secret-code", "LIB-RPL-2025"}:
+        raise RuntimeError("Production requires a private LIBRARIAN_AUTH_CODE.")
+    if not ENTRY_STATION_PIN or ENTRY_STATION_PIN == "1234":
+        raise RuntimeError("Production requires a private ENTRY_STATION_PIN.")
+    if not ALLOWED_ORIGINS or any(not origin.startswith("https://") for origin in ALLOWED_ORIGINS):
+        raise RuntimeError("Production ALLOWED_ORIGINS must list the HTTPS frontend domains.")

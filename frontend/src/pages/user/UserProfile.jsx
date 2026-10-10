@@ -7,8 +7,7 @@ import {
 } from 'lucide-react';
 import { getProfile, getBiometricStatus, updateProfile, changePassword, uploadAvatar } from '../../api/user';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+import { assetUrl } from '../../api/urls';
 
 const getInitials = (name = '') =>
   name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -20,7 +19,7 @@ function AvatarUpload({ currentUrl, name, onUploaded }) {
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState(null);
 
-  const imgSrc = preview || (currentUrl ? `${API}${currentUrl}` : null);
+  const imgSrc = preview || assetUrl(currentUrl);
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];

@@ -1,5 +1,6 @@
 import client from './client';
 import { resetMemberPasswordPath } from './passwordRecovery';
+import { prepareUploadForm } from './uploads';
 
 // Dashboard
 export const getStats = () =>
@@ -18,8 +19,8 @@ export const getDueBooks = (filter = 'all') =>
 export const getMembers = (params = {}) =>
   client.get('/api/librarian/users', { params });
 
-export const registerMember = (formData) =>
-  client.post('/api/librarian/users/register', formData);
+export const registerMember = async (formData) =>
+  client.post('/api/librarian/users/register', await prepareUploadForm(formData, 'id_image', 'ids'));
 
 export const getMemberStats = () =>
   client.get('/api/librarian/users/stats');
@@ -67,8 +68,8 @@ export const updateBook = (id, data) =>
 export const deleteBook = (id) =>
   client.delete(`/api/inventory/books/${id}`);
 
-export const bulkUpload = (formData) =>
-  client.post('/api/inventory/bulk-upload', formData, {
+export const bulkUpload = async (formData) =>
+  client.post('/api/inventory/bulk-upload', await prepareUploadForm(formData, 'file', 'imports'), {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
@@ -81,10 +82,10 @@ export const getBookCopies = (params = {}) =>
 export const getCopyQRImage = (copyId) =>
   client.get(`/api/inventory/book-copies/${copyId}/qr`, { responseType: 'blob' });
 
-export const uploadBookCover = (bookId, file) => {
+export const uploadBookCover = async (bookId, file) => {
   const form = new FormData();
   form.append('file', file);
-  return client.post(`/api/inventory/books/${bookId}/cover`, form, {
+  return client.post(`/api/inventory/books/${bookId}/cover`, await prepareUploadForm(form, 'file', 'covers'), {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };

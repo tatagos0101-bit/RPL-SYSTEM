@@ -2,6 +2,8 @@
 
 An intelligent library management system featuring **AI-driven Facial Recognition** and **Automated Academic Reporting** for a seamless, "oldie-friendly" provincial library experience.
 
+Cloud deployment: see [Vercel and Supabase setup](docs/DEPLOYMENT.md).
+
 ---
 
 ## 🚀 Features
@@ -20,7 +22,7 @@ An intelligent library management system featuring **AI-driven Facial Recognitio
 | :--- | :--- | :--- |
 | **Frontend** | React.js (Vite), Tailwind CSS | User Interface & Slidable Layout |
 | **Backend** | Python (FastAPI / Flask) | AI "Brain" & Logic Controller |
-| **Database** | MySQL | Storage for 7,000+ Books & User Logs |
+| **Database & Files** | Supabase PostgreSQL & Storage | Online library records, face embeddings, covers, avatars and IDs |
 | **AI Engine** | OpenCV, Dlib, Face Recognition | Facial Feature Extraction & Matching |
 | **Data Tools** | Pandas, Openpyxl | Excel-to-QR Processing & Stats |
 

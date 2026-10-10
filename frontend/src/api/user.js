@@ -1,4 +1,5 @@
 import client from './client';
+import { prepareUploadForm } from './uploads';
 
 export const getProfile = () =>
   client.get('/api/user/profile');
@@ -50,10 +51,10 @@ export const changePassword = (currentPassword, newPassword) =>
     new_password: newPassword,
   });
 
-export const uploadAvatar = (file) => {
+export const uploadAvatar = async (file) => {
   const form = new FormData();
   form.append('file', file);
-  return client.post('/api/user/avatar', form, {
+  return client.post('/api/user/avatar', await prepareUploadForm(form, 'file', 'avatars'), {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };

@@ -1,6 +1,12 @@
 .env
+.env.*
+!.env.example
 __pycache__
 *.pyc
 *.pyo
 *.db
 uploads/
+logs/
+.venv/
+.pytest_cache/
+tests/

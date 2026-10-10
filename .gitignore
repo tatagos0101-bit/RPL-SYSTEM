@@ -54,3 +54,7 @@ CLAUDE.md
 .claude/
 .agents/
 .worktrees/
+.vercel/
+.supabase/
+supabase/.temp/
+.tools/

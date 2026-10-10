@@ -2,6 +2,7 @@ fastapi==0.115.0
 slowapi==0.1.9
 uvicorn[standard]==0.30.6
 sqlalchemy==2.0.35
+psycopg[binary]==3.2.13
 pymysql==1.1.1
 cryptography==43.0.1
 python-jose[cryptography]==3.3.0

@@ -15,10 +15,10 @@ class User(Base):
     must_change_password = Column(Boolean, nullable=False, default=False)
     email_verified = Column(Boolean, nullable=False, default=False)
     phone_verified = Column(Boolean, nullable=False, default=False)
-    role           = Column(Enum("member", "librarian"), nullable=False, default="member")
+    role           = Column(Enum("member", "librarian", name="user_role", native_enum=False, create_constraint=True), nullable=False, default="member")
     phone          = Column(String(30), nullable=True)
     location       = Column(String(120), nullable=True)
-    status         = Column(Enum("active", "suspended"), nullable=False, default="active")
+    status         = Column(Enum("active", "suspended", name="user_status", native_enum=False, create_constraint=True), nullable=False, default="active")
 
     # 128-float face encoding stored as JSON array string e.g. "[0.123, -0.456, ...]"
     face_encoding  = Column(Text, nullable=True)

@@ -13,6 +13,8 @@ os.environ["JWT_SECRET_KEY"] = "test-secret"
 os.environ["LIBRARIAN_AUTH_CODE"] = "test-librarian-code"
 os.environ["ENVIRONMENT"] = "test"
 os.environ["ALLOWED_ORIGINS"] = "http://testserver"
+os.environ["STORAGE_BACKEND"] = "local"
+os.environ["AUTO_MIGRATE"] = "false"
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:

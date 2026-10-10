@@ -1,6 +1,6 @@
 from fastapi import Response
 
-from config import ACCESS_TOKEN_EXPIRE_MIN, ENVIRONMENT, HTTPS_ONLY
+from config import ACCESS_TOKEN_EXPIRE_MIN, ENVIRONMENT, HTTPS_ONLY, AUTH_COOKIE_SAMESITE
 
 AUTH_COOKIE_NAME = "rpl_auth"
 
@@ -16,7 +16,7 @@ def set_auth_cookie(response: Response, token: str) -> None:
         max_age=ACCESS_TOKEN_EXPIRE_MIN * 60,
         httponly=True,
         secure=_secure_cookie(),
-        samesite="lax",
+        samesite=AUTH_COOKIE_SAMESITE,
         path="/",
     )
 
@@ -26,6 +26,6 @@ def clear_auth_cookie(response: Response) -> None:
         key=AUTH_COOKIE_NAME,
         httponly=True,
         secure=_secure_cookie(),
-        samesite="lax",
+        samesite=AUTH_COOKIE_SAMESITE,
         path="/",
     )

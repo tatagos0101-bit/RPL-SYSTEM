@@ -1,0 +1,11 @@
+.env*
+!.env.example
+.venv/
+logs/
+uploads/
+tests/
+__pycache__/
+*.pyc
+*.db
+.pytest_cache/
+.tools/

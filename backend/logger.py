@@ -15,7 +15,9 @@ import time
 from datetime import timezone, timedelta
 
 LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
-os.makedirs(LOG_DIR, exist_ok=True)
+LOG_TO_FILES = os.getenv("LOG_TO_FILES", "false" if os.getenv("ENVIRONMENT") == "production" else "true").lower() == "true"
+if LOG_TO_FILES:
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 _FMT      = "%(asctime)s PHT [%(levelname)s] %(name)s — %(message)s"
 _DATE_FMT = "%Y-%m-%d %H:%M:%S"
@@ -54,7 +56,8 @@ def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     if not logger.handlers:
         logger.setLevel(logging.DEBUG)
-        logger.addHandler(_rotating_file_handler("app.log"))
+        if LOG_TO_FILES:
+            logger.addHandler(_rotating_file_handler("app.log"))
         logger.addHandler(_console_handler())
         logger.propagate = False
     return logger
@@ -65,6 +68,7 @@ def get_logger(name: str) -> logging.Logger:
 security_logger = logging.getLogger("security")
 if not security_logger.handlers:
     security_logger.setLevel(logging.DEBUG)
-    security_logger.addHandler(_rotating_file_handler("security.log", level=logging.INFO))
-    security_logger.addHandler(_console_handler(level=logging.WARNING))
+    if LOG_TO_FILES:
+        security_logger.addHandler(_rotating_file_handler("security.log", level=logging.INFO))
+    security_logger.addHandler(_console_handler(level=logging.INFO))
     security_logger.propagate = False
