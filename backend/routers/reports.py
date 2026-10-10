@@ -82,7 +82,7 @@ def monthly_report(
     # KPI stats
     borrows = (
         db.query(func.count(Transaction.id))
-        .filter(Transaction.type == "borrow", Transaction.borrow_date >= start, Transaction.borrow_date < end)
+        .filter(Transaction.borrow_date >= start, Transaction.borrow_date < end)
         .scalar()
     )
     returns = (
@@ -146,7 +146,7 @@ def monthly_report(
     # Top 10 borrowed books this month
     top_book_rows = (
         db.query(Transaction.book_id, func.count(Transaction.id).label("cnt"))
-        .filter(Transaction.type == "borrow", Transaction.borrow_date >= start, Transaction.borrow_date < end)
+        .filter(Transaction.borrow_date >= start, Transaction.borrow_date < end)
         .group_by(Transaction.book_id)
         .order_by(desc("cnt"))
         .limit(10)
@@ -166,7 +166,7 @@ def monthly_report(
     # Top 10 most active members this month
     top_member_rows = (
         db.query(Transaction.user_id, func.count(Transaction.id).label("cnt"))
-        .filter(Transaction.type == "borrow", Transaction.borrow_date >= start, Transaction.borrow_date < end)
+        .filter(Transaction.borrow_date >= start, Transaction.borrow_date < end)
         .group_by(Transaction.user_id)
         .order_by(desc("cnt"))
         .limit(10)

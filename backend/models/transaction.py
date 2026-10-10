@@ -11,6 +11,8 @@ class Transaction(Base):
     user_id      = Column(Integer, ForeignKey("users.id"), nullable=False)
     book_id      = Column(Integer, ForeignKey("books.id"), nullable=False)
     copy_id      = Column(Integer, ForeignKey("book_copies.id"), nullable=True, index=True)
+    # One row represents a loan; a return changes its type/status in place.
+    # Historical borrow counts use borrow_date, including rows now marked return.
     type         = Column(Enum("borrow", "return", name="transaction_type", native_enum=False, create_constraint=True), nullable=False)
     borrow_date  = Column(DateTime(timezone=True), server_default=func.now())
     due_date     = Column(DateTime(timezone=True), nullable=True)

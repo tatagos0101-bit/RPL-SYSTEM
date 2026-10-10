@@ -138,6 +138,12 @@ same librarian-help response; reset codes are exposed only in the automated test
 environment. Biometric accuracy still requires on-device camera
 testing with enrolled members; deployment does not establish biometric accuracy.
 
+Feature QA on October 11, 2026 confirmed that the current brightness/texture
+heuristic accepts static face photographs, including through the deployed login
+and simulated webcam flow. Face detection/matching works, but photo/replay
+resistance is not established. Face-only login needs stronger liveness or an
+additional authentication factor before it can be considered secure.
+
 Sources: [Supabase SQLAlchemy connections](https://supabase.com/docs/guides/troubleshooting/using-sqlalchemy-with-supabase-FUqebT),
 [Supabase Storage access control](https://supabase.com/docs/guides/storage/security/access-control),
 [Vercel FastAPI](https://vercel.com/docs/frameworks/backend/fastapi),

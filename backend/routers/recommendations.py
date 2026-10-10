@@ -57,7 +57,7 @@ def reading_stats(
     rows = (
         db.query(Book.category, func.count(Transaction.id).label("cnt"))
         .join(Transaction, Transaction.book_id == Book.id)
-        .filter(Transaction.user_id == current_user.id, Transaction.type == "borrow")
+        .filter(Transaction.user_id == current_user.id, Transaction.borrow_date.isnot(None))
         .group_by(Book.category)
         .order_by(desc("cnt"))
         .all()
@@ -152,7 +152,7 @@ def reading_goals(
                 db.query(func.count(Transaction.id))
                 .filter(
                     Transaction.user_id == current_user.id,
-                    Transaction.type    == "borrow",
+                    Transaction.borrow_date.isnot(None),
                     Transaction.borrow_date >= year_start,
                     Transaction.borrow_date < year_end,
                 )
@@ -164,7 +164,7 @@ def reading_goals(
                 .join(Transaction, Transaction.book_id == Book.id)
                 .filter(
                     Transaction.user_id == current_user.id,
-                    Transaction.type    == "borrow",
+                    Transaction.borrow_date.isnot(None),
                     Transaction.borrow_date >= year_start,
                     Transaction.borrow_date < year_end,
                 )

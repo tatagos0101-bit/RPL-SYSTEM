@@ -22,7 +22,7 @@ def get_recommendations(user_id: int, db: Session, limit: int = 10) -> list[dict
     already_read_ids = {
         row.book_id
         for row in db.query(Transaction.book_id)
-        .filter(Transaction.user_id == user_id, Transaction.type == "borrow")
+        .filter(Transaction.user_id == user_id, Transaction.borrow_date.isnot(None))
         .all()
     }
 
@@ -30,7 +30,7 @@ def get_recommendations(user_id: int, db: Session, limit: int = 10) -> list[dict
     top_categories = (
         db.query(Book.category, func.count(Transaction.id).label("cnt"))
         .join(Transaction, Transaction.book_id == Book.id)
-        .filter(Transaction.user_id == user_id, Transaction.type == "borrow")
+        .filter(Transaction.user_id == user_id, Transaction.borrow_date.isnot(None))
         .group_by(Book.category)
         .order_by(desc("cnt"))
         .limit(3)
@@ -75,7 +75,7 @@ def get_recommendations(user_id: int, db: Session, limit: int = 10) -> list[dict
 
     trending_ids = (
         db.query(Transaction.book_id, func.count(Transaction.id).label("borrows"))
-        .filter(Transaction.type == "borrow", Transaction.borrow_date >= since)
+        .filter(Transaction.borrow_date >= since)
         .group_by(Transaction.book_id)
         .order_by(desc("borrows"))
         .limit(30)

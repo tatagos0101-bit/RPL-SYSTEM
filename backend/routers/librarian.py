@@ -188,7 +188,7 @@ def borrow_trend(
         count = (
             db.query(func.count(Transaction.id))
             .filter(
-                Transaction.type        == "borrow",
+                Transaction.borrow_date.isnot(None),
                 Transaction.borrow_date >= month_dt,
                 Transaction.borrow_date <  next_month,
             )
@@ -319,7 +319,7 @@ def list_members(
         )
         total_loans = (
             db.query(func.count(Transaction.id))
-            .filter(Transaction.user_id == m.id, Transaction.type == "borrow")
+            .filter(Transaction.user_id == m.id, Transaction.borrow_date.isnot(None))
             .scalar()
         )
         result.append(LibMemberOut(

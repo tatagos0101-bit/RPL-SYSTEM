@@ -228,7 +228,7 @@ def build_transcript(user, transactions: list) -> bytes:
     story.append(Spacer(1, 0.5*cm))
 
     # Summary stats
-    total_books  = len([t for t in transactions if t.type == "borrow"])
+    total_books  = len([t for t in transactions if t.borrow_date is not None])
     total_fines  = sum(float(t.fine_amount or 0) for t in transactions)
     active_loans = len([t for t in transactions if t.status == "active"])
 
@@ -257,7 +257,7 @@ def build_transcript(user, transactions: list) -> bytes:
         "sec", fontSize=11, fontName="Helvetica-Bold", textColor=SLATE, spaceAfter=6,
     )))
 
-    borrow_txs = [t for t in transactions if t.type == "borrow"]
+    borrow_txs = [t for t in transactions if t.borrow_date is not None]
     if borrow_txs:
         rows = [["#", "Book Title", "Borrow Date", "Due Date", "Return Date", "Fine"]]
         for i, tx in enumerate(borrow_txs, 1):

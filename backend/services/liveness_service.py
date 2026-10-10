@@ -1,8 +1,9 @@
 """
 Liveness detection service for anti-spoofing.
 
-Detects whether a face in an image is real (live) or spoofed (photo, video, etc).
-Returns hints for the gate: "ok", "spoof", "retry", "too_dark", "too_far"
+Screens image brightness, face size, and texture. Static photographs can pass
+these checks; this heuristic does not establish liveness or prevent replay.
+Returns hints for the gate: "ok", "spoof", "retry", "too_dark", "too_far".
 """
 import cv2
 import numpy as np
@@ -24,7 +25,7 @@ def _decode_base64_image(b64_string: str) -> np.ndarray:
 
 def check_liveness(b64_image: str) -> Tuple[str, float]:
     """
-    Check if face in image is real (live) or spoofed.
+    Check frame quality and basic texture; "ok" does not prove a live person.
     
     Returns:
         (hint, probability)
@@ -74,5 +75,6 @@ def check_liveness(b64_image: str) -> Tuple[str, float]:
         spoof_prob = 0.8
         return ("spoof", spoof_prob)
     
-    # Default: assume it's real
+    # Passes quality checks, including for some static photos. A verified
+    # anti-spoofing method is still required for secure face-only authentication.
     return ("ok", 0.95)

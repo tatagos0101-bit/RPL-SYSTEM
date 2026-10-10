@@ -73,7 +73,7 @@ def trending_books(request: Request, limit: int = Query(10, ge=1, le=50), db: Se
 
     top_ids = (
         db.query(Transaction.book_id, func.count(Transaction.id).label("borrows"))
-        .filter(Transaction.borrow_date >= since, Transaction.type == "borrow")
+        .filter(Transaction.borrow_date >= since)
         .group_by(Transaction.book_id)
         .order_by(desc("borrows"))
         .limit(limit)
