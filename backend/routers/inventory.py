@@ -9,6 +9,7 @@ from fastapi.responses import Response, StreamingResponse
 from io import BytesIO
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 
 from database import get_db
 from dependencies import require_librarian
@@ -17,7 +18,7 @@ from models.book_copy import BookCopy
 from models.user import User
 from schemas.book import BookCreate, BookUpdate, BookOut, BookCopyLabelOut, BulkUploadResponse, InventoryStats
 from services.qr_service import make_qr_code, generate_qr_png, generate_bulk_pdf
-from services.book_copy_service import copy_label_payload, ensure_book_copies, get_copy_or_404
+from services.book_copy_service import copy_label_payload, ensure_book_copies, get_copy_or_404, resize_book_copies
 from services.storage_service import save_upload, delete_upload
 from services.cloud_uploads import read_upload
 
@@ -94,15 +95,29 @@ def update_book(
     db:      Session = Depends(get_db),
     _:       User    = Depends(require_librarian),
 ):
-    book = db.query(Book).filter(Book.id == book_id).first()
+    book = db.query(Book).filter(Book.id == book_id).with_for_update().first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
 
-    for field, value in body.model_dump(exclude_none=True).items():
-        setattr(book, field, value)
+    changes = body.model_dump(exclude_unset=True)
+    for required in ("title", "author", "category", "copies_total"):
+        if required in changes and changes[required] is None:
+            raise HTTPException(422, f"{required.replace('_', ' ').capitalize()} cannot be empty.")
+    if changes.get("isbn") and db.query(Book.id).filter(Book.isbn == changes["isbn"], Book.id != book_id).first():
+        raise HTTPException(409, "This ISBN is already assigned to another book.")
 
-    db.commit()
-    ensure_book_copies(db, book.id)
+    resize_book_copies(db, book, changes.get("copies_total", book.copies_total))
+    if "copies_available" in changes and changes["copies_available"] != book.copies_available:
+        raise HTTPException(422, "Available copies are calculated from physical copies and active loans.")
+    for field, value in changes.items():
+        if field not in {"copies_total", "copies_available"}:
+            setattr(book, field, value)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Book details conflict with another record. Refresh and try again.") from None
     db.refresh(book)
     return book
 

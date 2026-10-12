@@ -32,7 +32,7 @@ def _sync_book_available_count(book: Book) -> None:
     book.copies_available = sum(1 for copy in book.copies if copy.status == "available")
 
 
-def ensure_book_copies(db: Session, book_id: int | None = None) -> int:
+def ensure_book_copies(db: Session, book_id: int | None = None, *, commit: bool = True) -> int:
     query = db.query(Book)
     if book_id is not None:
         query = query.filter(Book.id == book_id)
@@ -63,9 +63,45 @@ def ensure_book_copies(db: Session, book_id: int | None = None) -> int:
         db.flush()
         changed += assign_legacy_loans_to_copies(db, book)
 
-    if changed:
+    if changed and commit:
         db.commit()
     return changed
+
+
+def resize_book_copies(db: Session, book: Book, total: int) -> None:
+    """Adjust physical stock without deleting QR identities or loan history.
+
+    The caller holds the book row lock and commits all inventory edits together.
+    """
+    ensure_book_copies(db, book.id, commit=False)
+    copies = db.query(BookCopy).filter(BookCopy.book_id == book.id).with_for_update().all()
+    active = [copy for copy in copies if copy.status != "retired"]
+    loan_copy_ids = {row[0] for row in db.query(Transaction.copy_id).filter(
+        Transaction.book_id == book.id,
+        Transaction.status.in_(["active", "overdue"]),
+        Transaction.copy_id.isnot(None),
+    ).all()}
+    protected = [copy for copy in active if copy.status == "borrowed" or copy.id in loan_copy_ids]
+    if total < len(protected):
+        raise HTTPException(409, f"Cannot reduce total copies below {len(protected)} while those copies are on loan.")
+    if total < len(active):
+        candidates = sorted(
+            (copy for copy in active if copy not in protected),
+            key=lambda copy: (copy.status == "available", -copy.copy_number),
+        )
+        for copy in candidates[:len(active) - total]:
+            copy.status = "retired"
+    elif total > len(active):
+        number = max((copy.copy_number for copy in copies), default=0)
+        for _ in range(total - len(active)):
+            number += 1
+            copy = BookCopy(book_id=book.id, copy_number=number,
+                            qr_code=make_copy_qr_code(book.id, number), status="available")
+            db.add(copy)
+            copies.append(copy)
+    book.copies_total = total
+    book.copies_available = sum(copy.status == "available" for copy in copies)
+    db.flush()
 
 
 def assign_legacy_loans_to_copies(db: Session, book: Book) -> int:

@@ -23,8 +23,8 @@ class BookBase(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Title cannot be empty")
-        if len(v) > 500:
-            raise ValueError("Title must be at most 500 characters")
+        if len(v) > 255:
+            raise ValueError("Title must be at most 255 characters")
         return v
 
     @field_validator("author")
@@ -33,8 +33,8 @@ class BookBase(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Author cannot be empty")
-        if len(v) > 200:
-            raise ValueError("Author must be at most 200 characters")
+        if len(v) > 180:
+            raise ValueError("Author must be at most 180 characters")
         return v
 
     @field_validator("category")
@@ -43,8 +43,8 @@ class BookBase(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Category cannot be empty")
-        if len(v) > 100:
-            raise ValueError("Category must be at most 100 characters")
+        if len(v) > 80:
+            raise ValueError("Category must be at most 80 characters")
         return v
 
     @field_validator("year")
@@ -83,8 +83,8 @@ class BookBase(BaseModel):
         if v is None:
             return v
         v = v.strip()
-        if len(v) > 100:
-            raise ValueError("Shelf location must be at most 100 characters")
+        if len(v) > 80:
+            raise ValueError("Shelf location must be at most 80 characters")
         return v or None
 
     @field_validator("cover_url")
@@ -126,8 +126,8 @@ class BookUpdate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Title cannot be empty")
-        if len(v) > 500:
-            raise ValueError("Title must be at most 500 characters")
+        if len(v) > 255:
+            raise ValueError("Title must be at most 255 characters")
         return v
 
     @field_validator("author")
@@ -138,8 +138,8 @@ class BookUpdate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Author cannot be empty")
-        if len(v) > 200:
-            raise ValueError("Author must be at most 200 characters")
+        if len(v) > 180:
+            raise ValueError("Author must be at most 180 characters")
         return v
 
     @field_validator("category")
@@ -150,8 +150,8 @@ class BookUpdate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Category cannot be empty")
-        if len(v) > 100:
-            raise ValueError("Category must be at most 100 characters")
+        if len(v) > 80:
+            raise ValueError("Category must be at most 80 characters")
         return v
 
     @field_validator("year")
@@ -192,8 +192,8 @@ class BookUpdate(BaseModel):
         if v is None:
             return v
         v = v.strip()
-        if len(v) > 100:
-            raise ValueError("Shelf location must be at most 100 characters")
+        if len(v) > 80:
+            raise ValueError("Shelf location must be at most 80 characters")
         return v or None
 
     @field_validator("cover_url")

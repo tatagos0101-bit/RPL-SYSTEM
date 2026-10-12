@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Package, CheckCircle, Clock, BookOpen, Trash2, RefreshCw, ImagePlus, Library } from 'lucide-react';
+import { Search, Plus, Package, CheckCircle, Clock, BookOpen, Trash2, RefreshCw, ImagePlus, Library, Pencil } from 'lucide-react';
 import BookCover from '../../components/BookCover';
+import BookEditDialog from '../../components/BookEditDialog';
 import { getBooks, getCategories } from '../../api/books';
 import { getInventoryStats, deleteBook, uploadBookCover } from '../../api/librarian';
 
@@ -20,6 +21,8 @@ const LibInventory = () => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState(null);
+  const [editingBook, setEditingBook] = useState(null);
+  const [success, setSuccess] = useState('');
   const fileInputRef = useRef(null);
   const uploadTargetId = useRef(null);
 
@@ -70,8 +73,19 @@ const LibInventory = () => {
     return matchCat && matchSearch;
   });
 
+  const handleSaved = (book) => {
+    setBooks((current) => current.map((item) => item.id === book.id ? book : item));
+    setEditingBook(null);
+    setSuccess(`“${book.title}” was updated successfully.`);
+    setActiveCategory('All');
+    setSearch(book.title);
+    fetchData();
+  };
+
   return (
     <div className="min-h-screen bg-transparent pt-8 px-6 md:px-12 pb-20 font-sans text-slate-900 dark:text-white transition-colors duration-300">
+      {editingBook && <BookEditDialog key={editingBook.id} book={editingBook} categories={categories}
+        onClose={() => setEditingBook(null)} onSaved={handleSaved} />}
       {/* Hidden file input for cover upload */}
       <input
         ref={fileInputRef}
@@ -102,6 +116,7 @@ const LibInventory = () => {
         </header>
 
         {/* Stats */}
+        {success && <p role="status" className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">{success}</p>}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-10 animate-fade-in-up delay-100">
           <StatCard label="Total Books" val={invStats.total_titles ?? 0} icon={<Library size={18} />} color="bg-violet-500" />
           <StatCard label="Total Copies" val={invStats.total_copies ?? 0} icon={<Package size={18} />} color="bg-blue-500" />
@@ -178,7 +193,7 @@ const LibInventory = () => {
                           <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{book.category}</span>
                         </td>
                         <td className="px-4 py-4">
-                          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{book.year}</span>
+                          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{book.year ?? '—'}</span>
                         </td>
                         <td className="px-4 py-4 text-center">
                           <span className="text-sm font-black text-slate-900 dark:text-white">{book.copies_available}</span>
@@ -191,11 +206,17 @@ const LibInventory = () => {
                         </td>
                         <td className="px-8 py-4 text-xs font-mono text-slate-400">{book.location_shelf || '—'}</td>
                         <td className="px-8 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200">
+                          <div className="flex items-center justify-end gap-2">
+                            <button type="button" onClick={() => { setSuccess(''); setEditingBook(book); }}
+                              aria-label={`Edit ${book.title}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50">
+                              <Pencil size={14} /> Edit
+                            </button>
                             <button
                               onClick={() => handleCoverClick(book.id)}
                               disabled={uploadingId === book.id}
                               title="Upload cover image"
+                              aria-label={`Upload cover for ${book.title}`}
                               className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all duration-200 hover:scale-110 disabled:opacity-50"
                             >
                               {uploadingId === book.id
@@ -204,6 +225,7 @@ const LibInventory = () => {
                             </button>
                             <button
                               onClick={() => handleDelete(book.id)}
+                              aria-label={`Delete ${book.title}`}
                               className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all duration-200 hover:scale-110"
                             >
                               <Trash2 size={15} />
@@ -231,7 +253,7 @@ const LibInventory = () => {
 };
 
 const StatCard = ({ label, val, icon, color }) => (
-  <div className="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-4 transition-all hover:-translate-y-1">
+  <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col items-start sm:flex-row sm:items-center gap-3 sm:gap-4 transition-all hover:-translate-y-1">
     <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md flex-shrink-0`}>{icon}</div>
     <div>
       <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-0.5">{label}</p>
