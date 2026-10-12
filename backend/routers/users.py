@@ -12,7 +12,7 @@ from dependencies import get_current_user
 from models.notification import Notification
 from models.face_embedding import FaceEmbedding
 from models.user import User
-from schemas.user import UserProfile, UserProfileUpdate, BiometricStatus, ChangePasswordRequest
+from schemas.user import UserProfile, UserProfileUpdate, BiometricStatus, ChangePasswordRequest, ChangePasswordResponse
 from services.upload_validation import IMAGE_EXTS, validate_upload_bytes
 from services.storage_service import save_upload, resolve_upload_url, delete_upload
 from services.cloud_uploads import read_upload
@@ -77,7 +77,7 @@ def update_profile(
     return _build_profile(current_user, db)
 
 
-@router.put("/change-password")
+@router.put("/change-password", response_model=ChangePasswordResponse)
 def change_password(
     body: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
@@ -92,7 +92,13 @@ def change_password(
     current_user.password_hash = pwd_ctx.hash(body.new_password)
     current_user.must_change_password = False
     db.commit()
-    return {"success": True, "message": "Password updated successfully."}
+    # Confirm the committed first-login state without a second profile request
+    # (which also signs avatar links and can fail independently of this save).
+    return ChangePasswordResponse(
+        success=True, message="Password updated successfully.",
+        id=current_user.id, name=current_user.name, role=current_user.role,
+        must_change_password=bool(current_user.must_change_password),
+    )
 
 
 @router.post("/avatar")

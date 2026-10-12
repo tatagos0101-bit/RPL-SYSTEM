@@ -1,6 +1,6 @@
 import re
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 
 _PHONE_RE = re.compile(r"^[\d\s\-\+\(\)]{7,20}$")
@@ -81,3 +81,12 @@ class ChangePasswordRequest(BaseModel):
         if len(v) < 6:
             raise ValueError("New password must be at least 6 characters")
         return v
+
+
+class ChangePasswordResponse(BaseModel):
+    success: bool
+    message: str
+    id: int
+    name: str
+    role: Literal["member", "librarian"]
+    must_change_password: bool

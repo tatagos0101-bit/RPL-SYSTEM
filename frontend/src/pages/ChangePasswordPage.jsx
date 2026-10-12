@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Check, Eye, EyeOff, KeyRound, Lock, RefreshCw } from 'lucide-react';
-import { changePassword, getProfile } from '../api/user';
-import { homeForRole, updateStoredProfile } from '../api/authRoutes';
+import { changePassword } from '../api/user';
+import { getStoredAuth, homeForRole, updateStoredProfile } from '../api/authRoutes';
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
@@ -10,6 +10,7 @@ export default function ChangePasswordPage() {
   const [show, setShow] = useState({ current: false, next: false, confirm: false });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const pending = useRef(false);
 
   const update = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -18,25 +19,42 @@ export default function ChangePasswordPage() {
 
   const submit = async (event) => {
     event.preventDefault();
+    if (pending.current) return;
     if (form.next.length < 6) {
-      setError('New password must be at least 6 characters.');
+      setError('Password was not changed. New password must be at least 6 characters.');
       return;
     }
     if (form.next !== form.confirm) {
-      setError('Passwords do not match.');
+      setError('Password was not changed. Passwords do not match.');
       return;
     }
 
+    pending.current = true;
     setSaving(true);
     setError('');
     try {
-      await changePassword(form.current, form.next);
-      const { data } = await getProfile();
-      updateStoredProfile(data);
-      navigate(homeForRole(data.role), { replace: true });
+      const { data } = await changePassword(form.current, form.next);
+      if (data.success !== true) throw new Error('Password update was not confirmed.');
+      // Older deployed API versions return only success/message. Stored metadata
+      // supplies navigation during rollout; RequireRole still verifies the server.
+      const stored = getStoredAuth();
+      const profile = {
+        id: data.id ?? stored.userId,
+        name: data.name ?? stored.name,
+        role: data.role ?? stored.role,
+        must_change_password: false,
+      };
+      updateStoredProfile(profile);
+      setForm({ current: '', next: '', confirm: '' });
+      navigate(homeForRole(profile.role), { replace: true, state: { passwordChanged: true } });
     } catch (err) {
-      setError(err?.response?.data?.detail || 'Password update failed.');
+      const detail = err.response?.data?.detail;
+      const rejected = err.response?.status >= 400 && err.response?.status < 500;
+      setError(rejected
+        ? `Password was not changed. ${typeof detail === 'string' ? detail : 'Check your password fields and try again.'}`
+        : 'Could not confirm the password update. Please retry or sign in with your new password.');
     } finally {
+      pending.current = false;
       setSaving(false);
     }
   };
@@ -54,8 +72,13 @@ export default function ChangePasswordPage() {
           </div>
         </div>
 
+        <p className="mb-6 text-sm leading-6 text-slate-400">
+          Choose a new password to finish setting up your account. After it is saved,
+          you will go to your homepage.
+        </p>
+
         {error && (
-          <div className="mb-4 flex items-start gap-2.5 rounded-2xl border border-rose-800/60 bg-rose-950/40 px-4 py-3">
+          <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-2xl border border-rose-800/60 bg-rose-950/40 px-4 py-3">
             <AlertCircle size={15} className="text-rose-400 mt-0.5 flex-shrink-0" />
             <p className="text-xs font-bold text-rose-300">{error}</p>
           </div>
@@ -78,6 +101,7 @@ export default function ChangePasswordPage() {
                   className="min-w-0 flex-1 bg-transparent outline-none text-sm font-semibold text-white placeholder:text-slate-600"
                   autoComplete={key === 'current' ? 'current-password' : 'new-password'}
                   required
+                  disabled={saving}
                 />
                 <button
                   type="button"

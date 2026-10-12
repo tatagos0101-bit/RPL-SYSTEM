@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import UserLayout from './components/UserLayout';
 import LibLayout from './components/LibLayout';
 import RequireRole from './components/RequireRole';
+import PasswordChangeNotice from './components/PasswordChangeNotice';
 import { legacyLibPathToLibrarian } from './api/authRoutes';
 import './index.css';
 
@@ -57,6 +58,7 @@ const AppContent = () => {
 
   return (
     <>
+      <PasswordChangeNotice />
       {showNavbar && <Navbar />}
       <Suspense fallback={<RouteFallback />}>
         <Routes>
