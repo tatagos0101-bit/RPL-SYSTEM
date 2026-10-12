@@ -397,13 +397,13 @@ const TodayPanel = ({ notice, entrySummary }) => {
                 {notice.actionLabel}
                 <ArrowRight size={14} />
               </Link>
-              <Link
+              {notice.actionHref !== '/librarian/borrow-return' && <Link
                 to="/librarian/borrow-return"
                 className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 transition hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200"
               >
                 <ArrowUpRight size={14} />
                 Borrow / Return
-              </Link>
+              </Link>}
             </div>
           </div>
         </div>

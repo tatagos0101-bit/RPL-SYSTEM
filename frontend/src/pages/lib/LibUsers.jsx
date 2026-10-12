@@ -5,6 +5,7 @@ import {
   KeyRound,
 } from 'lucide-react';
 import Webcam from 'react-webcam';
+import FloatingActions from '../../components/FloatingActions';
 import {
   getMembers,
   updateMemberStatus,
@@ -431,6 +432,8 @@ export default function LibUsers() {
   const [search,       setSearch]       = useState('');
   const [loading,      setLoading]      = useState(true);
   const [actionMenu,   setActionMenu]   = useState(null);
+  const [actionAnchor, setActionAnchor] = useState(null);
+  const closeActionMenu = useCallback(() => setActionMenu(null), []);
   const [enrollTarget, setEnrollTarget] = useState(null);
   const [resetTarget,  setResetTarget]  = useState(null);
   const [showRegister, setShowRegister] = useState(false);
@@ -550,12 +553,16 @@ export default function LibUsers() {
                         </span>
                       </td>
                       <td className="px-6 py-4 relative">
-                        <button onClick={() => setActionMenu(actionMenu===u.id?null:u.id)}
+                        <button type="button" aria-label={`Actions for ${u.name}`} aria-expanded={actionMenu === u.id}
+                          onClick={(event) => {
+                            setActionAnchor(event.currentTarget);
+                            setActionMenu(actionMenu===u.id?null:u.id);
+                          }}
                           className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all">
                           <MoreHorizontal size={15}/>
                         </button>
                         {actionMenu===u.id && (
-                          <div className="absolute right-6 top-12 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-2 min-w-[170px]">
+                          <FloatingActions anchor={actionAnchor} onClose={closeActionMenu}>
                             {!u.face_enrolled && (
                               <button onClick={() => { setActionMenu(null); setEnrollTarget(u); }}
                                 className="w-full text-left px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2 transition-all">
@@ -570,7 +577,7 @@ export default function LibUsers() {
                               className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${u.status==='active'?'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20':'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20'}`}>
                               {u.status==='active'?'Suspend':'Reactivate'}
                             </button>
-                          </div>
+                          </FloatingActions>
                         )}
                       </td>
                     </tr>

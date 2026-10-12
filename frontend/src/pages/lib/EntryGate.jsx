@@ -5,7 +5,8 @@ import {
   ArrowLeft, Clock, LogIn, LogOut, Wifi, WifiOff, RefreshCw,
   LockKeyhole,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { getStoredAuth, homeForRole } from '../../api/authRoutes';
 import { parseApiDateTime } from '../../api/dateTime';
 import { faceBoxToStyle, summarizeFaceResults } from '../../api/entryFaceOverlay';
 import { isQuietWalkThroughMessage, shouldLoadEntryStationLogsOnMount } from '../../api/entryStationState';
@@ -25,6 +26,15 @@ const UNKNOWN_CONFIRM_FRAMES = 2; // consecutive unknown frames required before 
 const LOG_REFRESH_MS   = 10000;  // ms between attendance log refreshes
 
 const EntryGate = () => {
+  const navigate = useNavigate();
+  const goBack = () => {
+    if (window.history.state?.idx > 0) {
+      navigate(-1);
+      return;
+    }
+    const { isLoggedIn, role } = getStoredAuth();
+    navigate(isLoggedIn ? homeForRole(role) : '/', { replace: true });
+  };
   const webcamRef    = useRef(null);
   const pollRef      = useRef(null);       // setInterval handle
   const isPendingRef = useRef(false);      // true while a face-scan request is in flight
@@ -269,13 +279,15 @@ const EntryGate = () => {
           onSubmit={handleUnlock}
           className="relative z-10 w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 shadow-2xl shadow-black/40 backdrop-blur-xl"
         >
-          <Link
-            to="/librarian"
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label="Back to previous page"
             className="mb-8 inline-flex items-center gap-3 text-slate-500 transition-colors hover:text-white"
           >
             <ArrowLeft size={16} />
             <span className="text-[10px] font-black uppercase tracking-widest">Librarian Portal</span>
-          </Link>
+          </button>
 
           <div className="mb-7 flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-400/30 bg-blue-500/10 text-blue-300">
@@ -338,9 +350,9 @@ const EntryGate = () => {
 
         {/* Left: back + branding */}
         <div className="flex items-center gap-4">
-          <Link to="/librarian" className="text-slate-600 hover:text-white transition-colors">
+          <button type="button" onClick={goBack} aria-label="Back to previous page" className="text-slate-600 hover:text-white transition-colors">
             <ArrowLeft size={16} />
-          </Link>
+          </button>
           <img src="/logo.library.png" alt="Logo" className="w-8 h-8 object-contain opacity-50" />
           <div>
             <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 leading-none mb-0.5">
