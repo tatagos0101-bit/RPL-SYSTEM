@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, ChevronRight, ChevronLeft, ArrowRight, X, BookOpen, LogIn, RefreshCw } from 'lucide-react';
 import BookCard from '../../components/BookCard';
 import { getBooks } from '../../api/books';
+import { getStoredAuth } from '../../api/authRoutes';
 
 const FEATURES = [
   {
@@ -103,6 +104,9 @@ const GenreRow = ({ genre, books, onSelect }) => {
 };
 
 const LandingPage = () => {
+  const { isLoggedIn, role } = getStoredAuth();
+  const isLibrarian = isLoggedIn && role === 'librarian';
+  const isMember = isLoggedIn && role === 'member';
   const [searchQuery, setSearchQuery] = useState('');
   const [selected, setSelected] = useState(null);
   const [books, setBooks] = useState([]);
@@ -436,12 +440,13 @@ const LandingPage = () => {
 
                   {/* CTA */}
                   <div className="space-y-2.5">
-                    <Link
-                      to="/login"
+                    {!isLibrarian && <Link
+                      to={isMember ? `/user/reservations?reserveBook=${selected.id}` : '/login'}
                       className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-[0.98]"
                     >
-                      <LogIn size={15} /> Login to Reserve
-                    </Link>
+                      {isMember ? <BookOpen size={15} /> : <LogIn size={15} />}
+                      {isMember ? 'Reserve Book' : 'Login to Reserve'}
+                    </Link>}
                     <button
                       onClick={() => setSelected(null)}
                       className="w-full py-3 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:border-slate-300 dark:hover:border-slate-600 transition-all"

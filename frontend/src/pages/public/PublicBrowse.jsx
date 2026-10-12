@@ -3,8 +3,14 @@ import { Link } from 'react-router-dom';
 import { Search, X, RefreshCw, BookOpen, LogIn, ChevronLeft, ChevronRight } from 'lucide-react';
 import BookCard from '../../components/BookCard';
 import { getBooks, getCategories } from '../../api/books';
+import { getStoredAuth } from '../../api/authRoutes';
 
 const PublicBrowse = () => {
+  // This role controls catalogue presentation; protected actions still verify
+  // the session and role on the server.
+  const { isLoggedIn, role } = getStoredAuth();
+  const isLibrarian = isLoggedIn && role === 'librarian';
+  const isMember = isLoggedIn && role === 'member';
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -277,7 +283,7 @@ const PublicBrowse = () => {
                       </span>
                     </div>
 
-                    {!isAvailable && (
+                    {!isAvailable && !isLibrarian && (
                       <p className="text-xs font-bold leading-relaxed text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-2xl px-4 py-3 mb-6">
                         Currently not available. Reserve now to join the queue. You'll be notified when it's your turn.
                       </p>
@@ -286,12 +292,15 @@ const PublicBrowse = () => {
 
                   {/* CTA */}
                   <div className="space-y-3">
-                    <Link
-                      to={reserveLoginPath(selected.id)}
+                    {!isLibrarian && <Link
+                      to={isMember ? `/user/reservations?reserveBook=${selected.id}` : reserveLoginPath(selected.id)}
                       className="w-full flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-[0.98]"
                     >
-                      <LogIn size={15} /> {isAvailable ? 'Login to Reserve' : 'Login to Join Queue'}
-                    </Link>
+                      {isMember ? <BookOpen size={15} /> : <LogIn size={15} />}
+                      {isMember
+                        ? (isAvailable ? 'Reserve Book' : 'Join Queue')
+                        : (isAvailable ? 'Login to Reserve' : 'Login to Join Queue')}
+                    </Link>}
                     <button
                       onClick={() => setSelected(null)}
                       className="w-full py-3 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:border-slate-300 dark:hover:border-slate-600 transition-all"
