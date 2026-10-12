@@ -263,14 +263,14 @@ const LibDashboard = () => {
   }
 
   return (
-    <div className={layoutClasses.page}>
+    <div className={`min-w-0 [overflow-wrap:anywhere] ${layoutClasses.page}`}>
       <div className={layoutClasses.content}>
         <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="mb-2 text-[10px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">
               Librarian Home
             </p>
-            <h1 className="text-3xl font-black uppercase tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+            <h1 className="text-2xl font-black uppercase tracking-tight text-slate-950 dark:text-white min-[390px]:text-3xl sm:text-4xl">
               {getGreeting()}, <span className="text-blue-600">Staff</span>
             </h1>
             <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
@@ -297,7 +297,7 @@ const LibDashboard = () => {
 
         <TodayPanel notice={overview.primaryNotice} entrySummary={overview.entrySummary} />
 
-        <section className="mb-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <section className="mb-8 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 xl:grid-cols-4">
           <StatusCard
             icon={BookOpen}
             label="Active Loans"
@@ -330,7 +330,7 @@ const LibDashboard = () => {
           />
         </section>
 
-        <div className="mb-8 grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)]">
+        <div className="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)]">
           <PriorityLoans
             loans={filteredLoans}
             totalLoans={loans.length}
@@ -344,7 +344,7 @@ const LibDashboard = () => {
           </aside>
         </div>
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.85fr)]">
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.85fr)]">
           <BorrowTrendPanel trendSummary={overview.trendSummary} />
           <EntryActivityPanel entryLogs={entryLogs} entrySummary={overview.entrySummary} />
         </section>
@@ -374,8 +374,8 @@ const TodayPanel = ({ notice, entrySummary }) => {
   const style = NOTICE_STYLES[notice.kind] || NOTICE_STYLES.clear;
   return (
     <section className={`mb-6 rounded-[2rem] border p-5 shadow-sm sm:p-6 lg:p-7 ${style.shell}`}>
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.85fr)] lg:items-stretch">
-        <div className="flex gap-4">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.85fr)] lg:items-stretch">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row">
           <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${style.icon}`}>
             {notice.kind === 'overdue' ? <AlertCircle size={22} /> : <Library size={22} />}
           </div>
@@ -509,7 +509,7 @@ const LoanRow = ({ loan }) => {
   const style = STATUS_STYLES[status] || STATUS_STYLES.active;
   const fineAmount = Number.parseFloat(loan.fine_amount || 0);
   return (
-    <article className={`grid gap-3 rounded-3xl border p-4 transition hover:-translate-y-0.5 hover:shadow-md lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center ${style.row}`}>
+    <article className={`grid grid-cols-1 gap-3 rounded-3xl border p-4 transition hover:-translate-y-0.5 hover:shadow-md lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center ${style.row}`}>
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${style.badge}`}>
@@ -521,8 +521,8 @@ const LoanRow = ({ loan }) => {
             </span>
           )}
         </div>
-        <h3 className="truncate text-base font-black text-slate-950 dark:text-white">{loan.book_title || 'Unknown book'}</h3>
-        <p className="truncate text-xs font-bold text-slate-500 dark:text-slate-400">
+        <h3 className="text-base font-black text-slate-950 dark:text-white">{loan.book_title || 'Unknown book'}</h3>
+        <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
           {loan.member_name || 'Unknown member'} {loan.member_id ? `- ${loan.member_id}` : ''}
         </p>
       </div>
@@ -635,7 +635,7 @@ const BorrowTrendPanel = ({ trendSummary }) => {
         </span>
       </div>
 
-      <div className="mb-6 grid gap-3 md:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
         <ActivityMetric icon={BookOpen} label="Total Borrows" value={trendSummary.totalBorrows} />
         <ActivityMetric icon={BarChart3} label="Latest Month" value={trendSummary.latestBorrows} />
         <ActivityMetric
@@ -645,11 +645,11 @@ const BorrowTrendPanel = ({ trendSummary }) => {
         />
       </div>
 
-      <div className="flex h-52 items-end gap-3 rounded-3xl bg-slate-50 p-4 dark:bg-slate-900/40">
+      <div className="flex h-52 items-end gap-1 rounded-3xl bg-slate-50 p-3 dark:bg-slate-900/40 sm:gap-3 sm:p-4">
         {trendSummary.bars.map((bar) => {
           const heightPct = bar.borrows > 0 ? Math.max(12, Math.round((bar.borrows / maxBorrows) * 100)) : 6;
           return (
-            <div key={`${bar.month}-${bar.index}`} className="flex flex-1 flex-col items-center justify-end gap-2">
+            <div key={`${bar.month}-${bar.index}`} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
               <div className="flex h-36 w-full items-end">
                 <div
                   className={`w-full rounded-t-2xl transition-all ${bar.borrows > 0 ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`}
@@ -716,7 +716,7 @@ const EntryRow = ({ log }) => (
       {log.granted ? <CheckCircle2 size={17} /> : <XCircle size={17} />}
     </div>
     <div className="min-w-0 flex-1">
-      <p className="truncate text-sm font-black text-slate-950 dark:text-white">
+      <p className="text-sm font-black text-slate-950 dark:text-white">
         {log.member_name || 'Unknown visitor'}
       </p>
       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">

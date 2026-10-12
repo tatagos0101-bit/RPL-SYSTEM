@@ -59,14 +59,14 @@ const GenreRow = ({ genre, books, onSelect }) => {
 
   return (
     <div>
-      <div className="px-4 md:px-8 lg:px-12 flex items-center justify-between mb-7">
-        <div>
+      <div className="px-4 md:px-8 lg:px-12 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-7">
+        <div className="min-w-0">
           <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white">
             {genre}
           </h3>
           <div className="h-1 w-12 bg-blue-600 dark:bg-blue-500 mt-2 rounded-full" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           <button
             onClick={() => scroll(-1)}
             disabled={!canScrollLeft}
@@ -160,7 +160,7 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 font-sans transition-colors duration-300">
+    <div className="min-h-screen min-w-0 [overflow-wrap:anywhere] bg-white dark:bg-slate-950 font-sans transition-colors duration-300">
 
       {/* ── HERO ── */}
       <section className="relative pt-36 pb-28 px-6 overflow-hidden bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-950">
@@ -185,7 +185,7 @@ const LandingPage = () => {
             Rizal Provincial Library
           </p>
 
-          <h1 className="animate-fade-in-up delay-150 text-5xl sm:text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-[0.88] text-slate-900 dark:text-white mb-6">
+          <h1 className="animate-fade-in-up delay-150 text-[clamp(2.25rem,11vw,3rem)] sm:text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-[0.95] text-slate-900 dark:text-white mb-6">
             Your Story <br />
             <span className="text-blue-600 dark:text-blue-500">Starts Here.</span>
           </h1>
@@ -199,14 +199,14 @@ const LandingPage = () => {
             onSubmit={handleSearch}
             className="animate-fade-in-up delay-300 flex flex-col md:flex-row gap-3 p-2.5 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_20px_60px_rgba(37,99,235,0.10)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-slate-200 dark:border-slate-700 max-w-2xl mx-auto mb-8 hover:shadow-[0_24px_70px_rgba(37,99,235,0.15)] transition-shadow duration-300"
           >
-            <div className="flex-1 flex items-center gap-3 px-4">
+            <div className="min-w-0 flex-1 flex items-center gap-3 px-4">
               <Search size={17} className="text-slate-400 dark:text-slate-500 flex-shrink-0" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search title, author, or genre..."
-                className="flex-1 bg-transparent py-3 outline-none text-slate-700 dark:text-slate-200 font-medium placeholder:text-slate-400 dark:placeholder:text-slate-600 text-sm"
+                className="min-w-0 w-full flex-1 bg-transparent py-3 outline-none text-slate-700 dark:text-slate-200 font-medium placeholder:text-slate-400 dark:placeholder:text-slate-600 text-sm"
               />
             </div>
             <button

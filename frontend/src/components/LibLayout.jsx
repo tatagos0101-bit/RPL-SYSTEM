@@ -174,7 +174,7 @@ const LibLayout = () => {
 
             {/* Dropdown Panel */}
             {bellOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-2xl shadow-2xl shadow-blue-200/30 dark:shadow-black/60 z-[100] overflow-hidden">
+              <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full mt-2 sm:w-80 [overflow-wrap:anywhere] bg-white dark:bg-slate-900 border border-blue-100 dark:border-white/10 rounded-2xl shadow-2xl shadow-blue-200/30 dark:shadow-black/60 z-[100] overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-blue-100 dark:border-white/10">
                   <p className="font-black uppercase text-[10px] tracking-widest text-blue-900 dark:text-white">

@@ -1,7 +1,7 @@
 const BookCard = ({ book, onClick }) => {
   return (
     <div
-      className="w-full group cursor-pointer flex flex-col"
+      className="w-full min-w-0 [overflow-wrap:anywhere] group cursor-pointer flex flex-col"
       onClick={onClick}
     >
       {/* Cover */}
@@ -17,8 +17,8 @@ const BookCard = ({ book, onClick }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         {/* Category badge */}
-        <div className="absolute top-2 left-2">
-          <span className="px-2 py-1 bg-blue-600/90 backdrop-blur-sm rounded-lg text-[8px] font-black text-white uppercase tracking-wider shadow-sm">
+        <div className={`absolute top-2 left-2 ${book.available === false ? 'right-10' : 'right-2'}`}>
+          <span className="inline-block max-w-full px-2 py-1 bg-blue-600/90 backdrop-blur-sm rounded-lg text-[8px] font-black text-white uppercase tracking-wider shadow-sm">
             {book.category || 'General'}
           </span>
         </div>

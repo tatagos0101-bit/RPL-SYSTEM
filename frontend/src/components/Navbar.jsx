@@ -41,10 +41,10 @@ const Navbar = () => {
   return (
     <>
       {/* TOP NAV */}
-      <nav className="fixed top-0 left-0 w-full z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur-lg border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm px-6 py-3 flex justify-between items-center font-sans transition-colors duration-300">
+      <nav className="fixed top-0 left-0 w-full z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur-lg border-b border-slate-200/60 dark:border-slate-800/60 shadow-sm px-3 sm:px-6 py-3 flex justify-between items-center gap-2 font-sans transition-colors duration-300">
 
         {/* Left: Hamburger + Logo */}
-        <div className="flex items-center gap-3">
+        <div className="min-w-0 flex items-center gap-1 sm:gap-3">
           <button
             onClick={() => setIsOpen(true)}
             className="p-2 text-slate-600 dark:text-slate-300 hover:bg-blue-100/50 dark:hover:bg-blue-900/30 rounded-xl transition-all"
@@ -53,7 +53,7 @@ const Navbar = () => {
             <Menu size={26} />
           </button>
 
-          <Link to={getHomePath()} onClick={() => setIsOpen(false)} className="group flex items-center gap-3">
+          <Link to={getHomePath()} onClick={() => setIsOpen(false)} className="group min-w-0 flex items-center gap-2 sm:gap-3">
             <img src="/logo.library.png" alt="Rizal Provincial Library" className="w-9 h-9 object-contain transition-transform duration-500 group-hover:rotate-[20deg] group-hover:scale-110" />
             <div className="flex flex-col leading-none">
               <span className="text-lg font-black text-slate-900 dark:text-white tracking-tighter uppercase italic group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
@@ -65,7 +65,7 @@ const Navbar = () => {
         </div>
 
         {/* Right: Theme toggle + Auth button */}
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
           <button
             onClick={toggleTheme}
             className="p-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"

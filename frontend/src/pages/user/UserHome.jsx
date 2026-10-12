@@ -259,14 +259,14 @@ const UserHome = () => {
   }
 
   return (
-    <div className="px-4 py-6 pb-16 sm:px-6 lg:px-10">
+    <div className="min-w-0 [overflow-wrap:anywhere] px-4 py-6 pb-16 sm:px-6 lg:px-10">
       <header className="mb-6">
         <p className="mb-2 text-[10px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">
           {getGreeting()}
         </p>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-black uppercase tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-black uppercase tracking-tight text-slate-950 dark:text-white min-[390px]:text-3xl sm:text-4xl">
               {userName.split(' ')[0]}
               {userName.split(' ').length > 1 && (
                 <span className="text-blue-600"> {userName.split(' ').slice(1).join(' ')}</span>
@@ -297,7 +297,7 @@ const UserHome = () => {
 
       <TodayPanel notice={overview.primaryNotice} nextLoan={nextLoan} />
 
-      <section className="mb-8 grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <section className="mb-8 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 xl:grid-cols-4">
         <StatusCard
           icon={BookOpen}
           label="Borrowed Now"
@@ -331,7 +331,7 @@ const UserHome = () => {
         />
       </section>
 
-      <div className="mb-8 grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
+      <div className="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
         <BorrowedBooks loans={overview.priorityLoans} openReportModal={openReportModal} />
 
         <aside className="space-y-6">
@@ -374,8 +374,8 @@ const TodayPanel = ({ notice, nextLoan }) => {
 
   return (
     <section className={`mb-6 rounded-[2rem] border p-5 shadow-sm sm:p-6 lg:p-7 ${style.shell}`}>
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.8fr)] lg:items-stretch">
-        <div className="flex gap-4">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.8fr)] lg:items-stretch">
+        <div className="flex min-w-0 flex-col gap-4 sm:flex-row">
           <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${style.icon}`}>
             {notice.kind === 'overdue' ? <AlertCircle size={22} /> : <Library size={22} />}
           </div>
@@ -411,7 +411,7 @@ const TodayPanel = ({ notice, nextLoan }) => {
           </div>
           {nextLoan ? (
             <div>
-              <p className="line-clamp-2 text-base font-black text-slate-950 dark:text-white">
+              <p className="text-base font-black text-slate-950 dark:text-white">
                 {nextLoan.book_title}
               </p>
               <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -473,7 +473,7 @@ const StatusCard = ({ icon, label, value, detail, tone, urgent = false }) => {
         </div>
         {urgent && <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />}
       </div>
-      <p className="text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">{value}</p>
+      <p className="text-xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">{value}</p>
       <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
         {label}
       </p>
@@ -529,7 +529,7 @@ const LoanRow = ({ loan, openReportModal }) => {
   const fineAmount = Number.parseFloat(loan.fine_amount || 0);
 
   return (
-    <article className={`grid gap-3 rounded-3xl border p-3 transition hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center ${dueStyle.row}`}>
+    <article className={`grid grid-cols-1 gap-3 rounded-3xl border p-3 transition hover:-translate-y-0.5 hover:shadow-md sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center ${dueStyle.row}`}>
       <div className="flex items-center gap-3 sm:contents">
         <div className="h-16 w-12 flex-shrink-0 overflow-hidden rounded-2xl bg-slate-200 shadow-sm dark:bg-slate-700 sm:h-20 sm:w-14">
           <BookCover
@@ -549,8 +549,8 @@ const LoanRow = ({ loan, openReportModal }) => {
               </span>
             )}
           </div>
-          <h3 className="truncate text-base font-black text-slate-950 dark:text-white">{loan.book_title}</h3>
-          <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{loan.book_author || 'Unknown author'}</p>
+          <h3 className="text-base font-black text-slate-950 dark:text-white">{loan.book_title}</h3>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{loan.book_author || 'Unknown author'}</p>
           <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
             Due {formatLoanDate(loan.due_date)}
           </p>
@@ -608,7 +608,7 @@ const ReadingTastes = ({ genreData, topGenrePct }) => (
         {genreData.map((g) => (
           <div key={g.label} className="flex items-center gap-3">
             <span className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: g.color }} />
-            <p className="flex-1 truncate text-xs font-bold text-slate-600 dark:text-slate-400">{g.label}</p>
+            <p className="min-w-0 flex-1 text-xs font-bold text-slate-600 dark:text-slate-400">{g.label}</p>
             <p className="text-xs font-black text-slate-950 dark:text-white">{g.value.toFixed(0)}%</p>
           </div>
         ))}
@@ -686,7 +686,7 @@ const LibraryActivity = ({ activitySummary }) => (
       </span>
     </div>
 
-    <div className="mb-6 grid gap-3 md:grid-cols-3">
+    <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
       <ActivityMetric icon={Library} label="Visits Recorded" value={activitySummary.totalVisits} />
       <ActivityMetric icon={BarChart3} label="Active Days" value={activitySummary.activeDays} />
       <ActivityMetric icon={Clock} label="Last Visit" value={activitySummary.lastVisitLabel} />
@@ -726,7 +726,7 @@ const ActivityMetric = ({ icon, label, value }) => (
 
 const GoalsModal = ({ goalDraft, setGoalDraft, goalsSaving, onClose, onSave }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-    <div className="w-full max-w-sm rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+    <div className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:p-8">
       <div className="mb-7 flex items-center justify-between">
         <h3 className="text-xl font-black uppercase tracking-tight text-slate-950 dark:text-white">Set Goals</h3>
         <button
@@ -793,7 +793,7 @@ const ReportLoanModal = ({
   onSubmit,
 }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-    <div className="w-full max-w-sm rounded-[2rem] border border-slate-200 bg-white p-8 shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+    <div className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:p-8">
       {reportSuccess ? (
         <div className="py-4 text-center">
           <CheckCircle size={40} className="mx-auto mb-4 text-emerald-500" />
@@ -821,7 +821,7 @@ const ReportLoanModal = ({
               <X size={16} />
             </button>
           </div>
-          <p className="mb-6 truncate text-xs font-medium text-slate-400 dark:text-slate-500">{reportModal.bookTitle}</p>
+          <p className="mb-6 text-xs font-medium text-slate-400 dark:text-slate-500">{reportModal.bookTitle}</p>
 
           <div className="mb-5 space-y-2">
             <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">

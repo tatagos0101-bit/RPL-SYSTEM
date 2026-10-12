@@ -148,7 +148,7 @@ const UserLayout = () => {
 
             {/* Notification dropdown */}
             {notifOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+              <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full mt-2 sm:w-80 [overflow-wrap:anywhere] bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                   <p className="text-[10px] font-black uppercase tracking-widest text-white">Notifications</p>
@@ -263,6 +263,7 @@ const UserLayout = () => {
             </div>
             <button
               onClick={close}
+              aria-label="Close menu"
               className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
             >
               <X size={20} />
@@ -336,7 +337,7 @@ const UserLayout = () => {
       </div>
 
       {/* ── PAGE CONTENT ── */}
-      <main className="flex-1">
+      <main className="min-w-0 flex-1">
         <Outlet />
       </main>
     </div>

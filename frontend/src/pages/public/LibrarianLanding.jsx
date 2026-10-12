@@ -17,7 +17,7 @@ export default function LibrarianLanding() {
   const location = useLocation();
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white overflow-hidden lg:flex">
+    <main className="min-h-screen [overflow-wrap:anywhere] bg-slate-950 text-white overflow-hidden lg:flex">
       <aside className="relative z-20 w-full border-b border-white/10 bg-slate-950/95 px-5 py-4 lg:fixed lg:inset-y-0 lg:left-0 lg:w-72 lg:border-b-0 lg:border-r lg:px-5 lg:py-6">
         <Link to="/librarian" className="group flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl border border-blue-400/30 bg-white/10 p-1.5 overflow-hidden">
@@ -81,20 +81,20 @@ export default function LibrarianLanding() {
         </div>
       </aside>
 
-      <section className="relative min-h-[calc(100vh-120px)] flex items-center px-6 py-14 sm:px-10 lg:ml-72 lg:min-h-screen lg:flex-1 lg:px-16 lg:py-20">
+      <section className="relative min-w-0 min-h-[calc(100vh-120px)] flex items-center px-6 py-14 sm:px-10 lg:ml-72 lg:min-h-screen lg:flex-1 lg:px-10 xl:px-16 lg:py-20">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute -top-40 right-0 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
           <div className="absolute bottom-0 left-10 h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
         </div>
 
-        <div className="relative z-10 mx-auto grid w-full max-w-6xl gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <div>
+        <div className="relative z-10 mx-auto grid w-full min-w-0 max-w-6xl grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] xl:items-center">
+          <div className="min-w-0">
             <div className="mb-8 flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-400/30 bg-blue-500/10 text-blue-300">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-blue-400/30 bg-blue-500/10 text-blue-300">
                 <ShieldCheck size={28} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-blue-300">
                   Authorized Personnel Only
                 </p>
@@ -104,14 +104,14 @@ export default function LibrarianLanding() {
               </div>
             </div>
 
-            <h1 className="max-w-3xl text-5xl font-black uppercase italic leading-[0.9] tracking-tighter text-white sm:text-6xl lg:text-7xl">
+            <h1 className="max-w-3xl text-[clamp(2.25rem,10vw,3rem)] font-black uppercase italic leading-[1] tracking-tighter text-white sm:text-6xl 2xl:text-7xl">
               Librarian Command Center
             </h1>
             <p className="mt-6 max-w-xl text-base font-medium leading-8 text-slate-400">
               Sign in to access circulation, member records, reservations, inventory, reports, and daily library operations.
             </p>
 
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Link
                 to="/librarian/login"
                 className="inline-flex items-center justify-center gap-3 rounded-2xl bg-blue-500 px-6 py-4 text-xs font-black uppercase tracking-[0.25em] text-white shadow-xl shadow-blue-950/60 transition-all hover:-translate-y-0.5 hover:bg-blue-400"
@@ -128,9 +128,9 @@ export default function LibrarianLanding() {
             </div>
           </div>
 
-          <div className="rounded-[2rem] border border-white/10 bg-white/[0.03] p-5 shadow-2xl shadow-black/40 backdrop-blur">
-            <div className="rounded-[1.5rem] border border-white/10 bg-slate-900/90 p-6">
-              <div className="mb-6 flex items-center gap-4 border-b border-white/10 pb-6">
+          <div className="min-w-0 rounded-[2rem] border border-white/10 bg-white/[0.03] p-4 sm:p-5 shadow-2xl shadow-black/40 backdrop-blur">
+            <div className="rounded-[1.5rem] border border-white/10 bg-slate-900/90 p-4 sm:p-6">
+              <div className="mb-6 flex flex-col items-start gap-4 border-b border-white/10 pb-6 sm:flex-row sm:items-center">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-300">
                   <LockKeyhole size={22} />
                 </div>
