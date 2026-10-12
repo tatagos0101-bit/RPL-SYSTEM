@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, LogOut, User, BookOpen, LayoutGrid, Camera, ShieldCheck, Home, Sun, Moon, LogIn } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, LogOut, User, BookOpen, LayoutGrid, Camera, Home, Sun, Moon, LogIn } from 'lucide-react';
 import { clearAuth } from '../api/auth';
 
 const Navbar = () => {
@@ -9,9 +9,11 @@ const Navbar = () => {
     document.documentElement.classList.contains('dark')
   );
   const navigate = useNavigate();
+  const location = useLocation();
 
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   const userRole = localStorage.getItem('userRole');
+  const hideCurrentCatalog = isLoggedIn && userRole === 'librarian' && location.pathname.replace(/\/+$/, '') === '/browse';
 
   const toggleTheme = () => {
     const newDark = !isDark;
@@ -116,6 +118,7 @@ const Navbar = () => {
           </div>
           <button
             onClick={() => setIsOpen(false)}
+            aria-label="Close menu"
             className="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl hover:text-red-500 dark:text-slate-400 transition-all"
           >
             <X size={22} />
@@ -124,7 +127,7 @@ const Navbar = () => {
 
         <ul className="space-y-2">
           <SideLink to={getHomePath()} icon={<Home size={18} />} label="Dashboard Home" onClick={() => setIsOpen(false)} />
-          <SideLink to="/browse" icon={<LayoutGrid size={18} />} label="Public Catalog" onClick={() => setIsOpen(false)} />
+          {!hideCurrentCatalog && <SideLink to="/browse" icon={<LayoutGrid size={18} />} label="Public Catalog" onClick={() => setIsOpen(false)} />}
 
           {isLoggedIn && (
             <>
@@ -133,7 +136,7 @@ const Navbar = () => {
               {userRole === 'librarian' ? (
                 <>
                   <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest ml-4 mb-2">Staff Terminal</p>
-                  <SideLink to="/librarian/home" icon={<ShieldCheck size={18} />} label="Control Panel" onClick={() => setIsOpen(false)} />
+                  {/* Dashboard Home already links to the staff dashboard. */}
                   <SideLink to="/entry-station" icon={<Camera size={18} />} label="Entrance Station" onClick={() => setIsOpen(false)} />
                 </>
               ) : (
