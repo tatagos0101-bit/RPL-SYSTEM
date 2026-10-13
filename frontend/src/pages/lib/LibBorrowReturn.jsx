@@ -448,7 +448,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
             {/* ── STEP 1: FACE SCAN ── */}
             {step === 'face' && (
               <div className="p-4 sm:p-8">
-                <div className="grid md:grid-cols-2 gap-6 items-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center [&>div]:min-w-0">
                   {/* Camera view */}
                   <div className="relative aspect-video bg-black rounded-[2rem] overflow-hidden border border-white/10">
                     {lookupMethod === 'face' ? (
@@ -647,7 +647,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
                   <span className="text-[9px] font-black text-slate-500 ml-auto">{foundMember?.member_id}</span>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 [&>div]:min-w-0">
                   {/* Left — QR scanner */}
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-3">Scan Book QR Code</p>
@@ -957,7 +957,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
             {/* ── STEP 3: CONFIRM ── */}
             {step === 'confirm' && (
               <div className="p-4 sm:p-8 animate-fade-in-up">
-                <div className="grid md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 [&>div]:min-w-0">
                   {/* Left — book list */}
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-4">

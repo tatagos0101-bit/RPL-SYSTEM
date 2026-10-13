@@ -337,7 +337,7 @@ const UserLayout = () => {
       </div>
 
       {/* ── PAGE CONTENT ── */}
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 [overflow-wrap:anywhere]">
         <Outlet />
       </main>
     </div>

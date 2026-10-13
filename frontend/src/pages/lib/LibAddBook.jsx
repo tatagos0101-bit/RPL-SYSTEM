@@ -480,7 +480,7 @@ export default function LibAddBook() {
                       onChange={(e) => { setIsbnInput(e.target.value); setLookupError(''); setLookupSuccess(false); }}
                       onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleIsbnLookup())}
                       placeholder="Enter ISBN-10 or ISBN-13…"
-                      className="flex-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                      className="min-w-0 w-full flex-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600"
                     />
                     <button type="button" onClick={handleIsbnLookup} disabled={lookingUp || !isbnInput.trim()}
                       className="flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all">

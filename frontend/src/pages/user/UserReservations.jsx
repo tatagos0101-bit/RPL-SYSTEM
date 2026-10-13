@@ -119,14 +119,14 @@ export default function UserReservations() {
   };
 
   return (
-    <div className="p-6 md:p-10 pb-16">
+    <div className="min-w-0 p-4 sm:p-6 md:p-10 pb-16">
 
       {/* Header */}
       <div className="animate-fade-in-up mb-10">
         <p className="text-[10px] font-black uppercase tracking-[0.45em] text-slate-400 dark:text-slate-500 mb-2">
           Member Portal
         </p>
-        <h1 className="text-4xl sm:text-5xl font-black italic uppercase tracking-tighter leading-none text-slate-900 dark:text-white">
+        <h1 className="text-3xl sm:text-5xl font-black italic uppercase tracking-tighter leading-none text-slate-900 dark:text-white">
           My <span className="text-blue-600">Reservations</span>
         </h1>
       </div>
@@ -136,11 +136,11 @@ export default function UserReservations() {
         <div className="mb-8">
           <div className="animate-fade-in-up delay-75 bg-emerald-600 rounded-[2rem] p-6 text-white relative overflow-hidden hover:shadow-xl transition-all duration-300">
             <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
                 <Bell size={22} className="animate-bounce" />
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 w-full flex-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-emerald-200 mb-1">
                   Ready for Pickup!
                 </p>
@@ -160,6 +160,7 @@ export default function UserReservations() {
                         </p>
                       </div>
                       <button 
+                        aria-label={`Cancel reservation for ${item.book_title}`}
                         onClick={() => setCancellingId(item.id)}
                         className="p-2 text-white/50 hover:text-white hover:bg-white/10 rounded-xl transition-all"
                       >
@@ -174,8 +175,8 @@ export default function UserReservations() {
         </div>
       )}
 
-      <div className="grid xl:grid-cols-3 gap-8">
-        <div className="xl:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
+        <div className="min-w-0 xl:col-span-2 space-y-8">
 
           {/* ── WAITLIST / QUEUE ── */}
           {loadingReservations ? (
@@ -191,7 +192,7 @@ export default function UserReservations() {
               <div className="space-y-4">
                 {inQueue.map((item, i) => (
                   <div key={item.id}
-                    className="animate-fade-in-up group bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 p-5 flex items-center gap-5 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
+                    className="animate-fade-in-up group bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 p-4 sm:p-5 grid grid-cols-[3rem_minmax(0,1fr)] sm:flex items-center gap-3 sm:gap-5 shadow-sm hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200"
                     style={{ animationDelay: `${i * 80}ms` }}
                   >
                     <div className="w-12 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-slate-200 dark:bg-slate-700">
@@ -211,7 +212,7 @@ export default function UserReservations() {
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col items-end gap-2 flex-shrink-0 min-w-0">
+                    <div className="col-span-2 flex flex-wrap sm:flex-col items-center sm:items-end justify-between gap-2 sm:flex-shrink-0 min-w-0">
                       {item.queue_position && (
                         <div className="flex items-center gap-1.5">
                           <Users size={12} className="text-blue-600 dark:text-blue-400" />
@@ -229,6 +230,7 @@ export default function UserReservations() {
                         </div>
                       )}
                       <button
+                        aria-label={`Cancel reservation for ${item.book_title}`}
                         onClick={() => setCancellingId(item.id)}
                         className="text-[9px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors"
                       >
@@ -254,7 +256,7 @@ export default function UserReservations() {
             </h2>
 
             {confirmed ? (
-              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2.5rem] p-12 text-center shadow-sm">
+              <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2.5rem] p-6 sm:p-12 text-center shadow-sm">
                 <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-5">
                   <CheckCircle2 size={32} className="text-emerald-600 dark:text-emerald-400" />
                 </div>
@@ -299,17 +301,17 @@ export default function UserReservations() {
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{book.title}</p>
                       <div className="flex flex-wrap items-center gap-2 mt-1">
-                        <span className="inline-block px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-[9px] font-black uppercase tracking-widest">
+                        <span className="inline-block max-w-full px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full text-[9px] font-black uppercase tracking-widest">
                           {book.category}
                         </span>
                         {(book.copies_available ?? 0) < 1 && (
-                          <span className="inline-block px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-[9px] font-black uppercase tracking-widest">
+                          <span className="inline-block max-w-full px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-[9px] font-black uppercase tracking-widest">
                             Queue
                           </span>
                         )}
                       </div>
                     </div>
-                    <button onClick={() => removeFromCart(book.id)}
+                    <button aria-label={`Remove ${book.title} from selection`} onClick={() => removeFromCart(book.id)}
                       className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all duration-200 flex-shrink-0">
                       <Trash2 size={16} />
                     </button>
@@ -321,29 +323,29 @@ export default function UserReservations() {
         </div>
 
         {/* ── SUMMARY SIDEBAR ── */}
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2.5rem] p-5 md:p-7 shadow-sm xl:sticky xl:top-6">
             <h3 className="text-xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white mb-6">
               Summary
             </h3>
 
             <div className="space-y-4 mb-6">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-wrap gap-2 justify-between items-center">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Selected</span>
                 <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{cart.length}</span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-wrap gap-2 justify-between items-center">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Waitlist</span>
                 <span className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">{inQueue.length}</span>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-wrap gap-2 justify-between items-center">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Ready</span>
                 <span className={`text-2xl font-black tracking-tighter ${readyForPickup.length > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
                   {readyForPickup.length}
                 </span>
               </div>
               <div className="h-px bg-slate-100 dark:bg-slate-700" />
-              <div className="flex justify-between items-center">
+              <div className="flex flex-wrap gap-2 justify-between items-center">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Ready pickup</span>
                 <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">Within 24 hrs</span>
               </div>
@@ -359,7 +361,7 @@ export default function UserReservations() {
             <button
               onClick={handleConfirm}
               disabled={cart.length === 0 || isConfirming || confirmed}
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-200 dark:shadow-blue-900/40 transition-all flex justify-center items-center gap-2 active:scale-[0.98]"
+              className="w-full px-3 py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg shadow-blue-200 dark:shadow-blue-900/40 transition-all flex justify-center items-center gap-2 active:scale-[0.98]"
             >
               {isConfirming
                 ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -386,7 +388,7 @@ export default function UserReservations() {
       {/* ── CANCEL CONFIRMATION MODAL ── */}
       {cancellingId && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-xs p-8 animate-fade-in-up">
+          <div className="bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-xs max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 sm:p-8 animate-fade-in-up">
             <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mx-auto mb-5 text-rose-600">
               <AlertCircle size={32} />
             </div>

@@ -46,7 +46,7 @@ function FaceEnrollModal({ user, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl w-full max-w-sm p-6 relative">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl shadow-2xl w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 relative">
         <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
           <X size={16}/>
         </button>
@@ -483,7 +483,7 @@ export default function LibUsers() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-7">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-3 sm:gap-4 mb-7">
           {[
             { label:'Total Members', val:stats.total,     color:'text-blue-600 dark:text-blue-400',    hover:'hover:border-blue-300 dark:hover:border-blue-700' },
             { label:'Active',        val:stats.active,    color:'text-emerald-600 dark:text-emerald-400', hover:'hover:border-emerald-300 dark:hover:border-emerald-700' },
@@ -498,12 +498,12 @@ export default function LibUsers() {
 
         {/* Table */}
         <div className="bg-white/80 dark:bg-slate-900 backdrop-blur-sm border border-blue-100 dark:border-slate-800 rounded-[2rem] overflow-hidden shadow-sm">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-blue-50 dark:border-slate-800">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-5 border-b border-blue-50 dark:border-slate-800">
             <h3 className="font-black italic uppercase tracking-tighter text-lg">All Members</h3>
-            <div className="relative">
+            <div className="relative max-w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14}/>
               <input type="text" placeholder="Search name or ID…" value={search} onChange={e => setSearch(e.target.value)}
-                className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 pl-8 pr-4 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500 w-52 text-slate-700 dark:text-slate-200 placeholder:text-slate-400"/>
+                className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 pl-8 pr-4 text-xs font-medium outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-52 text-slate-700 dark:text-slate-200 placeholder:text-slate-400"/>
             </div>
           </div>
 

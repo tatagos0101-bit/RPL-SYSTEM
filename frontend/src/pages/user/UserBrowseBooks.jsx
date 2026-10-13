@@ -311,7 +311,7 @@ export default function UserBrowseBooks() {
                     </span>
                   </div>
                 </div>
-                <div className="p-5 md:p-10 flex flex-col justify-center relative">
+                <div className="min-w-0 p-5 md:p-10 flex flex-col justify-center relative">
                   <button onClick={() => setSelected(null)}
                     className="absolute top-6 right-6 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
                     <XCircle size={26} />
@@ -327,7 +327,7 @@ export default function UserBrowseBooks() {
                      selected.availability_status === 'Limited' ? 'Limited Copies' : 
                      'Not available'}
                   </span>
-                  <h2 className="text-3xl font-black italic uppercase tracking-tighter mb-2 leading-none text-slate-900 dark:text-white">
+                  <h2 className="text-2xl sm:text-3xl pr-8 font-black italic uppercase tracking-tighter mb-2 leading-none text-slate-900 dark:text-white">
                     {selected.title}
                   </h2>
                   <p className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-widest mb-1">
@@ -387,7 +387,7 @@ export default function UserBrowseBooks() {
                     setAnimKey(k => k + 1);
                     setSelected(filteredBooks[targetIdx]);
                   }}
-                  className="flex-1 accent-blue-600 cursor-pointer"
+                  className="min-w-0 w-full flex-1 accent-blue-600 cursor-pointer"
                 />
               </div>
             </div>

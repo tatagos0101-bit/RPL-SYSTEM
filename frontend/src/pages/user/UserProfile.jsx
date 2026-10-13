@@ -112,14 +112,14 @@ function PasswordChangeForm() {
   const wrap = (err) =>
     `flex items-center gap-2 px-3.5 py-2.5 rounded-xl border ${err ? 'border-rose-500/60' : 'border-slate-700'} bg-slate-800/60 focus-within:border-blue-500 transition-colors`;
 
-  const inp = 'flex-1 bg-transparent outline-none text-sm font-medium text-white placeholder-slate-500';
+  const inp = 'min-w-0 w-full flex-1 bg-transparent outline-none text-sm font-medium text-white placeholder-slate-500';
 
   return (
     <div className="rounded-2xl overflow-hidden border border-slate-800">
       <button
         type="button"
         onClick={() => { setOpen(o => !o); if (open) reset(); }}
-        className="w-full flex items-center justify-between px-5 py-4 bg-slate-800/40 hover:bg-slate-800/70 transition-colors"
+        className="w-full flex flex-wrap gap-3 items-center justify-between px-4 sm:px-5 py-4 bg-slate-800/40 hover:bg-slate-800/70 transition-colors"
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
@@ -357,14 +357,14 @@ export default function UserProfile() {
         </div>
 
         {/* ── Body grid ── */}
-        <div className="grid md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
           {/* Left col — 2/3 */}
-          <div className="md:col-span-2 space-y-5">
+          <div className="min-w-0 lg:col-span-2 space-y-5">
 
             {/* Contact Information */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8">
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex flex-wrap gap-2 items-center justify-between mb-5">
                 <h3 className="text-sm font-black italic uppercase tracking-tighter text-white">Contact Information</h3>
                 {editing && <span className="text-[9px] font-black uppercase tracking-widest text-blue-400 bg-blue-600/10 border border-blue-600/20 px-2.5 py-1 rounded-lg">Editing</span>}
               </div>
@@ -416,7 +416,7 @@ export default function UserProfile() {
           </div>
 
           {/* Right col — 1/3 */}
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
 
             {/* Membership */}
             <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
@@ -447,7 +447,7 @@ export default function UserProfile() {
               <div className="absolute -top-6 -right-6 w-28 h-28 bg-blue-600/8 rounded-full blur-2xl pointer-events-none" />
               <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-indigo-600/8 rounded-full blur-xl pointer-events-none" />
               <div className="relative">
-                <div className="flex items-center justify-between mb-5">
+                <div className="flex flex-wrap gap-2 items-center justify-between mb-5">
                   <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">Biometric ID</p>
                   <div className="flex items-center gap-1 px-2 py-1 bg-slate-800 rounded-lg border border-slate-700">
                     <Lock size={8} className="text-slate-600" />
@@ -507,7 +507,7 @@ function EditRow({ icon, label, value, onChange, placeholder, type = 'text' }) {
   return (
     <div className="flex items-start gap-3.5 px-4 py-3 rounded-2xl bg-blue-600/5 border border-blue-600/15">
       <div className="mt-[2.2rem] flex-shrink-0 text-blue-400">{icon}</div>
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">{label}</p>
         <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
           className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none rounded-xl px-3.5 py-2.5 text-sm font-medium text-white placeholder-slate-600 transition-colors" />
@@ -525,7 +525,7 @@ const badgeCls = {
 
 function SecBadgeRow({ icon, label, value, badge, badgeColor }) {
   return (
-    <div className="flex items-center justify-between px-4 py-3.5 bg-slate-800/40 rounded-2xl border border-slate-800">
+    <div className="flex flex-wrap gap-3 items-center justify-between px-4 py-3.5 bg-slate-800/40 rounded-2xl border border-slate-800">
       <div className="flex items-center gap-3">
         <div className="w-8 h-8 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-center">{icon}</div>
         <div>

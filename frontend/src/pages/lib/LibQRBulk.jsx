@@ -160,7 +160,7 @@ export default function LibQRBulk() {
                   <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 font-mono mb-1 truncate w-full">
                     {copy.qr_code}
                   </p>
-                  <p className="text-[11px] font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors duration-200">
+                  <p className="w-full min-w-0 text-[11px] font-bold text-slate-900 dark:text-white leading-tight line-clamp-2 mb-1 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors duration-200">
                     {copy.title}
                   </p>
                   <p className="text-[9px] text-slate-400 dark:text-slate-500 font-medium truncate w-full">

@@ -7,6 +7,6 @@ export const getLibrarianShellClasses = (sidebarOpen) => ({
   sidebar: `fixed top-0 left-0 h-full w-72 z-[60] transform transition-transform duration-300 ease-out ${
     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
   }`,
-  main: 'flex-1',
+  main: 'min-w-0 flex-1 [overflow-wrap:anywhere]',
 });
 

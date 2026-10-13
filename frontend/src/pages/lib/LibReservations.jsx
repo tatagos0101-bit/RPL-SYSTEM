@@ -191,14 +191,14 @@ export default function LibReservations() {
                         {r.book_title}
                       </p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{r.book_author}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
                         <span className="text-[9px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">{r.member_name}</span>
                         <span className="text-[9px] font-black text-slate-400 dark:text-slate-500">{r.member_id}</span>
                       </div>
                     </div>
 
                     {/* Meta */}
-                    <div className="flex items-center gap-6 text-xs flex-shrink-0">
+                    <div className="flex flex-wrap items-center gap-4 text-xs md:flex-shrink-0">
                       {r.queue_position && r.status === 'pending' && (
                         <div>
                           <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Queue</p>

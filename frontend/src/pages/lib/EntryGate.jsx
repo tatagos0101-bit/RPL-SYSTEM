@@ -343,10 +343,10 @@ const EntryGate = () => {
   }
 
   return (
-    <div className="h-screen bg-[#05080f] text-white flex flex-col overflow-hidden font-sans select-none">
+    <div className="min-h-screen lg:h-screen bg-[#05080f] text-white flex flex-col overflow-x-hidden lg:overflow-hidden font-sans select-none">
 
       {/* ── Top bar ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-8 py-3 border-b border-white/[0.06] bg-black/50 backdrop-blur-xl shrink-0 z-10">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-4 sm:px-8 py-3 border-b border-white/[0.06] bg-black/50 backdrop-blur-xl shrink-0 z-10">
 
         {/* Left: back + branding */}
         <div className="flex items-center gap-4">
@@ -366,8 +366,8 @@ const EntryGate = () => {
         </div>
 
         {/* Center: live clock */}
-        <div className="text-center">
-          <p className="text-4xl font-black tabular-nums tracking-tight text-white leading-none">
+        <div className="text-left lg:text-center">
+          <p className="text-2xl sm:text-4xl whitespace-nowrap font-black tabular-nums tracking-tight text-white leading-none">
             {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </p>
           <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mt-1">
@@ -398,13 +398,13 @@ const EntryGate = () => {
       </div>
 
       {/* ── Main area ─────────────────────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:overflow-hidden">
 
         {/* ── LEFT: Camera ───────────────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8 gap-5">
+        <div className="min-w-0 flex-1 flex flex-col items-center justify-center p-4 sm:p-8 gap-5">
 
           {/* Camera viewport */}
-          <div className="relative w-full max-w-[580px] aspect-[4/3] bg-slate-950/60 border border-white/[0.08] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(59,130,246,0.08)]">
+          <div className="relative w-full max-w-[580px] min-h-[300px] aspect-[4/3] bg-slate-950/60 border border-white/[0.08] rounded-[2.5rem] overflow-hidden shadow-[0_0_80px_rgba(59,130,246,0.08)]">
 
             <Webcam
               ref={webcamRef}
@@ -509,7 +509,7 @@ const EntryGate = () => {
         </div>
 
         {/* ── RIGHT: Attendance log ───────────────────────────────────────────── */}
-        <div className="w-[400px] shrink-0 border-l border-white/[0.06] flex flex-col bg-black/20">
+        <div className="w-full lg:w-[400px] shrink-0 border-t lg:border-t-0 lg:border-l border-white/[0.06] flex flex-col bg-black/20">
 
           {/* Panel header */}
           <div className="px-6 py-4 border-b border-white/[0.06] shrink-0">
