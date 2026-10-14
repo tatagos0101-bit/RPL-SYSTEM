@@ -19,6 +19,10 @@ from reportlab.platypus import (
 )
 
 
+# Presentation only: retain fine calculations and source report fields.
+SHOW_FINES = False
+
+
 # ── Colour palette ─────────────────────────────────────────────────────────────
 BLUE   = colors.HexColor("#2563eb")
 SLATE  = colors.HexColor("#1e293b")
@@ -144,6 +148,8 @@ def _metric_grid(cards):
         row = cards[i:i + 2]
         if len(row) == 1:
             row.append(["", "", ""])
+            # An odd card count needs a scalar empty cell, not string flowables.
+            row[-1] = ""
         rows.append(row)
 
     table = Table(rows, colWidths=[8.25 * cm, 8.25 * cm], hAlign="LEFT")
@@ -155,6 +161,8 @@ def _metric_grid(cards):
         ("PADDING", (0, 0), (-1, -1), 10),
         ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
     ]))
+    if len(cards) % 2:
+        table.setStyle(TableStyle([("SPAN", (0, -1), (-1, -1))]))
     return table
 
 
@@ -194,6 +202,7 @@ def build_transcript(user, transactions: list) -> bytes:
     )
 
     h1   = _header_style()
+    h1.leading = 24
     sub  = _sub_style()
     body = _body_style()
     story = []
@@ -238,7 +247,9 @@ def build_transcript(user, transactions: list) -> bytes:
     summary_data = [
         ["Total Books Borrowed", str(total_books)],
         ["Currently Borrowed",   str(active_loans)],
+        *([
         ["Total Fines Accrued",  f"₱{total_fines:.2f}"],
+        ] if SHOW_FINES else []),
     ]
     summary_table = Table(summary_data, colWidths=[8*cm, 8*cm])
     summary_table.setStyle(TableStyle([
@@ -271,6 +282,9 @@ def build_transcript(user, transactions: list) -> bytes:
             ])
 
         col_widths = [0.8*cm, 7*cm, 2.8*cm, 2.8*cm, 2.8*cm, 2*cm]
+        if not SHOW_FINES:
+            rows = [row[:-1] for row in rows]
+            col_widths = [0.8*cm, 6*cm, 3*cm, 3*cm, 3*cm]
         hist_table = Table(rows, colWidths=col_widths, repeatRows=1)
         hist_table.setStyle(TableStyle([
             ("FONTNAME",    (0,0), (-1,0),   "Helvetica-Bold"),
@@ -330,7 +344,9 @@ def _build_monthly_report_legacy(month_label: str, stats: dict, top_books: list,
         ["Unique Members Active",      str(stats.get("members",    0))],
         ["New Members Registered",     str(stats.get("new_members",0))],
         ["Overdue Books",              str(stats.get("overdue",    0))],
+        *([
         ["Fines Collected (₱)",        f"₱{stats.get('fines', 0):.2f}"],
+        ] if SHOW_FINES else []),
         ["Library Visits (Face Scan)", str(stats.get("visits",     0))],
     ]
     kpi_table = Table(kpi_data, colWidths=[10*cm, 6*cm])
@@ -561,7 +577,9 @@ def build_monthly_report(month_label: str, stats: dict, top_books: list, top_mem
         _metric_card("Borrowed This Month", borrows, "Checkout records created", BLUE),
         _metric_card("Returned This Month", returns, "Books returned during the month", GREEN),
         _metric_card("Overdue Books", overdue, "Currently overdue at report time", RED if overdue else GREEN),
+        *([
         _metric_card("Fines Collected", _money(stats.get("fines")), "Fines connected to returned books", AMBER),
+        ] if SHOW_FINES else []),
     ]))
     story.append(Spacer(1, 0.45 * cm))
 

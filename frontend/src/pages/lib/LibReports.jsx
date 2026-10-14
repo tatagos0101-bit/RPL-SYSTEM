@@ -1,3 +1,4 @@
+import { SHOW_FINES } from '../../api/fineVisibility';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays,
@@ -34,7 +35,9 @@ const TRANSACTION_COLUMNS = [
   { key: 'borrowed', label: 'Borrowed' },
   { key: 'due', label: 'Due' },
   { key: 'returned', label: 'Returned' },
+  ...(SHOW_FINES ? [
   { key: 'fine', label: 'Fine' },
+  ] : []),
 ];
 
 const ENTRY_COLUMNS = [

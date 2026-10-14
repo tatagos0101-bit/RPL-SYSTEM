@@ -1,3 +1,4 @@
+import FineContent from '../../components/FineContent';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
 import {
@@ -903,9 +904,11 @@ const QuickScanModal = ({ onClose, onCommit }) => {
                                 }`}>
                                   {isOverdue ? `Overdue ${Math.abs(loan.days_left)}d` : `${loan.days_left}d left`}
                                 </span>
+                                <FineContent>
                                 {isOverdue && loan.fine_amount > 0 && (
                                   <span className="text-[8px] font-black text-rose-400">₱{Number(loan.fine_amount).toFixed(2)} fine</span>
                                 )}
+                                </FineContent>
                               </div>
                             </div>
                             <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
@@ -1061,13 +1064,17 @@ const QuickScanModal = ({ onClose, onCommit }) => {
                           <p className="text-sm font-bold text-white">
                             14 days — due <span className="text-blue-300">{dueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                           </p>
+                          <FineContent>
                           <p className="text-[9px] text-slate-500 font-medium mt-0.5">₱5/day fine after due date · applies to all {bookCart.length} book{bookCart.length !== 1 ? 's' : ''}</p>
+                          </FineContent>
                         </div>
                       )}
                       {action === 'return' && (
                         <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl mb-4">
                           <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Return Note</p>
+                          <FineContent>
                           <p className="text-sm font-bold text-white">Fines calculated automatically for each book.</p>
+                          </FineContent>
                           <p className="text-[9px] text-slate-500 font-medium mt-0.5">All {bookCart.length} book{bookCart.length !== 1 ? 's' : ''} will be marked available immediately.</p>
                         </div>
                       )}

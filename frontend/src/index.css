@@ -97,3 +97,11 @@
 .delay-400 { animation-delay: 400ms; }
 .delay-500 { animation-delay: 500ms; }
 .delay-600 { animation-delay: 600ms; }
+
+/* Reflow the remaining member summary cards when fine presentation is disabled. */
+@media (min-width: 360px) and (max-width: 639px) {
+  .fine-free-summary > section > :last-child { grid-column: 1 / -1; }
+}
+@media (min-width: 640px) {
+  .fine-free-summary > section { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

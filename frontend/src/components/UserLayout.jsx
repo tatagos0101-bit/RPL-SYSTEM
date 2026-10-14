@@ -1,3 +1,4 @@
+import FineContent from './FineContent';
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuth } from '../api/auth';
@@ -174,7 +175,9 @@ const UserLayout = () => {
                       <p className="text-xs font-bold text-rose-300 leading-snug">
                         {overdueCount} book{overdueCount > 1 ? 's' : ''} overdue
                       </p>
+                      <FineContent>
                       <p className="text-[10px] text-rose-500/80 font-medium">Fines are accruing — return immediately</p>
+                      </FineContent>
                     </div>
                   </Link>
                 )}

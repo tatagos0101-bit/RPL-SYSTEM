@@ -1,3 +1,5 @@
+import { SHOW_FINES } from '../../api/fineVisibility';
+import FineContent from '../../components/FineContent';
 import { createElement, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -297,6 +299,7 @@ const UserHome = () => {
 
       <TodayPanel notice={overview.primaryNotice} nextLoan={nextLoan} />
 
+      <div className={SHOW_FINES ? 'contents' : 'contents fine-free-summary'}>
       <section className="mb-8 grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 xl:grid-cols-4">
         <StatusCard
           icon={BookOpen}
@@ -321,6 +324,7 @@ const UserHome = () => {
           tone="rose"
           urgent={overview.overdueCount > 0}
         />
+        <FineContent>
         <StatusCard
           icon={Wallet}
           label="Fine to Pay"
@@ -329,7 +333,9 @@ const UserHome = () => {
           tone={overview.totalFine > 0 ? 'rose' : 'emerald'}
           urgent={overview.totalFine > 0}
         />
+        </FineContent>
       </section>
+      </div>
 
       <div className="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
         <BorrowedBooks loans={overview.priorityLoans} openReportModal={openReportModal} />
@@ -386,9 +392,11 @@ const TodayPanel = ({ notice, nextLoan }) => {
             <h2 className={`text-2xl font-black tracking-tight sm:text-3xl ${style.title}`}>
               {notice.title}
             </h2>
+            {(SHOW_FINES || notice.kind !== 'soon') && (
             <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">
               {notice.body}
             </p>
+            )}
             <div className="mt-5 flex flex-wrap gap-2">
               <NoticeAction notice={notice} className={style.button} />
               <Link
@@ -543,11 +551,13 @@ const LoanRow = ({ loan, openReportModal }) => {
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <DueBadge dueInfo={loan.dueInfo} />
+            <FineContent>
             {fineAmount > 0 && (
               <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-rose-700 dark:bg-slate-900 dark:text-rose-300">
                 Fine {formatMoney(fineAmount)}
               </span>
             )}
+            </FineContent>
           </div>
           <h3 className="text-base font-black text-slate-950 dark:text-white">{loan.book_title}</h3>
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{loan.book_author || 'Unknown author'}</p>

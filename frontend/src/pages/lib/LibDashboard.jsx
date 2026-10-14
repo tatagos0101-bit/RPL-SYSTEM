@@ -1,3 +1,4 @@
+import FineContent from '../../components/FineContent';
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -515,11 +516,13 @@ const LoanRow = ({ loan }) => {
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${style.badge}`}>
             {style.label}
           </span>
+          <FineContent>
           {fineAmount > 0 && (
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-rose-700 dark:bg-slate-900 dark:text-rose-300">
               Fine {formatMoney(fineAmount)}
             </span>
           )}
+          </FineContent>
         </div>
         <h3 className="text-base font-black text-slate-950 dark:text-white">{loan.book_title || 'Unknown book'}</h3>
         <p className="text-xs font-bold text-slate-500 dark:text-slate-400">

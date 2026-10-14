@@ -1,3 +1,4 @@
+import FineContent from '../../components/FineContent';
 import { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, Clock, Search, Bell, CheckCircle2, RefreshCw, BookOpen, List } from 'lucide-react';
 import { getDueBooks, notifyMember, returnBook, getTransactions } from '../../api/librarian';
@@ -340,12 +341,14 @@ export default function LibDueBooks() {
                               {dl < 0 ? `${Math.abs(dl)} late` : `${dl} left`}
                             </p>
                           </div>
+                          <FineContent>
                           {Number(b.fine_amount) > 0 && (
                             <div>
                               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Fine</p>
                               <p className="font-black text-sm text-rose-600 dark:text-rose-400">₱{Number(b.fine_amount).toFixed(2)}</p>
                             </div>
                           )}
+                          </FineContent>
                         </div>
 
                         <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex-shrink-0 ${cfg.cls}`}>
