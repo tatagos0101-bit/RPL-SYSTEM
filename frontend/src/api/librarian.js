@@ -2,6 +2,11 @@ import client from './client';
 import { resetMemberPasswordPath } from './passwordRecovery';
 import { prepareUploadForm } from './uploads';
 
+export const getEntryStationPinStatus = () => client.get('/api/librarian/settings/entry-station-pin');
+
+export const updateEntryStationPin = (currentPassword, newPin) =>
+  client.put('/api/librarian/settings/entry-station-pin', { current_password: currentPassword, new_pin: newPin });
+
 // Dashboard
 export const getStats = () =>
   client.get('/api/librarian/stats');

@@ -30,6 +30,7 @@ const LibUsers = lazy(() => import('./pages/lib/LibUsers'));
 const LibDueBooks = lazy(() => import('./pages/lib/LibDueBooks'));
 const LibReservations = lazy(() => import('./pages/lib/LibReservations'));
 const LibReports = lazy(() => import('./pages/lib/LibReports'));
+const LibSettings = lazy(() => import('./pages/lib/LibSettings'));
 
 const NAVBAR_HIDDEN_PATHS = ['/librarian', '/entry-station', '/entry-gate'];
 const NAVBAR_HIDDEN_PREFIXES = ['/user/', '/librarian/', '/lib/'];
@@ -94,6 +95,7 @@ const AppContent = () => {
               <Route path="/librarian/due-books" element={<LibDueBooks />} />
               <Route path="/librarian/reservations" element={<LibReservations />} />
               <Route path="/librarian/reports" element={<LibReports />} />
+              <Route path="/librarian/settings" element={<LibSettings />} />
               <Route path="/librarian/entry" element={<Navigate to="/entry-station" replace />} />
               <Route path="/librarian/change-password" element={<ChangePasswordPage />} />
             </Route>

@@ -1,31 +1,29 @@
-# ⚙️ Backend Logic & Responsibilities
+# Technology stack
 
-The Python backend acts as the "Brain" of the Rizal Provincial Library System. It bridges the gap between the React UI and the MySQL Database.
+Source-based overview inspected October 14 and checked against main on October 15, 2026.
+This is not verification of the deployed revision or live cloud configuration.
 
-### 🧠 Core Responsibilities
+| Layer | Implementation |
+| --- | --- |
+| Frontend | React 19 with JavaScript/JSX, Vite 7, Tailwind CSS 4, React Router 7, Axios, and react-webcam. |
+| Backend | Python 3.11–3.12, FastAPI, Pydantic, SQLAlchemy 2, and Uvicorn. Python 3.12 is selected for Vercel. |
+| Production data | Supabase PostgreSQL through SQLAlchemy/psycopg with TLS and transaction-pooler settings. SQLite and MySQL remain local development options. |
+| Authentication | FastAPI-managed bcrypt passwords and JWTs; HttpOnly browser cookies with legacy bearer compatibility. Supabase Auth is not used. |
+| File storage | Supabase Storage: public catalog covers; private avatars, government IDs, and imports. FastAPI authorizes uploads and private viewing links. |
+| Facial recognition | face-recognition/dlib with optional InsightFace; OpenCV, NumPy, and Pillow support image processing. |
+| Presentation checks | Main uses brightness/texture heuristics that static photos can pass. Separate uncommitted MiniFASNet ONNX work is excluded from this release; physical-camera acceptance remains pending. |
+| Library tooling | Physical-copy QR labels via qrcode, workbook parsing via openpyxl, PDF generation via ReportLab, and browser CSV/print exports. |
+| Recommendations | Database rules using borrowing categories and recent popularity; no trained recommendation model. |
+| Deployment | Vercel frontend and FastAPI configurations with Supabase persistence; Docker/Railway artifacts also remain. |
+| Verification | pytest backend regressions, Node's built-in frontend helper tests, ESLint, and Vite build. |
 
-1. **Biometric Identity Mapping**: 
-   * Convert facial images into 128-dimension mathematical vectors.
-   * Compare live camera frames from the `EntryGate` against the MySQL `users` table to identify members.
+Implemented workflows include public catalog browsing, member/librarian portals,
+attendance, copy-aware borrowing/returns, reservations, and reports. Book-condition
+photos and durable offline synchronization are not implemented. Email/SMS recovery
+delivery is also absent; operational resets are librarian-assisted.
 
-2. **QR Code Orchestration**:
-   * Generate unique QR IDs for new book entries during bulk Excel uploads.
-   * Process "Scan to Return" requests by updating book status from `borrowed` to `available`.
-
-3. **Smart Shelf (Recommendation AI)**:
-   * **Personalized Logic**: Analyze a user's `borrow_history` table to suggest books in similar categories.
-   * **Trending Logic**: Calculate the most-borrowed books within the last 30 days.
-
-4. **Bulk Data Processing**:
-   * Handle Librarian's `.xlsx` uploads to update the 7,000+ book inventory in real-time.
-
-5. **Reporting Engine**:
-   * Query the `logs` and `transactions` tables to aggregate monthly data into official PDF/Excel formats.
-
----
-
-### 🛠️ API Endpoints (Planned)
-* `POST /api/auth/face`: Biometric login/entry.
-* `GET /api/books/recommendations`: Fetch AI-suggested books.
-* `POST /api/librarian/upload`: Bulk book import via Excel.
-* `GET /api/user/report`: Generate the PDF Reading Transcript.
+See [architecture, source references, and limitations](docs/ARCHITECTURE.md),
+[agent instructions and check commands](AGENTS.md), [local setup](README.md), and
+[deployment documentation](docs/DEPLOYMENT.md). Dependency manifests and lockfiles
+are the source of truth for exact versions; historical plans do not establish
+feature completion.

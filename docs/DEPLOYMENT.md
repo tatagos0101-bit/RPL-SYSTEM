@@ -65,14 +65,16 @@ Set these additional server environment variables:
 | `SUPABASE_SERVICE_ROLE_KEY` | Provided by the integration; server only |
 | `JWT_SECRET_KEY` | Random secret with at least 32 characters |
 | `LIBRARIAN_AUTH_CODE` | Random private librarian registration code |
-| `ENTRY_STATION_PIN` | Private station PIN, not `1234` |
+| `ENTRY_STATION_PIN` | Optional legacy/bootstrap PIN; managed PINs are set in Librarian Settings |
 | `ALLOWED_ORIGINS` | Exact HTTPS frontend origins, comma-separated |
 | `AUTH_COOKIE_SAMESITE` | `lax` |
 | `HTTPS_ONLY` | `true` |
 | `LOG_TO_FILES` | `false` |
 | `FACE_ENGINE` | `dlib` (the included runtime) |
 
-Production rejects local database/storage configurations and default secrets.
+Production rejects local database/storage configurations and default account secrets.
+An absent station PIN (or the development default) leaves kiosk access disabled;
+it does not prevent the API from starting so a librarian can configure it.
 Apply future additive schema changes explicitly with `python migrate.py` using
 the cloud database settings before releasing them. Startup does not perform DDL
 on every serverless cold start. `/health` checks database connectivity.
@@ -105,6 +107,22 @@ file `.tools/deployment-access.txt`. Sign in at `/librarian/login` and choose a 
 password when prompted. Keep that file private; it is not uploaded or committed.
 For a separate fresh installation, create a librarian through `/api/auth/signup`
 using the private registration code and a strong password.
+
+### Entrance station PIN management
+
+Sign in as a librarian, open **Settings**, and enter your current librarian password
+plus a new 6–12 digit PIN twice. The old station PIN is not required. Use the new
+PIN on each entrance station; an already unlocked station returns to its lock
+screen when its next scan or attendance-log request rejects the old PIN.
+
+The existing `library_settings` table stores a salted HMAC-SHA256 digest keyed by
+the server JWT secret; neither the PIN nor its digest is returned by the settings API.
+No schema migration is required for this feature on an initialized database.
+The database setting overrides `ENTRY_STATION_PIN` on every request, across API
+instances. The environment PIN remains a bootstrap fallback only until a managed
+setting exists. Production never grants station access using the development default.
+Rotating `JWT_SECRET_KEY` also invalidates the managed station PIN: sign in again
+and set the station PIN through Settings. Do not delete the setting to recover access.
 
 Import actual library books through Inventory. Do not run `seed.py` against
 production: it creates demo data. The script now refuses production or remote

@@ -308,14 +308,17 @@ const EntryGate = () => {
           </h1>
           <p className="mt-4 text-sm font-medium leading-6 text-slate-400">
             Enter the station PIN before opening the camera and attendance logs on this entrance PC.
+            {' '}A librarian can set or change this PIN in Settings.
           </p>
 
           <div className="mt-7">
-            <label className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
+            <label htmlFor="station-pin" className="mb-2 block text-[10px] font-black uppercase tracking-widest text-slate-500">
               Station PIN
             </label>
             <input
+              id="station-pin"
               type="password"
+              inputMode="numeric"
               value={pinInput}
               onChange={(e) => setPinInput(e.target.value)}
               className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-4 text-center text-lg font-black tracking-[0.4em] text-white outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
