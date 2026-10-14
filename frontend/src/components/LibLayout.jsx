@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { clearAuth } from '../api/auth';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../api/librarian';
 import { getLibrarianShellClasses } from '../api/librarianShell';
 import { STAFF_LIBRARIAN_NAV_LINKS } from '../api/librarianNavigation';
 import { parseApiDateTime } from '../api/dateTime';
 import {
   BookOpen, PlusSquare, Users,
-  LogOut, QrCode, FileText,
-  Menu, X, ChevronRight, Sun, Moon, ShieldCheck,
+  QrCode, FileText,
+  Menu, X, ChevronRight, ShieldCheck,
   AlertTriangle, Bell, BookMarked, Settings,
 } from 'lucide-react';
 
@@ -22,15 +21,11 @@ const NAV_ICONS = {
   users: <Users size={18} />,
   'add-book': <PlusSquare size={18} />,
   'qr-bulk': <QrCode size={18} />,
-  settings: <Settings size={18} />,
   'public-catalog': <BookOpen size={18} />,
 };
 
 const LibLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isDark, setIsDark] = useState(
-    document.documentElement.classList.contains('dark')
-  );
   const [notifications, setNotifications] = useState([]);
   const [bellOpen, setBellOpen] = useState(false);
   const [nowMs, setNowMs] = useState(0);
@@ -101,18 +96,6 @@ const LibLayout = () => {
     return `${Math.floor(hrs / 24)}d ago`;
   };
 
-  const toggleTheme = () => {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('theme', next ? 'dark' : 'light');
-  };
-
-  const handleLogout = () => {
-    clearAuth();
-    navigate('/librarian/login');
-  };
-
   const close = () => setSidebarOpen(false);
 
   return (
@@ -148,16 +131,8 @@ const LibLayout = () => {
           </div>
         </button>
 
-        {/* Right: Theme toggle + Bell + Logout */}
+        {/* Notifications */}
         <div className="flex items-center gap-1 lg:ml-auto">
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-xl text-blue-900/60 dark:text-slate-400 hover:text-blue-700 dark:hover:text-white hover:bg-blue-100 dark:hover:bg-white/10 transition-all"
-            aria-label="Toggle theme"
-          >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-
           {/* Notification Bell */}
           <div className="relative" ref={bellRef}>
             <button
@@ -236,14 +211,6 @@ const LibLayout = () => {
             )}
           </div>
 
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-xl text-blue-900/60 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"
-            aria-label="Logout"
-            title="Logout"
-          >
-            <LogOut size={18} />
-          </button>
         </div>
       </nav>
 
@@ -304,7 +271,7 @@ const LibLayout = () => {
             <p className="text-[9px] font-black uppercase tracking-widest text-blue-300 dark:text-slate-600 px-4 mb-3">
               Navigation
             </p>
-            {STAFF_LIBRARIAN_NAV_LINKS.map((link, i) => {
+            {STAFF_LIBRARIAN_NAV_LINKS.filter((link) => link.key !== 'settings').map((link, i) => {
               const active = location.pathname === link.to;
               return (
                 <Link
@@ -335,29 +302,22 @@ const LibLayout = () => {
             })}
           </nav>
 
-          {/* Bottom */}
-          <div className="px-4 pb-6 border-t border-blue-100 dark:border-white/5 pt-4 space-y-1">
-            <button
-              onClick={toggleTheme}
-              className="group w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest text-blue-400 dark:text-slate-500 hover:text-blue-700 dark:hover:text-white hover:bg-blue-100 dark:hover:bg-white/10 transition-all duration-200"
+          {/* Settings stays below the navigation divider. */}
+          <div className="shrink-0 px-4 pb-6 border-t border-blue-100 dark:border-white/5 pt-4">
+            <Link
+              to="/librarian/settings"
+              onClick={close}
+              aria-current={location.pathname === '/librarian/settings' ? 'page' : undefined}
+              className={`group flex items-center gap-3 px-4 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all duration-200 ${
+                location.pathname === '/librarian/settings'
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-300/40 dark:shadow-blue-900/50'
+                  : 'text-blue-900/70 dark:text-slate-400 hover:bg-blue-100 dark:hover:bg-white/10 hover:text-blue-700 dark:hover:text-white'
+              }`}
             >
-              <span className="transition-transform duration-300 group-hover:rotate-12">
-                {isDark ? <Sun size={17} /> : <Moon size={17} />}
-              </span>
-              {isDark ? 'Light Mode' : 'Dark Mode'}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="group w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-200"
-            >
-              <span className="transition-transform duration-200 group-hover:translate-x-0.5">
-                <LogOut size={17} />
-              </span>
-              Logout
-            </button>
-            <p className="text-[8px] font-black uppercase tracking-widest text-blue-200 dark:text-slate-700 text-center pt-3">
-              RPL Librarian Terminal v1.0
-            </p>
+              <Settings size={18} />
+              <span className="flex-1">Settings</span>
+              <ChevronRight size={12} />
+            </Link>
           </div>
         </div>
       </aside>

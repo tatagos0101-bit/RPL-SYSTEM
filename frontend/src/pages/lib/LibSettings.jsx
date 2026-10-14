@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
-import { LockKeyhole } from 'lucide-react';
+import { LockKeyhole, LogOut, Moon, Sun } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { clearAuth } from '../../api/auth';
 import { getEntryStationPinStatus, updateEntryStationPin } from '../../api/librarian';
 
 const inputClass = 'mt-2 w-full rounded-xl border border-blue-100 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-900';
 
 export default function LibSettings() {
+  const navigate = useNavigate();
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [loggingOut, setLoggingOut] = useState(false);
   const [configured, setConfigured] = useState(null);
   const [statusError, setStatusError] = useState('');
   const [password, setPassword] = useState('');
@@ -13,6 +18,20 @@ export default function LibSettings() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('theme', next ? 'dark' : 'light');
+    setIsDark(next);
+  };
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    await clearAuth();
+    navigate('/librarian/login', { replace: true });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +76,21 @@ export default function LibSettings() {
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
       <h1 className="text-3xl font-black tracking-tight text-blue-950 dark:text-white">Settings</h1>
-      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Manage access to the library entrance station.</p>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Manage appearance, entrance station access, and your session.</p>
+
+      <section aria-labelledby="appearance-title" className="mt-8 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 id="appearance-title" className="text-xl font-bold text-slate-900 dark:text-white">Appearance</h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Choose light or dark mode for this browser.</p>
+          </div>
+          <button type="button" onClick={toggleTheme}
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            {isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          </button>
+        </div>
+      </section>
 
       <section aria-labelledby="station-pin-title" className="mt-8 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-start gap-3">
@@ -107,6 +140,20 @@ export default function LibSettings() {
             {saving ? 'Saving…' : 'Save PIN'}
           </button>
         </form>
+      </section>
+
+      <section aria-labelledby="session-title" className="mt-8 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 id="session-title" className="text-xl font-bold text-slate-900 dark:text-white">Session</h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Log out of your librarian account on this browser.</p>
+          </div>
+          <button type="button" onClick={handleLogout} disabled={loggingOut}
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-rose-50 px-5 py-3 text-sm font-bold text-rose-600 hover:bg-rose-100 disabled:opacity-60 dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20">
+            <LogOut size={18} />
+            {loggingOut ? 'Logging out…' : 'Logout'}
+          </button>
+        </div>
       </section>
     </div>
   );

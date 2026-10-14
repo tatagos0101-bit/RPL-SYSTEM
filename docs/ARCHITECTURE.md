@@ -131,6 +131,10 @@ storage. A station unlock is not librarian authentication. Preserve request limi
 safe validation errors, and [security middleware](../backend/middleware/security.py)
 that avoids reflecting credentials and raw input into errors/logs.
 
+The librarian sidebar places Settings alone below its navigation divider. Settings
+contains the browser's light/dark appearance toggle, station PIN controls, and logout.
+Theme and logout controls are no longer duplicated in the librarian header/sidebar.
+
 Librarians manage the station PIN at `/librarian/settings`, using their current
 account password and a new 6–12 digit PIN. The [settings API](../backend/routers/librarian_settings.py)
 provides a protected GET/PUT at `/api/librarian/settings/entry-station-pin`; GET
