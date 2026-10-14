@@ -17,6 +17,7 @@ from middleware.security import SecurityMiddleware
 # Import all models to ensure SQLAlchemy relationships are properly initialized
 from models.security_alert import SecurityAlert
 from routers import auth, users, books, inventory, transactions, reservations, librarian, recommendations, reports, kiosk, uploads
+from routers import librarian_settings
 
 logger = get_logger("main")
 
@@ -65,6 +66,7 @@ app.include_router(inventory.router)
 app.include_router(transactions.router)
 app.include_router(reservations.router)
 app.include_router(librarian.router)
+app.include_router(librarian_settings.router)
 app.include_router(recommendations.router)
 app.include_router(reports.router)
 app.include_router(kiosk.router)

@@ -13,5 +13,6 @@ export const STAFF_LIBRARIAN_NAV_LINKS = [
   { key: 'users', to: '/librarian/users', label: 'Users' },
   { key: 'add-book', to: '/librarian/add-book', label: 'Add Book' },
   { key: 'qr-bulk', to: '/librarian/qr-bulk', label: 'Print QR' },
+  { key: 'settings', to: '/librarian/settings', label: 'Settings' },
   { key: 'public-catalog', to: '/browse', label: 'Public Catalog' },
 ];

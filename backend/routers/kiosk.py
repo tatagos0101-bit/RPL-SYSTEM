@@ -4,18 +4,16 @@ Entrance station endpoints.
 The entrance station can run without a librarian web session, but it must be
 unlocked with the station PIN before logs or camera scans are available.
 """
-from secrets import compare_digest
-
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from config import ENTRY_STATION_PIN
 from database import get_db
 from limiter import limiter
 from models.entry_log import EntryLog
 from schemas.auth import FaceAuthRequest, FaceAuthResponse
 from schemas.librarian import EntryLogOut
+from services.entry_station_pin import verify_station_pin
 from timezone_utils import now_ph
 
 router = APIRouter(prefix="/api/kiosk", tags=["Entrance Station"])
@@ -25,28 +23,11 @@ class EntryStationFaceRequest(FaceAuthRequest):
     station_pin: str
 
 
-def _verify_station_pin(pin: str | None) -> None:
-    if not pin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Entry station PIN required.",
-        )
-    if not ENTRY_STATION_PIN:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Entry station PIN is not configured.",
-        )
-    if not compare_digest(pin, ENTRY_STATION_PIN):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid entry station PIN.",
-        )
-
-
 def require_station_pin_header(
     x_entry_station_pin: str | None = Header(default=None, alias="X-Entry-Station-Pin"),
+    db: Session = Depends(get_db),
 ) -> None:
-    _verify_station_pin(x_entry_station_pin)
+    verify_station_pin(db, x_entry_station_pin)
 
 
 @router.post("/face", response_model=FaceAuthResponse)
@@ -57,7 +38,7 @@ def kiosk_face(
     body: EntryStationFaceRequest,
     db: Session = Depends(get_db),
 ):
-    _verify_station_pin(body.station_pin)
+    verify_station_pin(db, body.station_pin)
     from routers.auth import process_entry_face
 
     return process_entry_face(request, response, body.image, db, issue_token=False)

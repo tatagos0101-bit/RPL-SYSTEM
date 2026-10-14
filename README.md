@@ -119,7 +119,9 @@ Copy-Item -LiteralPath backend/.env.example -Destination backend/.env
 Edit `backend/.env` before starting. For an isolated local database, set
 `DATABASE_URL=sqlite:///./rizal_library.db`, `ENVIRONMENT=development`,
 `STORAGE_BACKEND=local`, and `AUTO_MIGRATE=true`. Replace the JWT secret and
-librarian authorization code with unique random values; change the station PIN.
+librarian authorization code with unique random values. Set or change the entrance
+station PIN in **Librarian → Settings**, confirming your librarian password and a
+new 6–12 digit PIN. Existing stations need the new PIN on their next scan/log refresh.
 Local MySQL is also supported if its database and connection URL are configured.
 Keep this environment file private. Do not overwrite an existing configured file.
 

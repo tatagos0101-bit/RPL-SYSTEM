@@ -9,7 +9,7 @@ import {
   BookOpen, PlusSquare, Users,
   LogOut, QrCode, FileText,
   Menu, X, ChevronRight, Sun, Moon, ShieldCheck,
-  AlertTriangle, Bell, BookMarked,
+  AlertTriangle, Bell, BookMarked, Settings,
 } from 'lucide-react';
 
 const NAV_ICONS = {
@@ -22,6 +22,7 @@ const NAV_ICONS = {
   users: <Users size={18} />,
   'add-book': <PlusSquare size={18} />,
   'qr-bulk': <QrCode size={18} />,
+  settings: <Settings size={18} />,
   'public-catalog': <BookOpen size={18} />,
 };
 

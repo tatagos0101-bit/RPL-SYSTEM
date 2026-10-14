@@ -90,7 +90,7 @@ def validate_deployment_config() -> None:
         raise RuntimeError("Production requires a random JWT_SECRET_KEY of at least 32 characters.")
     if not LIBRARIAN_AUTH_CODE or LIBRARIAN_AUTH_CODE in {"change-this-to-a-secret-code", "LIB-RPL-2025"}:
         raise RuntimeError("Production requires a private LIBRARIAN_AUTH_CODE.")
-    if not ENTRY_STATION_PIN or ENTRY_STATION_PIN == "1234":
-        raise RuntimeError("Production requires a private ENTRY_STATION_PIN.")
+    # Staff can set a managed PIN after startup. Kiosk verification fails closed
+    # when neither a database PIN nor a safe legacy environment PIN exists.
     if not ALLOWED_ORIGINS or any(not origin.startswith("https://") for origin in ALLOWED_ORIGINS):
         raise RuntimeError("Production ALLOWED_ORIGINS must list the HTTPS frontend domains.")
