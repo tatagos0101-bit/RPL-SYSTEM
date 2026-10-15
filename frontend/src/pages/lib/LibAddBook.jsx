@@ -420,34 +420,34 @@ export default function LibAddBook() {
   const canLookup     = bulkFile || bulkText.trim();
 
   return (
-    <div className="min-h-screen bg-transparent pb-20 font-sans text-slate-900 dark:text-white transition-colors duration-300">
+    <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-5 md:px-8 pt-8">
 
         {/* Header */}
         <div className="animate-fade-in-up mb-8">
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600 dark:text-blue-400 mb-1">
+          <p className="text-sm font-semibold tracking-normal text-link mb-1">
             Librarian Terminal
           </p>
-          <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none">
-            Add <span className="text-blue-600">Book</span>
+          <h1 className="font-semibold tracking-normal leading-none rpl-title">
+            Add <span className="text-link">Book</span>
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-2">
+          <p className="text-sm text-muted font-medium mt-2">
             Add a single book, bulk-search by ISBN, or import via file upload.
           </p>
         </div>
 
         {/* Mode Toggle */}
-        <div className="animate-fade-in-up delay-100 flex flex-wrap gap-1 bg-white/80 dark:bg-slate-900 backdrop-blur-sm border border-blue-100 dark:border-slate-800 p-1.5 rounded-2xl mb-7 w-fit shadow-sm">
+        <div className="animate-fade-in-up delay-100 flex flex-wrap gap-1 bg-panel border border-line p-1.5 rounded-xl mb-7 w-fit shadow-sm">
           {[
             { id: 'manual',     icon: <PlusSquare size={14} />, label: 'Single Book' },
             { id: 'isbn-bulk',  icon: <List size={14} />,       label: 'ISBN Bulk Lookup' },
             { id: 'upload',     icon: <Upload size={14} />,     label: 'Upload File' },
           ].map(({ id, icon, label }) => (
             <button key={id} onClick={() => setMode(id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold tracking-normal transition-all ${
                 mode === id
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/40'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                  ? 'bg-action text-white shadow-md '
+                  : 'text-muted hover:text-ink '
               }`}
             >
               {icon} {label}
@@ -457,76 +457,76 @@ export default function LibAddBook() {
 
         {/* ── SINGLE BOOK ── */}
         {mode === 'manual' && (
-          <div className="animate-fade-in-up delay-200 bg-white/80 dark:bg-slate-900 backdrop-blur-sm border border-blue-100 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm">
+          <div className="animate-fade-in-up delay-200 bg-panel border border-line rounded-xl p-8 shadow-sm">
             {submitted ? (
               <div className="flex flex-col items-center py-10 text-center">
-                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle2 size={32} className="text-emerald-600 dark:text-emerald-400" />
+                <div className="w-16 h-16 bg-success-soft rounded-full flex items-center justify-center mb-4">
+                  <CheckCircle2 size={32} className="text-success" />
                 </div>
-                <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-1">Book Added!</h3>
-                <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">The book has been added to the catalog.</p>
+                <h3 className="font-semibold tracking-normal mb-1 rpl-subheading">Book Added!</h3>
+                <p className="text-sm text-muted font-medium">The book has been added to the catalog.</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
 
                 {/* ISBN Auto-Fill */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-4">
-                  <label className="block text-[9px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-2">
+                <div className="bg-info-soft border border-line rounded-xl p-4">
+                  <label className="block text-sm font-semibold tracking-normal text-link mb-2">
                     ISBN Auto-Fill
                   </label>
                   <div className="flex gap-2">
-                    <input
+                    <input aria-label="ISBN Auto-Fill"
                       type="text" value={isbnInput}
                       onChange={(e) => { setIsbnInput(e.target.value); setLookupError(''); setLookupSuccess(false); }}
                       onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleIsbnLookup())}
                       placeholder="Enter ISBN-10 or ISBN-13…"
-                      className="min-w-0 w-full flex-1 bg-white dark:bg-slate-800 border border-blue-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                      className="min-w-0 w-full flex-1 bg-panel border border-line rounded-lg px-4 py-3 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted"
                     />
                     <button type="button" onClick={handleIsbnLookup} disabled={lookingUp || !isbnInput.trim()}
-                      className="flex items-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all">
+                      className="flex items-center gap-2 px-5 py-3 bg-action hover:bg-action-hover disabled:opacity-50 text-white rounded-lg font-semibold text-sm tracking-normal transition-all">
                       {lookingUp ? <RefreshCw size={14} className="animate-spin" /> : <Search size={14} />}
                       {lookingUp ? 'Looking up…' : 'Look Up'}
                     </button>
                   </div>
                   {lookupSuccess && (
                     <div className="flex items-center gap-2 mt-2">
-                      <CheckCircle2 size={13} className="text-emerald-500" />
-                      <p className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400">Book found! Fields have been auto-filled. Review and edit as needed.</p>
+                      <CheckCircle2 size={13} className="text-success" />
+                      <p className="text-sm font-bold text-success">Book found! Fields have been auto-filled. Review and edit as needed.</p>
                     </div>
                   )}
                   {lookupError && (
                     <div className="flex items-center gap-2 mt-2">
-                      <AlertCircle size={13} className="text-rose-500" />
-                      <p className="text-[11px] font-bold text-rose-700 dark:text-rose-400">{lookupError}</p>
+                      <AlertCircle size={13} className="text-danger" />
+                      <p className="text-sm font-bold text-danger">{lookupError}</p>
                     </div>
                   )}
                 </div>
 
                 {/* Cover preview */}
                 {(coverPreviewUrl || form.cover_url) && (
-                  <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3">
+                  <div className="flex items-center gap-4 bg-subtle rounded-xl p-3">
                     <img src={coverPreviewUrl || form.cover_url} alt="Book cover preview"
                       className="w-14 h-20 object-cover rounded-xl shadow-md flex-shrink-0"
                       onError={(e) => { e.target.style.display = 'none'; }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-0.5">Cover Preview</p>
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 break-all line-clamp-2">
+                      <p className="text-sm font-semibold tracking-normal text-muted mb-0.5">Cover Preview</p>
+                      <p className="text-sm font-medium text-muted break-all line-clamp-2">
                         {coverFile ? coverFile.name : form.cover_url}
                       </p>
                     </div>
-                    <button type="button" onClick={() => {
+                    <button aria-label="Close" type="button" onClick={() => {
                       if (coverFile) removeCoverFile();
                       else setForm((p) => ({ ...p, cover_url: '' }));
-                    }} className="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition-colors">
+                    }} className="p-1.5 text-muted hover:text-danger rounded-lg transition-colors">
                       <X size={14} />
                     </button>
                   </div>
                 )}
 
                 {formError && (
-                  <div className="flex items-center gap-2 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-2xl px-4 py-3">
-                    <AlertCircle size={14} className="text-rose-600 flex-shrink-0" />
-                    <p className="text-xs font-bold text-rose-700 dark:text-rose-400">{formError}</p>
+                  <div className="flex items-center gap-2 bg-danger-soft border border-danger rounded-xl px-4 py-3">
+                    <AlertCircle size={14} className="text-danger flex-shrink-0" />
+                    <p className="text-sm font-bold text-danger">{formError}</p>
                   </div>
                 )}
 
@@ -537,28 +537,28 @@ export default function LibAddBook() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                      <label className="block text-sm font-semibold tracking-normal text-muted">
                         Category
                       </label>
                       <button type="button"
                         onClick={() => { setUseCustomCategory((v) => !v); setForm((p) => ({ ...p, category: '' })); }}
-                        className="text-[9px] font-black uppercase tracking-widest text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
+                        className="text-sm font-semibold tracking-normal text-link hover:text-link transition-colors">
                         {useCustomCategory ? '← Pick existing' : '+ New category'}
                       </button>
                     </div>
 
                     {useCustomCategory ? (
                       <div className="relative">
-                        <input
+                        <input aria-label="Type a new category…"
                           type="text" name="category" value={form.category}
                           onChange={handleFormChange}
                           placeholder="Type a new category…"
                           required
                           maxLength={100}
-                          className="w-full bg-slate-100 dark:bg-slate-800 border border-blue-300 dark:border-blue-700 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                          className="w-full bg-subtle border border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted"
                         />
                         {form.category && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest text-emerald-500">
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold tracking-normal text-success">
                             New
                           </span>
                         )}
@@ -574,7 +574,7 @@ export default function LibAddBook() {
                           }
                         }}
                         required
-                        className="w-full bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 appearance-none">
+                        className="w-full bg-subtle border border-transparent border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink appearance-none">
                         <option value="">Select category...</option>
                         {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                         <option disabled>──────────</option>
@@ -583,9 +583,9 @@ export default function LibAddBook() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Year Published</label>
-                    <select name="year" value={form.year} onChange={handleFormChange}
-                      className="w-full bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 appearance-none">
+                    <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Year Published</label>
+                    <select aria-label="Year Published" name="year" value={form.year} onChange={handleFormChange}
+                      className="w-full bg-subtle border border-transparent border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink appearance-none">
                       <option value="">Select year...</option>
                       {Array.from({ length: new Date().getFullYear() - 1799 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                         <option key={y} value={y}>{y}</option>
@@ -602,7 +602,7 @@ export default function LibAddBook() {
 
                   {/* Cover Image — URL or file upload */}
                   <div>
-                    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
+                    <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">
                       Cover Image
                     </label>
                     <input
@@ -610,17 +610,17 @@ export default function LibAddBook() {
                       onChange={handleFormChange}
                       disabled={!!coverFile}
                       placeholder={coverFile ? `File: ${coverFile.name}` : 'Paste URL or upload below…'}
-                      className="w-full bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 disabled:opacity-50"
+                      className="w-full bg-subtle border border-transparent border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted disabled:opacity-50"
                     />
                     <div className="flex items-center gap-2 mt-2">
-                      <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">or</span>
-                      <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                      <div className="flex-1 h-px bg-subtle" />
+                      <span className="text-sm font-semibold tracking-normal text-muted">or</span>
+                      <div className="flex-1 h-px bg-subtle" />
                     </div>
-                    <label className={`mt-2 flex items-center justify-center gap-2 w-full py-2.5 rounded-2xl border-2 border-dashed cursor-pointer transition-all text-[10px] font-black uppercase tracking-widest ${
+                    <label className={`mt-2 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border-2 border-dashed cursor-pointer transition-all text-sm font-semibold tracking-normal ${
                       coverFile
-                        ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400'
+                        ? 'border-success bg-success-soft bg-success-soft text-success text-success'
+                        : 'border-line text-muted hover:border-line hover:text-link hover:text-link'
                     }`}>
                       <ImagePlus size={14} />
                       {coverFile ? 'Change Image' : 'Upload Image'}
@@ -635,7 +635,7 @@ export default function LibAddBook() {
                 </div>
 
                 <button type="submit" disabled={submitting}
-                  className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-lg shadow-blue-200 dark:shadow-blue-900/40 active:scale-[0.98] flex items-center justify-center gap-2 mt-2">
+                  className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold text-sm tracking-normal transition-all shadow-sm flex items-center justify-center gap-2 mt-2">
                   {submitting ? <RefreshCw size={15} className="animate-spin" /> : <PlusSquare size={15} />}
                   {submitting ? 'Adding...' : 'Add to Catalog'}
                 </button>
@@ -649,34 +649,34 @@ export default function LibAddBook() {
           <div className="animate-fade-in-up delay-200 space-y-5">
 
             {/* Input area */}
-            <div className="bg-white/80 dark:bg-slate-900 backdrop-blur-sm border border-blue-100 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm space-y-5">
+            <div className="bg-panel border border-line rounded-xl p-8 shadow-sm space-y-5">
               <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">Option 1 — Upload a file</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                <p className="text-sm font-semibold tracking-normal text-muted mb-1">Option 1 — Upload a file</p>
+                <p className="text-sm text-muted mb-3">
                   Upload an <strong>.xlsx</strong> or <strong>.csv</strong> file. The system will look for a column named <em>ISBN</em>; if none is found, it reads the first column.
                 </p>
                 <div
                   onDragOver={(e) => { e.preventDefault(); setBulkDragging(true); }}
                   onDragLeave={() => setBulkDragging(false)}
                   onDrop={handleBulkDrop}
-                  className={`rounded-2xl border-2 border-dashed p-8 text-center transition-all ${
+                  className={`rounded-xl border-2 border-dashed p-8 text-center transition-all ${
                     bulkDragging
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-slate-200 dark:border-slate-700'
+                      ? 'border-line bg-info-soft bg-info-soft'
+                      : 'border-line '
                   }`}
                 >
                   {bulkFile ? (
                     <div className="flex items-center justify-center gap-3">
-                      <CheckCircle2 size={16} className="text-emerald-500 flex-shrink-0" />
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{bulkFile.name}</span>
-                      <button onClick={() => setBulkFile(null)} className="p-1 text-slate-400 hover:text-rose-500 rounded-lg transition-colors">
+                      <CheckCircle2 size={16} className="text-success flex-shrink-0" />
+                      <span className="text-sm font-bold text-ink">{bulkFile.name}</span>
+                      <button aria-label="Close" onClick={() => setBulkFile(null)} className="p-1 text-muted hover:text-danger rounded-lg transition-colors">
                         <X size={14} />
                       </button>
                     </div>
                   ) : (
                     <>
-                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-3">Drag & drop .xlsx / .csv here</p>
-                      <label className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black uppercase text-[10px] tracking-widest cursor-pointer transition-all">
+                      <p className="text-sm font-bold text-muted mb-3">Drag & drop .xlsx / .csv here</p>
+                      <label className="px-5 py-2.5 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal cursor-pointer transition-all">
                         Browse File
                         <input type="file" accept=".xlsx,.csv" className="hidden" onChange={handleBulkFileChange} />
                       </label>
@@ -686,20 +686,20 @@ export default function LibAddBook() {
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">or</span>
-                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                <div className="flex-1 h-px bg-subtle" />
+                <span className="text-sm font-semibold tracking-normal text-muted">or</span>
+                <div className="flex-1 h-px bg-subtle" />
               </div>
 
               <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">Option 2 — Paste ISBNs</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">One ISBN per line (or comma-separated). Dashes and spaces are ignored.</p>
+                <p className="text-sm font-semibold tracking-normal text-muted mb-1">Option 2 — Paste ISBNs</p>
+                <p className="text-sm text-muted mb-3">One ISBN per line (or comma-separated). Dashes and spaces are ignored.</p>
                 <textarea
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   rows={5}
                   placeholder={"9780307474278\n9780743273565\n978-0-06-112008-4\n..."}
-                  className="w-full bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-2xl px-4 py-3.5 text-sm font-mono outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 resize-none"
+                  className="w-full bg-subtle border border-transparent border-line rounded-lg px-4 py-3.5 text-base font-sans outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted resize-none"
                 />
               </div>
 
@@ -707,7 +707,7 @@ export default function LibAddBook() {
                 <button
                   onClick={startBulkLookup}
                   disabled={bulkRunning || !canLookup}
-                  className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2"
+                  className="flex-1 py-4 bg-action hover:bg-action-hover disabled:opacity-50 text-white rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-2"
                 >
                   {bulkRunning ? <RefreshCw size={15} className="animate-spin" /> : <Search size={15} />}
                   {bulkRunning
@@ -716,7 +716,7 @@ export default function LibAddBook() {
                 </button>
                 {bulkRunning && (
                   <button onClick={() => { bulkAbortRef.current = true; }}
-                    className="px-5 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all">
+                    className="px-5 py-4 bg-rose-500 hover:bg-rose-600 text-white rounded-lg font-semibold text-sm tracking-normal transition-all">
                     Stop
                   </button>
                 )}
@@ -724,9 +724,9 @@ export default function LibAddBook() {
 
               {/* Progress bar */}
               {bulkRunning && bulkProgress && (
-                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-subtle rounded-full h-2 overflow-hidden">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-action h-2 rounded-full transition-all duration-300"
                     style={{ width: `${(bulkProgress.done / bulkProgress.total) * 100}%` }}
                   />
                 </div>
@@ -735,24 +735,24 @@ export default function LibAddBook() {
 
             {/* Results */}
             {bulkResults.length > 0 && (
-              <div className="bg-white/80 dark:bg-slate-900 backdrop-blur-sm border border-blue-100 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm space-y-5">
+              <div className="bg-panel border border-line rounded-xl p-8 shadow-sm space-y-5">
 
                 {/* Summary bar */}
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-sm font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                  <span className="text-sm font-semibold tracking-normal text-muted">
                     Results
                   </span>
-                  <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                  <span className="px-3 py-1 bg-success-soft text-success rounded-full text-sm font-semibold tracking-normal">
                     {foundCount} found
                   </span>
                   {notFoundCount > 0 && (
-                    <span className="px-3 py-1 bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    <span className="px-3 py-1 bg-danger-soft text-danger rounded-full text-sm font-semibold tracking-normal">
                       {notFoundCount} not found
                     </span>
                   )}
                   {foundCount > 0 && (
                     <button onClick={toggleAll}
-                      className="ml-auto text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:underline">
+                      className="ml-auto text-sm font-semibold tracking-normal text-link hover:underline">
                       {bulkResults.filter((r) => r.status === 'found').every((r) => selected.has(r.isbn))
                         ? 'Deselect All' : 'Select All'}
                     </button>
@@ -763,12 +763,12 @@ export default function LibAddBook() {
                 <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
                   {bulkResults.map((row) => (
                     <div key={row.isbn}
-                      className={`flex items-center gap-3 rounded-2xl p-3 border transition-all ${
+                      className={`flex items-center gap-3 rounded-xl p-3 border transition-all ${
                         row.status === 'found'
                           ? selected.has(row.isbn)
-                            ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20'
-                            : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'
-                          : 'border-rose-100 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-900/10 opacity-60'
+                            ? 'border-line border-line bg-info-soft bg-info-soft'
+                            : 'border-line bg-subtle '
+                          : 'border-danger border-danger bg-danger-soft bg-danger-soft opacity-60'
                       }`}
                     >
                       {/* Checkbox */}
@@ -785,8 +785,8 @@ export default function LibAddBook() {
                           className="w-10 h-14 object-cover rounded-lg shadow flex-shrink-0"
                           onError={(e) => { e.target.style.display = 'none'; }} />
                       ) : (
-                        <div className="w-10 h-14 bg-slate-200 dark:bg-slate-700 rounded-lg flex-shrink-0 flex items-center justify-center">
-                          <FileText size={14} className="text-slate-400" />
+                        <div className="w-10 h-14 bg-subtle rounded-lg flex-shrink-0 flex items-center justify-center">
+                          <FileText size={14} className="text-muted" />
                         </div>
                       )}
 
@@ -794,57 +794,57 @@ export default function LibAddBook() {
                       <div className="flex-1 min-w-0">
                         {row.status === 'found' ? (
                           <>
-                            <p className="font-bold text-sm text-slate-900 dark:text-white truncate">{row.data.title || '—'}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{row.data.author || '—'}</p>
+                            <p className="font-bold text-sm text-ink truncate">{row.data.title || '—'}</p>
+                            <p className="text-sm text-muted truncate">{row.data.author || '—'}</p>
                             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                              {row.data.year && <span className="text-[10px] text-slate-400">{row.data.year}</span>}
+                              {row.data.year && <span className="text-sm text-muted">{row.data.year}</span>}
                               {row.data.category && (
-                                <span className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full font-bold">
+                                <span className="text-sm bg-info-soft text-link px-2 py-0.5 rounded-full font-bold">
                                   {row.data.category}
                                 </span>
                               )}
                             </div>
                           </>
                         ) : (
-                          <p className="text-xs font-bold text-rose-600 dark:text-rose-400">Not found</p>
+                          <p className="text-sm font-bold text-danger">Not found</p>
                         )}
-                        <p className="text-[10px] font-mono text-slate-400 mt-0.5">{row.isbn}</p>
+                        <p className="text-sm font-sans text-muted mt-0.5">{row.isbn}</p>
                         {row.importError && (
-                          <p className="text-[10px] font-bold text-rose-500 mt-0.5">{row.importError}</p>
+                          <p className="text-sm font-bold text-danger mt-0.5">{row.importError}</p>
                         )}
                       </div>
 
                       {/* Status icon */}
                       {row.importError
-                        ? <AlertCircle size={15} className="text-rose-400 flex-shrink-0" />
+                        ? <AlertCircle size={15} className="text-danger flex-shrink-0" />
                         : row.status === 'found'
-                          ? <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0" />
-                          : <AlertCircle size={15} className="text-rose-400 flex-shrink-0" />}
+                          ? <CheckCircle2 size={15} className="text-success flex-shrink-0" />
+                          : <AlertCircle size={15} className="text-danger flex-shrink-0" />}
                     </div>
                   ))}
                 </div>
 
                 {/* Import controls */}
                 {foundCount > 0 && (
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                  <div className="pt-4 border-t border-line space-y-3">
                     {importSummary && (
-                      <div className={`rounded-2xl px-4 py-3 border space-y-0.5 ${
+                      <div className={`rounded-xl px-4 py-3 border space-y-0.5 ${
                         importSummary.fail === 0
-                          ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
-                          : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                          ? 'bg-success-soft bg-success-soft border-success border-success'
+                          : 'bg-warning-soft bg-warning-soft border-warning border-warning'
                       }`}>
                         {importSummary.ok > 0 && (
-                          <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                          <p className="text-sm font-bold text-success">
                             {importSummary.ok} book{importSummary.ok !== 1 ? 's' : ''} added to catalog.
                           </p>
                         )}
                         {importSummary.skipped > 0 && (
-                          <p className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                          <p className="text-sm font-bold text-warning">
                             {importSummary.skipped} already in catalog (skipped).
                           </p>
                         )}
                         {importSummary.fail > 0 && (
-                          <p className="text-xs font-bold text-rose-700 dark:text-rose-400">
+                          <p className="text-sm font-bold text-danger">
                             {importSummary.fail} failed — see errors below.
                           </p>
                         )}
@@ -852,14 +852,14 @@ export default function LibAddBook() {
                     )}
                     <div className="flex gap-3 items-center">
                       <div className="flex-shrink-0">
-                        <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">Copies each</label>
-                        <input type="number" min="1" value={bulkCopies} onChange={(e) => setBulkCopies(e.target.value)}
-                          className="w-24 bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200" />
+                        <label className="block text-sm font-semibold tracking-normal text-muted mb-1">Copies each</label>
+                        <input aria-label="Copies each" type="number" min="1" value={bulkCopies} onChange={(e) => setBulkCopies(e.target.value)}
+                          className="w-24 bg-subtle border border-transparent border-line rounded-lg px-3 py-2.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink" />
                       </div>
                       <button
                         onClick={handleBulkImport}
                         disabled={importing || selected.size === 0}
-                        className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2"
+                        className="flex-1 py-3 bg-action hover:bg-action-hover disabled:opacity-50 text-white rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-2"
                       >
                         {importing ? <RefreshCw size={14} className="animate-spin" /> : <PlusSquare size={14} />}
                         {importing ? 'Adding to catalog…' : `Add ${selected.size} Selected Book${selected.size !== 1 ? 's' : ''} to Catalog`}
@@ -879,22 +879,22 @@ export default function LibAddBook() {
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
-              className={`rounded-[2.5rem] border-2 border-dashed p-16 text-center transition-all duration-200 ${
+              className={`rounded-xl border-2 border-dashed p-16 text-center transition-all duration-200 ${
                 dragging
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900 backdrop-blur-sm'
+                  ? 'border-line bg-info-soft bg-info-soft'
+                  : 'border-line bg-panel '
               }`}
             >
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <Upload size={28} className="text-blue-600 dark:text-blue-400" />
+              <div className="w-16 h-16 bg-info-soft rounded-xl flex items-center justify-center mx-auto mb-5">
+                <Upload size={28} className="text-link" />
               </div>
-              <p className="font-black uppercase tracking-widest text-sm text-slate-700 dark:text-slate-300 mb-2">
+              <p className="font-semibold tracking-normal text-sm text-muted mb-2">
                 Drag & drop your file here
               </p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mb-6">
+              <p className="text-sm text-muted font-medium mb-6">
                 Supports .xlsx and .csv — max 10 MB
               </p>
-              <label className="px-7 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest cursor-pointer transition-all">
+              <label className="px-7 py-3.5 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal cursor-pointer transition-all">
                 Browse File
                 <input type="file" accept=".xlsx,.csv" className="hidden"
                   onChange={(e) => { setFile(e.target.files[0]); setUploadResult(null); setUploadError(''); }} />
@@ -902,49 +902,49 @@ export default function LibAddBook() {
             </div>
 
             {file && (
-              <div className="bg-white/80 dark:bg-slate-900 backdrop-blur-sm border border-blue-100 dark:border-slate-800 rounded-[2rem] p-5 flex items-center gap-4">
-                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400" />
+              <div className="bg-panel border border-line rounded-xl p-5 flex items-center gap-4">
+                <div className="w-10 h-10 bg-success-soft rounded-xl flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 size={18} className="text-success" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-slate-900 dark:text-white truncate">{file.name}</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{(file.size / 1024).toFixed(1)} KB</p>
+                  <p className="font-bold text-sm text-ink truncate">{file.name}</p>
+                  <p className="text-sm text-muted font-medium">{(file.size / 1024).toFixed(1)} KB</p>
                 </div>
-                <button onClick={() => setFile(null)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all">
+                <button aria-label="Close" onClick={() => setFile(null)} className="p-2 text-muted hover:text-danger hover:bg-danger-soft rounded-lg transition-all">
                   <X size={16} />
                 </button>
               </div>
             )}
 
             {uploadResult && (
-              <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-[2rem] p-5 flex items-center gap-3">
-                <CheckCircle2 size={18} className="text-emerald-600 flex-shrink-0" />
-                <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+              <div className="bg-success-soft border border-success rounded-xl p-5 flex items-center gap-3">
+                <CheckCircle2 size={18} className="text-success flex-shrink-0" />
+                <p className="text-sm font-bold text-success">
                   {uploadResult.imported ?? uploadResult.count ?? 'Books'} books imported successfully!
                 </p>
               </div>
             )}
             {uploadError && (
-              <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-[2rem] p-5 flex items-center gap-3">
-                <AlertCircle size={18} className="text-rose-600 flex-shrink-0" />
-                <p className="text-sm font-bold text-rose-800 dark:text-rose-300">{uploadError}</p>
+              <div className="bg-danger-soft border border-danger rounded-xl p-5 flex items-center gap-3">
+                <AlertCircle size={18} className="text-danger flex-shrink-0" />
+                <p className="text-sm font-bold text-danger">{uploadError}</p>
               </div>
             )}
 
-            <div className="bg-white/80 dark:bg-slate-900 backdrop-blur-sm border border-blue-100 dark:border-slate-800 rounded-[2rem] p-7">
+            <div className="bg-panel border border-line rounded-xl p-7">
               <div className="flex items-center gap-3 mb-5">
-                <AlertCircle size={15} className="text-amber-500" />
-                <h3 className="font-black italic uppercase tracking-tighter text-slate-900 dark:text-white">Required Columns</h3>
+                <AlertCircle size={15} className="text-warning" />
+                <h3 className="font-semibold tracking-normal text-ink rpl-subheading">Required Columns</h3>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 {['Title', 'Author', 'Category', 'Year', 'ISBN', 'Copies', 'Location', 'Cover URL'].map((col) => (
-                  <div key={col} className="px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">{col}</p>
+                  <div key={col} className="px-3 py-2 bg-subtle rounded-xl border border-line text-center">
+                    <p className="text-sm font-semibold tracking-normal text-muted">{col}</p>
                   </div>
                 ))}
               </div>
               <button onClick={handleUpload} disabled={!file || uploading}
-                className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all flex items-center justify-center gap-2">
+                className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-2">
                 {uploading ? <RefreshCw size={15} className="animate-spin" /> : <FileText size={15} />}
                 {uploading ? 'Processing...' : 'Process & Import'}
               </button>
@@ -958,11 +958,11 @@ export default function LibAddBook() {
 
 const Field = ({ label, name, value, onChange, type = 'text', placeholder = '', required = false }) => (
   <div>
-    <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">{label}</label>
+    <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">{label}</label>
     <input
       type={type} name={name} value={value} onChange={onChange}
       placeholder={placeholder} required={required}
-      className="w-full bg-slate-100 dark:bg-slate-800 border border-transparent dark:border-slate-700 rounded-2xl px-4 py-3.5 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+      className="w-full bg-subtle border border-transparent border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted"
     />
   </div>
 );

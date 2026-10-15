@@ -47,7 +47,7 @@ const LegacyLibRedirect = () => {
 
 const RouteFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 text-slate-500 dark:text-slate-400">
-    <div className="text-[10px] font-black uppercase tracking-[0.35em]">Loading</div>
+    <div className="text-sm font-semibold tracking-normal">Loading</div>
   </div>
 );
 

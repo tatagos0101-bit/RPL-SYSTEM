@@ -44,22 +44,22 @@ function AvatarUpload({ currentUrl, name, onUploaded }) {
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" />
 
       {/* Avatar circle */}
-      <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 border-4 border-slate-900 shadow-2xl flex items-center justify-center flex-shrink-0">
+      <div className="w-24 h-24 rounded-xl overflow-hidden bg-action border-4 border-line shadow-sm flex items-center justify-center flex-shrink-0">
         {imgSrc ? (
           <img src={imgSrc} alt={name} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-white font-black text-2xl tracking-tight select-none">{getInitials(name)}</span>
+          <span className="text-white font-semibold text-2xl tracking-normal select-none">{getInitials(name)}</span>
         )}
       </div>
 
       {/* Upload overlay */}
-      <div className="absolute inset-0 rounded-2xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1">
+      <div className="absolute inset-0 rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1">
         {uploading ? (
           <RefreshCw size={18} className="animate-spin text-white" />
         ) : (
           <>
             <Camera size={16} className="text-white" />
-            <span className="text-[8px] font-black uppercase tracking-widest text-white text-center leading-tight">Upload<br />Photo</span>
+            <span className="text-sm font-semibold tracking-normal text-white text-center leading-tight">Upload<br />Photo</span>
           </>
         )}
       </div>
@@ -110,42 +110,42 @@ function PasswordChangeForm() {
   };
 
   const wrap = (err) =>
-    `flex items-center gap-2 px-3.5 py-2.5 rounded-xl border ${err ? 'border-rose-500/60' : 'border-slate-700'} bg-slate-800/60 focus-within:border-blue-500 transition-colors`;
+    `flex items-center gap-2 px-3.5 py-2.5 rounded-xl border ${err ? 'border-danger' : 'border-line'} bg-subtle focus-within:border-line transition-colors`;
 
-  const inp = 'min-w-0 w-full flex-1 bg-transparent outline-none text-sm font-medium text-white placeholder-slate-500';
+  const inp = 'min-w-0 w-full flex-1 bg-transparent outline-none text-base font-medium text-ink placeholder-muted';
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-slate-800">
+    <div className="rounded-xl overflow-hidden border border-line">
       <button
         type="button"
         onClick={() => { setOpen(o => !o); if (open) reset(); }}
-        className="w-full flex flex-wrap gap-3 items-center justify-between px-4 sm:px-5 py-4 bg-slate-800/40 hover:bg-slate-800/70 transition-colors"
+        className="w-full flex flex-wrap gap-3 items-center justify-between px-4 sm:px-5 py-4 bg-subtle hover:bg-subtle transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center">
-            <KeyRound size={13} className="text-blue-400" />
+          <div className="w-8 h-8 rounded-xl bg-subtle border border-line flex items-center justify-center">
+            <KeyRound size={13} className="text-link" />
           </div>
           <div className="text-left">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Password</p>
-            <p className="text-sm font-bold text-slate-200">
-              {success ? <span className="text-emerald-400 flex items-center gap-1"><Check size={12} /> Updated</span> : '••••••••••'}
+            <p className="text-sm font-semibold tracking-normal text-muted">Password</p>
+            <p className="text-sm font-bold text-ink">
+              {success ? <span className="text-success flex items-center gap-1"><Check size={12} /> Updated</span> : '••••••••••'}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-600/30">
+          <span className="text-sm font-semibold tracking-normal px-2 py-1 rounded-lg bg-info-soft text-link border border-line">
             {open ? 'Close' : 'Change'}
           </span>
-          {open ? <ChevronUp size={13} className="text-slate-500" /> : <ChevronDown size={13} className="text-slate-500" />}
+          {open ? <ChevronUp size={13} className="text-muted" /> : <ChevronDown size={13} className="text-muted" />}
         </div>
       </button>
 
       {open && (
-        <form onSubmit={handleSubmit} className="px-5 pt-4 pb-5 bg-slate-900/60 border-t border-slate-800 space-y-3">
+        <form onSubmit={handleSubmit} className="px-5 pt-4 pb-5 bg-panel border-t border-line space-y-3">
           {apiError && (
-            <div className="flex items-center gap-2 px-3.5 py-2.5 bg-rose-900/20 border border-rose-800/50 rounded-xl">
-              <AlertCircle size={12} className="text-rose-400 flex-shrink-0" />
-              <p className="text-xs font-bold text-rose-400">{apiError}</p>
+            <div className="flex items-center gap-2 px-3.5 py-2.5 bg-danger-soft border border-danger rounded-xl">
+              <AlertCircle size={12} className="text-danger flex-shrink-0" />
+              <p className="text-sm font-bold text-danger">{apiError}</p>
             </div>
           )}
           {[
@@ -154,9 +154,9 @@ function PasswordChangeForm() {
             { key: 'confirm', label: 'Confirm New',      ph: 'Re-enter new password' },
           ].map(({ key, label, ph }) => (
             <div key={key}>
-              <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">{label}</label>
+              <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">{label}</label>
               <div className={wrap(errors[key])}>
-                <Lock size={12} className="text-slate-600 flex-shrink-0" />
+                <Lock size={12} className="text-muted flex-shrink-0" />
                 <input
                   type={show[key] ? 'text' : 'password'}
                   value={form[key]}
@@ -164,31 +164,31 @@ function PasswordChangeForm() {
                   placeholder={ph}
                   className={inp}
                 />
-                <button type="button" onClick={() => setShow(s => ({ ...s, [key]: !s[key] }))} className="text-slate-600 hover:text-slate-300 transition-colors flex-shrink-0">
+                <button type="button" onClick={() => setShow(s => ({ ...s, [key]: !s[key] }))} className="text-muted hover:text-ink transition-colors flex-shrink-0">
                   {show[key] ? <EyeOff size={13} /> : <Eye size={13} />}
                 </button>
               </div>
-              {errors[key] && <p className="mt-1 text-[9px] font-bold text-rose-400">{errors[key]}</p>}
+              {errors[key] && <p className="mt-1 text-sm font-bold text-danger">{errors[key]}</p>}
             </div>
           ))}
           {/* Strength bar */}
           {form.next.length > 0 && (
             <div className="flex items-center gap-1">
               {[6, 9, 12].map((l, i) => (
-                <div key={i} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${form.next.length >= l ? ['bg-rose-500','bg-amber-400','bg-emerald-400'][i] : 'bg-slate-700'}`} />
+                <div key={i} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${form.next.length >= l ? ['bg-rose-500','bg-amber-400','bg-emerald-400'][i] : 'bg-subtle'}`} />
               ))}
-              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">
+              <span className="text-sm font-semibold tracking-normal text-muted ml-1">
                 {form.next.length < 6 ? 'Weak' : form.next.length < 9 ? 'Fair' : form.next.length < 12 ? 'Good' : 'Strong'}
               </span>
             </div>
           )}
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={() => { setOpen(false); reset(); }} disabled={saving}
-              className="flex-1 py-2.5 border border-slate-700 text-slate-400 hover:bg-slate-800 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all disabled:opacity-50">
+              className="flex-1 py-2.5 border border-line text-muted hover:bg-subtle rounded-lg font-semibold text-sm tracking-normal transition-all disabled:opacity-50">
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl font-black text-[9px] uppercase tracking-widest transition-all active:scale-95">
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold text-sm tracking-normal transition-all">
               {saving ? <RefreshCw size={11} className="animate-spin" /> : <Check size={11} />}
               {saving ? 'Saving…' : 'Update'}
             </button>
@@ -241,17 +241,17 @@ export default function UserProfile() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950">
+    <div className="rpl-page min-h-screen flex items-center justify-center bg-panel">
       <div className="flex flex-col items-center gap-3">
-        <RefreshCw size={26} className="animate-spin text-blue-500" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Loading…</p>
+        <RefreshCw size={26} className="animate-spin text-link" />
+        <p className="text-sm font-semibold tracking-normal text-muted">Loading…</p>
       </div>
     </div>
   );
 
   if (error || !profile) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950">
-      <p className="text-rose-400 font-bold text-sm">{error || 'Could not load profile.'}</p>
+    <div className="min-h-screen flex items-center justify-center bg-panel">
+      <p className="text-danger font-bold text-sm">{error || 'Could not load profile.'}</p>
     </div>
   );
 
@@ -259,37 +259,37 @@ export default function UserProfile() {
     ? toUtcDate(profile.member_since).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
     : '—';
 
-  const inputCls = 'w-full bg-slate-800/60 border border-slate-700 focus:border-blue-500 outline-none rounded-xl px-4 py-2.5 text-sm font-medium text-white placeholder-slate-500 transition-colors';
+  const inputCls = 'w-full bg-subtle border border-line focus:border-line outline-none rounded-lg px-4 py-2.5 text-base font-medium text-ink placeholder-muted transition-colors';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-24 transition-colors duration-300">
+    <div className="rpl-page rpl-profile min-h-screen bg-canvas text-ink pb-24 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 md:px-8 pt-8 space-y-5">
 
         {/* Page title */}
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-400 mb-1">Member Portal</p>
-          <h1 className="text-4xl font-black italic uppercase tracking-tighter leading-none">
-            My <span className="text-blue-500">Profile</span>
+          <p className="text-sm font-semibold tracking-normal text-link mb-1">Member Portal</p>
+          <h1 className="font-semibold tracking-normal leading-none rpl-title">
+            My <span className="text-link">Profile</span>
           </h1>
         </div>
 
         {/* ── Hero Card ── */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="bg-panel border border-line rounded-xl overflow-hidden shadow-sm">
           {/* Top strip — dark with dot pattern */}
-          <div className="h-32 bg-slate-800 relative overflow-hidden">
+          <div className="h-32 bg-subtle relative overflow-hidden">
             <div className="absolute inset-0 opacity-20"
               style={{ backgroundImage: 'radial-gradient(circle, #475569 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-900/40 via-transparent to-indigo-900/30" />
-            
+            <div className="absolute inset-0 bg-info-soft" />
+
             {/* Branding - Shifted right to avoid avatar overlap */}
             <div className="absolute bottom-4 right-8 text-right hidden sm:block">
-              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-blue-400/80 leading-none">Rizal Provincial Library</p>
-              <p className="text-[8px] font-bold uppercase tracking-[0.2em] text-slate-500 mt-1">Knowledge · Culture · Service</p>
+              <p className="rpl-brand rpl-profile-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></p>
+              <p className="text-sm font-bold tracking-normal text-muted mt-1">Knowledge · Culture · Service</p>
             </div>
-            
+
             {/* Mobile Branding */}
             <div className="absolute top-4 left-6 sm:hidden">
-              <p className="text-[8px] font-black uppercase tracking-[0.3em] text-blue-400/60">Rizal Provincial Library</p>
+              <p className="rpl-brand rpl-profile-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></p>
             </div>
           </div>
 
@@ -304,24 +304,24 @@ export default function UserProfile() {
 
               <div className="flex items-center gap-2.5 flex-wrap">
                 {saveSuccess && (
-                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-900/30 border border-emerald-700/40 rounded-xl text-xs font-bold text-emerald-400">
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 bg-success-soft border border-success rounded-xl text-sm font-bold text-success">
                     <Check size={12} /> Saved
                   </span>
                 )}
                 {!editing ? (
                   <button onClick={() => { setEditing(true); setSaveError(''); setSaveSuccess(false); }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-600/25 active:scale-95">
+                    className="flex items-center gap-2 px-5 py-2.5 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all hover:shadow-sm">
                     <Edit3 size={12} /> Edit Profile
                   </button>
                 ) : (
                   <>
                     <button onClick={() => { setEditing(false); setForm({ name: profile.name || '', phone: profile.phone || '', location: profile.location || '' }); setSaveError(''); }}
                       disabled={saving}
-                      className="flex items-center gap-1.5 px-4 py-2.5 border border-slate-700 text-slate-400 hover:bg-slate-800 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all disabled:opacity-50 active:scale-95">
+                      className="flex items-center gap-1.5 px-4 py-2.5 border border-line text-muted hover:bg-subtle rounded-lg font-semibold text-sm tracking-normal transition-all disabled:opacity-50">
                       <X size={12} /> Cancel
                     </button>
                     <button onClick={handleSave} disabled={saving}
-                      className="flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:-translate-y-0.5 active:scale-95">
+                      className="flex items-center gap-1.5 px-5 py-2.5 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold text-sm tracking-normal transition-all">
                       {saving ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
                       {saving ? 'Saving…' : 'Save'}
                     </button>
@@ -334,23 +334,23 @@ export default function UserProfile() {
             {!editing ? (
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                  <h2 className="text-2xl font-black tracking-tight text-white">{profile.name}</h2>
-                  <BadgeCheck size={18} className="text-blue-400" />
+                  <h2 className="font-semibold tracking-normal text-ink rpl-section-title">{profile.name}</h2>
+                  <BadgeCheck size={18} className="text-link" />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-blue-400 mb-1">Verified Member</p>
-                <p className="font-mono text-xs text-slate-500">{profile.member_id}</p>
+                <p className="text-sm font-semibold tracking-normal text-link mb-1">Verified Member</p>
+                <p className="font-sans text-sm text-muted">{profile.member_id}</p>
               </div>
             ) : (
               <div className="max-w-xs">
-                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Full Name</label>
-                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputCls} placeholder="Your full name" />
+                <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Full Name</label>
+                <input aria-label="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputCls} placeholder="Your full name" />
               </div>
             )}
 
             {saveError && (
-              <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-rose-900/20 border border-rose-800/50 rounded-xl">
-                <X size={12} className="text-rose-400 flex-shrink-0" />
-                <p className="text-xs font-bold text-rose-400">{saveError}</p>
+              <div className="mt-4 flex items-center gap-2 px-4 py-3 bg-danger-soft border border-danger rounded-xl">
+                <X size={12} className="text-danger flex-shrink-0" />
+                <p className="text-sm font-bold text-danger">{saveError}</p>
               </div>
             )}
           </div>
@@ -363,10 +363,10 @@ export default function UserProfile() {
           <div className="min-w-0 lg:col-span-2 space-y-5">
 
             {/* Contact Information */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8">
+            <div className="bg-panel border border-line rounded-xl p-6 md:p-8">
               <div className="flex flex-wrap gap-2 items-center justify-between mb-5">
-                <h3 className="text-sm font-black italic uppercase tracking-tighter text-white">Contact Information</h3>
-                {editing && <span className="text-[9px] font-black uppercase tracking-widest text-blue-400 bg-blue-600/10 border border-blue-600/20 px-2.5 py-1 rounded-lg">Editing</span>}
+                <h3 className="font-semibold tracking-normal text-ink rpl-subheading">Contact Information</h3>
+                {editing && <span className="text-sm font-semibold tracking-normal text-link bg-info-soft border border-line px-2.5 py-1 rounded-lg">Editing</span>}
               </div>
 
               <div className="space-y-2">
@@ -394,18 +394,18 @@ export default function UserProfile() {
             </div>
 
             {/* Account & Security */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8">
-              <h3 className="text-sm font-black italic uppercase tracking-tighter text-white mb-5">Account &amp; Security</h3>
+            <div className="bg-panel border border-line rounded-xl p-6 md:p-8">
+              <h3 className="font-semibold tracking-normal text-ink mb-5 rpl-subheading">Account &amp; Security</h3>
               <div className="space-y-3">
                 <PasswordChangeForm />
                 <SecBadgeRow
-                  icon={<BookOpen size={13} className="text-blue-400" />}
+                  icon={<BookOpen size={13} className="text-link" />}
                   label="Account Role"
                   value={profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
                   badge={profile.role} badgeColor="blue"
                 />
                 <SecBadgeRow
-                  icon={<Shield size={13} className={profile.status === 'active' ? 'text-emerald-400' : 'text-rose-400'} />}
+                  icon={<Shield size={13} className={profile.status === 'active' ? 'text-success' : 'text-danger'} />}
                   label="Account Status"
                   value={profile.status === 'active' ? 'Active · Good Standing' : 'Suspended'}
                   badge={profile.status}
@@ -419,19 +419,19 @@ export default function UserProfile() {
           <div className="min-w-0 space-y-5">
 
             {/* Membership */}
-            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-              <h3 className="text-sm font-black italic uppercase tracking-tighter text-white mb-5">Membership</h3>
+            <div className="bg-panel border border-line rounded-xl p-6">
+              <h3 className="font-semibold tracking-normal text-ink mb-5 rpl-subheading">Membership</h3>
               <div className="space-y-3">
                 {/* Status pill */}
-                <div className={`flex items-center gap-3 p-3.5 rounded-2xl border ${
+                <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${
                   profile.status === 'active'
-                    ? 'bg-emerald-900/20 border-emerald-800/40'
-                    : 'bg-rose-900/20 border-rose-800/40'
+                    ? 'bg-success-soft border-success'
+                    : 'bg-danger-soft border-danger'
                 }`}>
                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${profile.status === 'active' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
                   <div>
-                    <p className={`text-[9px] font-black uppercase tracking-widest ${profile.status === 'active' ? 'text-emerald-400' : 'text-rose-400'}`}>Status</p>
-                    <p className={`text-xs font-bold ${profile.status === 'active' ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    <p className={`text-sm font-semibold tracking-normal ${profile.status === 'active' ? 'text-success' : 'text-danger'}`}>Status</p>
+                    <p className={`text-sm font-bold ${profile.status === 'active' ? 'text-success' : 'text-danger'}`}>
                       {profile.status === 'active' ? 'Active · Good Standing' : 'Suspended'}
                     </p>
                   </div>
@@ -443,37 +443,35 @@ export default function UserProfile() {
             </div>
 
             {/* Biometric */}
-            <div className="bg-slate-950 border border-slate-800/60 rounded-3xl p-6 relative overflow-hidden">
-              <div className="absolute -top-6 -right-6 w-28 h-28 bg-blue-600/8 rounded-full blur-2xl pointer-events-none" />
-              <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-indigo-600/8 rounded-full blur-xl pointer-events-none" />
+            <div className="bg-panel border border-line rounded-xl p-6 relative overflow-hidden">
               <div className="relative">
                 <div className="flex flex-wrap gap-2 items-center justify-between mb-5">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">Biometric ID</p>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-slate-800 rounded-lg border border-slate-700">
-                    <Lock size={8} className="text-slate-600" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">Read Only</span>
+                  <p className="text-sm font-semibold tracking-normal text-muted">Biometric ID</p>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-subtle rounded-lg border border-line">
+                    <Lock size={8} className="text-muted" />
+                    <span className="text-sm font-semibold tracking-normal text-muted">Read Only</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3 mb-4">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border ${biometric?.enrolled ? 'bg-blue-900/40 border-blue-800/50' : 'bg-slate-800/60 border-slate-700/40'}`}>
-                    <Camera size={15} className={biometric?.enrolled ? 'text-blue-400' : 'text-slate-600'} />
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border ${biometric?.enrolled ? 'bg-info-soft border-line' : 'bg-subtle border-line'}`}>
+                    <Camera size={15} className={biometric?.enrolled ? 'text-link' : 'text-muted'} />
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <div className={`w-1.5 h-1.5 rounded-full ${biometric?.enrolled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`} />
-                      <p className={`text-[10px] font-black uppercase tracking-wider ${biometric?.enrolled ? 'text-emerald-400' : 'text-slate-400'}`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${biometric?.enrolled ? 'bg-emerald-400 animate-pulse' : 'bg-subtle'}`} />
+                      <p className={`text-sm font-semibold tracking-normal ${biometric?.enrolled ? 'text-success' : 'text-muted'}`}>
                         {biometric?.enrolled ? 'Face ID Active' : 'Not Enrolled'}
                       </p>
                     </div>
-                    <p className="text-[10px] text-slate-600 leading-relaxed">
+                    <p className="text-sm text-muted leading-relaxed">
                       {biometric?.enrolled ? 'Registered for entry kiosk.' : 'Visit the library to enroll.'}
                     </p>
                   </div>
                 </div>
 
-                <div className="pt-3.5 border-t border-slate-800/80">
-                  <p className="text-[9px] text-slate-600 leading-relaxed">
+                <div className="pt-3.5 border-t border-line">
+                  <p className="text-sm text-muted leading-relaxed">
                     Managed by library staff. Bring a valid ID to enroll or update your biometric data.
                   </p>
                 </div>
@@ -490,14 +488,14 @@ export default function UserProfile() {
 
 function InfoRow({ icon, label, value, locked }) {
   return (
-    <div className="group flex items-start gap-3.5 px-4 py-3 rounded-2xl hover:bg-slate-800/40 transition-colors duration-150">
-      <div className={`mt-0.5 flex-shrink-0 ${locked ? 'text-slate-600' : 'text-blue-400'}`}>{icon}</div>
+    <div className="group flex items-start gap-3.5 px-4 py-3 rounded-xl hover:bg-subtle transition-colors duration-150">
+      <div className={`mt-0.5 flex-shrink-0 ${locked ? 'text-muted' : 'text-link'}`}>{icon}</div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</p>
-          {locked && <Lock size={7} className="text-slate-700" />}
+          <p className="text-sm font-semibold tracking-normal text-muted">{label}</p>
+          {locked && <Lock size={7} className="text-muted" />}
         </div>
-        <p className="text-sm font-semibold text-slate-200 truncate">{value}</p>
+        <p className="text-sm font-semibold text-ink truncate">{value}</p>
       </div>
     </div>
   );
@@ -505,35 +503,35 @@ function InfoRow({ icon, label, value, locked }) {
 
 function EditRow({ icon, label, value, onChange, placeholder, type = 'text' }) {
   return (
-    <div className="flex items-start gap-3.5 px-4 py-3 rounded-2xl bg-blue-600/5 border border-blue-600/15">
-      <div className="mt-[2.2rem] flex-shrink-0 text-blue-400">{icon}</div>
+    <div className="flex items-start gap-3.5 px-4 py-3 rounded-xl bg-info-soft border border-line">
+      <div className="mt-[2.2rem] flex-shrink-0 text-link">{icon}</div>
       <div className="min-w-0 flex-1">
-        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">{label}</p>
+        <p className="text-sm font-semibold tracking-normal text-muted mb-1.5">{label}</p>
         <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-          className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 outline-none rounded-xl px-3.5 py-2.5 text-sm font-medium text-white placeholder-slate-600 transition-colors" />
+          className="w-full bg-subtle border border-line focus:border-line outline-none rounded-lg px-3.5 py-2.5 text-base font-medium text-ink placeholder-muted transition-colors" />
       </div>
     </div>
   );
 }
 
 const badgeCls = {
-  blue:    'bg-blue-600/15 text-blue-400 border-blue-600/25',
-  emerald: 'bg-emerald-600/15 text-emerald-400 border-emerald-600/25',
-  rose:    'bg-rose-600/15 text-rose-400 border-rose-600/25',
-  slate:   'bg-slate-700/50 text-slate-400 border-slate-600/40',
+  blue:    'bg-info-soft text-link border-line',
+  emerald: 'bg-success-soft text-success border-success',
+  rose:    'bg-danger-soft text-danger border-danger',
+  slate:   'bg-subtle text-muted border-line',
 };
 
 function SecBadgeRow({ icon, label, value, badge, badgeColor }) {
   return (
-    <div className="flex flex-wrap gap-3 items-center justify-between px-4 py-3.5 bg-slate-800/40 rounded-2xl border border-slate-800">
+    <div className="flex flex-wrap gap-3 items-center justify-between px-4 py-3.5 bg-subtle rounded-xl border border-line">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-center">{icon}</div>
+        <div className="w-8 h-8 bg-subtle border border-line rounded-xl flex items-center justify-center">{icon}</div>
         <div>
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">{label}</p>
-          <p className="text-sm font-bold text-slate-200">{value}</p>
+          <p className="text-sm font-semibold tracking-normal text-muted">{label}</p>
+          <p className="text-sm font-bold text-ink">{value}</p>
         </div>
       </div>
-      <span className={`text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg capitalize border ${badgeCls[badgeColor] ?? badgeCls.slate}`}>
+      <span className={`text-sm font-semibold tracking-normal px-2.5 py-1 rounded-lg capitalize border ${badgeCls[badgeColor] ?? badgeCls.slate}`}>
         {badge}
       </span>
     </div>
@@ -542,9 +540,9 @@ function SecBadgeRow({ icon, label, value, badge, badgeColor }) {
 
 function MiniCard({ label, value, mono = false }) {
   return (
-    <div className="p-3.5 bg-slate-800/40 border border-slate-800 rounded-2xl">
-      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1.5">{label}</p>
-      <p className={`text-sm font-bold text-slate-200 ${mono ? 'font-mono tracking-wider' : ''}`}>{value}</p>
+    <div className="p-3.5 bg-subtle border border-line rounded-xl">
+      <p className="text-sm font-semibold tracking-normal text-muted mb-1.5">{label}</p>
+      <p className={`text-sm font-bold text-ink ${mono ? 'font-sans tracking-normal' : ''}`}>{value}</p>
     </div>
   );
 }

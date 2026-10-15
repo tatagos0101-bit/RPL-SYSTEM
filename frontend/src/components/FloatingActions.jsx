@@ -49,7 +49,7 @@ export default function FloatingActions({ anchor, onClose, children }) {
       ref={panelRef}
       role="group"
       aria-label="Member actions"
-      className="fixed z-[100] max-h-[calc(100dvh-16px)] max-w-[calc(100vw-16px)] overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-2 min-w-[170px]"
+      className="fixed z-[100] max-h-[calc(100dvh-16px)] max-w-[calc(100vw-16px)] overflow-y-auto bg-panel border border-line rounded-xl shadow-sm p-2 min-w-[170px]"
     >
       {children}
     </div>,

@@ -31,8 +31,8 @@ export default function UserBrowseBooks() {
 
   const fetchData = () => {
     Promise.all([
-      getBooks({ limit: 1000 }), 
-      getCategories(), 
+      getBooks({ limit: 1000 }),
+      getCategories(),
       getRecommendations(10),
       getReservations()
     ])
@@ -113,29 +113,29 @@ export default function UserBrowseBooks() {
   }, [selected, filteredBooks]);
 
   const recBadge = recs[0]?.reason?.startsWith('Because')
-    ? { label: 'AI Pick', color: 'bg-violet-600', accentColor: 'text-violet-600 dark:text-violet-400', accentBg: 'bg-violet-50 dark:bg-violet-900/20', icon: <Sparkles size={18} />, headline: recs[0]?.reason || 'Recommended for you', type: 'personalized' }
-    : { label: 'Trending', color: 'bg-emerald-600', accentColor: 'text-emerald-600 dark:text-emerald-400', accentBg: 'bg-emerald-50 dark:bg-emerald-900/20', icon: <TrendingUp size={18} />, headline: 'Trending this month', type: 'trending' };
+    ? { label: 'For you', color: 'bg-violet-600', accentColor: 'text-link text-link', accentBg: 'bg-info-soft bg-info-soft', icon: <Sparkles size={18} />, headline: recs[0]?.reason || 'Recommended for you', type: 'personalized' }
+    : { label: 'Trending', color: 'bg-emerald-700', accentColor: 'text-success text-success', accentBg: 'bg-success-soft bg-success-soft', icon: <TrendingUp size={18} />, headline: 'Trending this month', type: 'trending' };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-white pb-16 transition-colors duration-300">
+    <div className="rpl-page min-h-screen bg-subtle text-ink pb-16 transition-colors duration-300">
       <ToastContainer theme={isDark ? 'dark' : 'light'} />
 
       {/* ── HEADER ── */}
-      <div className="animate-fade-in-up px-6 md:px-10 pt-10 pb-8 border-b border-slate-200 dark:border-white/5">
+      <div className="animate-fade-in-up px-6 md:px-10 pt-10 pb-8 border-b border-line">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.45em] text-slate-400 dark:text-slate-600 mb-2">
+            <p className="text-sm font-semibold tracking-normal text-muted mb-2">
               Member Terminal
             </p>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black italic uppercase tracking-tighter leading-none text-slate-900 dark:text-white">
-              Browse <span className="text-blue-600 dark:text-blue-500">Books</span>
+            <h1 className="font-semibold tracking-normal leading-none text-ink rpl-title">
+              Browse <span className="text-link">Books</span>
             </h1>
           </div>
 
           {(cart.length > 0 || reservations.length > 0) && (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-600/15 border border-blue-200 dark:border-blue-500/30 rounded-2xl">
-              <Bookmark size={14} className="text-blue-600 dark:text-blue-400" />
-              <span className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-info-soft border border-line rounded-xl">
+              <Bookmark size={14} className="text-link" />
+              <span className="text-sm font-semibold tracking-normal text-link">
                 {cart.length + reservations.length} reserved
               </span>
             </div>
@@ -145,7 +145,7 @@ export default function UserBrowseBooks() {
 
       {loading ? (
         <div className="flex items-center justify-center py-32">
-          <RefreshCw size={28} className="animate-spin text-blue-600" />
+          <RefreshCw size={28} className="animate-spin text-link" />
         </div>
       ) : (
         <div className="px-6 md:px-10 pt-8 space-y-12">
@@ -158,17 +158,17 @@ export default function UserBrowseBooks() {
                   {recBadge.icon}
                 </div>
                 <div>
-                  <h2 className="text-xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white">
+                  <h2 className="font-semibold tracking-normal text-ink rpl-section-title">
                     {recBadge.headline}
                   </h2>
-                  <p className={`text-[10px] font-black uppercase tracking-widest mt-0.5 ${recBadge.accentColor}`}>
+                  <p className={`text-sm font-semibold tracking-normal mt-0.5 ${recBadge.accentColor}`}>
                     {recBadge.type === 'personalized' ? 'Based on your reading history' : 'Most borrowed this month'}
                   </p>
                 </div>
                 {recBadge.type === 'trending' && (
-                  <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
-                    <Info size={12} className="text-slate-400 dark:text-slate-500" />
-                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                  <div className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-subtle rounded-xl border border-line">
+                    <Info size={12} className="text-muted" />
+                    <span className="text-sm font-semibold tracking-normal text-muted">
                       New user view
                     </span>
                   </div>
@@ -198,9 +198,9 @@ export default function UserBrowseBooks() {
 
           {/* ── DIVIDER ── */}
           <div className="flex items-center gap-4">
-            <div className="h-px flex-1 bg-slate-200 dark:bg-white/5" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600">All Books</span>
-            <div className="h-px flex-1 bg-slate-200 dark:bg-white/5" />
+            <div className="h-px flex-1 bg-subtle" />
+            <span className="text-sm font-semibold tracking-normal text-muted">All Books</span>
+            <div className="h-px flex-1 bg-subtle" />
           </div>
 
           {/* ── FILTER & SEARCH ── */}
@@ -210,10 +210,10 @@ export default function UserBrowseBooks() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-200 border flex-shrink-0 active:scale-95 ${
+                  className={`px-5 py-2.5 rounded-full text-sm font-semibold tracking-normal transition-all duration-200 border flex-shrink-0 ${
                     activeCategory === cat
-                      ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-blue-900/40'
-                      : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:border-blue-400 dark:hover:border-blue-500/50 hover:-translate-y-0.5'
+                      ? 'bg-action border-line text-white shadow-md '
+                      : 'bg-panel border-line text-muted hover:text-ink hover:border-line hover:border-line '
                   }`}
                 >
                   {cat}
@@ -221,13 +221,13 @@ export default function UserBrowseBooks() {
               ))}
             </div>
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600" size={16} />
-              <input
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
+              <input aria-label="Search title or author..."
                 type="text"
                 placeholder="Search title or author..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl py-3 pl-11 pr-4 outline-none focus:border-blue-500 text-sm font-medium text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 transition-all"
+                className="w-full bg-panel border border-line rounded-lg py-3 pl-11 pr-4 outline-none focus:border-line text-base font-medium text-ink placeholder:text-muted transition-all"
               />
             </div>
           </div>
@@ -253,9 +253,9 @@ export default function UserBrowseBooks() {
             </div>
           ) : (
             <div className="py-20 text-center">
-              <p className="text-slate-400 dark:text-slate-600 font-black uppercase tracking-widest text-sm mb-3">No books found</p>
+              <p className="text-muted font-semibold tracking-normal text-sm mb-3">No books found</p>
               <button onClick={() => { setActiveCategory('All'); setSearch(''); }}
-                className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 underline underline-offset-4">
+                className="text-sm font-semibold tracking-normal text-link underline underline-offset-4">
                 Reset filters
               </button>
             </div>
@@ -271,21 +271,21 @@ export default function UserBrowseBooks() {
         const isAvailable = (selected.copies_available ?? 0) > 0;
         return (
           <div
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 dark:bg-black/90 backdrop-blur-xl"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
             onClick={() => setSelected(null)}
           >
             {/* Left arrow */}
             {currentIdx > 0 && (
-              <button
+              <button aria-label="Previous"
                 onClick={(e) => { e.stopPropagation(); navigateBook(-1); }}
-                className="absolute left-2 md:left-4 z-10 p-2 md:p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm hidden sm:block"
+                className="absolute left-2 md:left-4 z-10 p-2 md:p-3 bg-panel hover:bg-panel rounded-full text-ink transition-all hidden sm:block"
               >
                 <ChevronLeft size={28} />
               </button>
             )}
 
             <div
-              className="max-w-3xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[1.5rem] md:rounded-[3rem] overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="max-w-3xl w-full bg-panel border border-line rounded-xl md:rounded-xl overflow-hidden shadow-sm max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => { touchStartX.current = e.clientX; }}
               onMouseUp={(e) => {
@@ -302,52 +302,52 @@ export default function UserBrowseBooks() {
               }}
             >
               <div key={animKey} className={`grid md:grid-cols-2 ${slideDir === 'right' ? 'animate-slide-in-right' : 'animate-slide-in-left-book'}`}>
-                <div className="aspect-[3/4] md:aspect-auto bg-slate-100 dark:bg-slate-800 relative">
+                <div className="aspect-[3/4] md:aspect-auto bg-subtle relative">
                   <BookCover src={selected.cover_url} alt={selected.title} iconSize={48} />
                   {/* Page indicator */}
-                  <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/40 rounded-full backdrop-blur-sm">
-                    <span className="text-[9px] font-black text-white/70 tracking-widest">
+                  <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/40 rounded-full">
+                    <span className="text-sm font-semibold text-white tracking-normal">
                       {currentIdx + 1} / {filteredBooks.length}
                     </span>
                   </div>
                 </div>
                 <div className="min-w-0 p-5 md:p-10 flex flex-col justify-center relative">
                   <button onClick={() => setSelected(null)}
-                    className="absolute top-6 right-6 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
+                    className="absolute top-6 right-6 text-muted hover:text-ink transition-colors">
                     <XCircle size={26} />
                   </button>
-                  <span className={`inline-block mb-4 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest w-fit ${
+                  <span className={`inline-block mb-4 px-3 py-1 rounded-full text-sm font-semibold tracking-normal w-fit ${
                     selected.availability_status === 'Available'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+                      ? 'bg-success-soft bg-success-soft text-success text-success'
                       : selected.availability_status === 'Limited'
-                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
-                      : 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400'
+                      ? 'bg-warning-soft bg-warning-soft text-warning text-warning'
+                      : 'bg-danger-soft bg-danger-soft text-danger text-danger'
                   }`}>
-                    {selected.availability_status === 'Available' ? `${selected.copies_available} Available` : 
-                     selected.availability_status === 'Limited' ? 'Limited Copies' : 
+                    {selected.availability_status === 'Available' ? `${selected.copies_available} Available` :
+                     selected.availability_status === 'Limited' ? 'Limited Copies' :
                      'Not available'}
                   </span>
-                  <h2 className="text-2xl sm:text-3xl pr-8 font-black italic uppercase tracking-tighter mb-2 leading-none text-slate-900 dark:text-white">
+                  <h2 className="pr-8 font-semibold tracking-normal mb-2 leading-none text-ink rpl-section-title">
                     {selected.title}
                   </h2>
-                  <p className="text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-widest mb-1">
+                  <p className="text-link font-bold text-sm tracking-normal mb-1">
                     {selected.author}
                   </p>
-                  <p className="text-slate-400 dark:text-slate-500 text-xs font-medium mb-5">
+                  <p className="text-muted text-sm font-medium mb-5">
                     {selected.category} • {selected.year}
                   </p>
                   {selected.isbn && (
-                    <p className="text-slate-400 dark:text-slate-500 text-xs font-mono mb-5">ISBN: {selected.isbn}</p>
+                    <p className="text-muted text-sm font-sans mb-5">ISBN: {selected.isbn}</p>
                   )}
                   {!isAvailable && (
-                    <p className="text-xs font-bold leading-relaxed text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-2xl px-4 py-3 mb-5">
+                    <p className="text-sm font-bold leading-relaxed text-warning bg-warning-soft border border-warning rounded-xl px-4 py-3 mb-5">
                       Currently not available. Reserve now to join the queue. You'll be notified when it's your turn.
                     </p>
                   )}
                   {isReserved ? (
                     <button
                       onClick={() => { handleCancelReservation(selected.id); setSelected(null); }}
-                      className="w-full py-4 bg-rose-600 hover:bg-rose-500 rounded-2xl font-black uppercase text-sm tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-3 text-white"
+                      className="w-full py-4 bg-rose-600 hover:bg-rose-500 rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-3 text-white"
                     >
                       <X size={16} />
                       Cancel Reservation
@@ -356,8 +356,8 @@ export default function UserBrowseBooks() {
                     <button
                       onClick={() => { addToCart(selected); setSelected(null); }}
                       disabled={isInCart}
-                      className={`w-full py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all active:scale-[0.98] flex items-center justify-center gap-3 text-white ${
-                        isInCart ? 'bg-emerald-600 cursor-default' : 'bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed'
+                      className={`w-full py-4 rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-3 text-white ${
+                        isInCart ? 'bg-emerald-700 cursor-default' : 'bg-action hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed'
                       }`}
                     >
                       <Bookmark size={16} />
@@ -369,10 +369,10 @@ export default function UserBrowseBooks() {
 
               {/* Slider bar */}
               <div
-                className="px-8 py-3 border-t border-slate-200 dark:border-white/5 flex items-center gap-4"
+                className="px-8 py-3 border-t border-line flex items-center gap-4"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <span className="text-[9px] font-black text-slate-400 dark:text-slate-600 tracking-widest tabular-nums shrink-0 w-12">
+                <span className="text-sm font-semibold text-muted tracking-normal tabular-nums shrink-0 w-12">
                   {currentIdx + 1} / {filteredBooks.length}
                 </span>
                 <input
@@ -394,9 +394,9 @@ export default function UserBrowseBooks() {
 
             {/* Right arrow */}
             {currentIdx < filteredBooks.length - 1 && (
-              <button
+              <button aria-label="Next"
                 onClick={(e) => { e.stopPropagation(); navigateBook(1); }}
-                className="absolute right-2 md:right-4 z-10 p-2 md:p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm hidden sm:block"
+                className="absolute right-2 md:right-4 z-10 p-2 md:p-3 bg-panel hover:bg-panel rounded-full text-ink transition-all hidden sm:block"
               >
                 <ChevronRight size={28} />
               </button>
@@ -414,23 +414,23 @@ const SmallBookCard = ({ book, onSelect, onAdd, onCancel, isInCart, isReserved, 
   const available = (book.copies_available ?? 0) > 0;
   return (
     <div
-      className="flex-none w-40 group cursor-pointer transition-transform duration-200 hover:-translate-y-1.5"
+      className="flex-none w-40 group cursor-pointer transition-transform duration-200"
       onClick={onSelect}
     >
-      <div className={`relative aspect-[2/3] rounded-3xl overflow-hidden border transition-all duration-300 shadow-md mb-3 ${
-        'border-slate-200 dark:border-white/10 group-hover:border-blue-500 group-hover:shadow-xl group-hover:shadow-blue-200/60 dark:group-hover:shadow-blue-900/50'
+      <div className={`relative aspect-[2/3] rounded-xl overflow-hidden border transition-all duration-300 shadow-md mb-3 ${
+        'border-line group-hover:border-line group-hover:shadow-sm '
       }`}>
-        <BookCover src={book.cover_url} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" iconSize={24} />
+        <BookCover src={book.cover_url} alt={book.title} className="w-full h-full object-cover transition-transform duration-500" iconSize={24} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
         <div className="absolute top-2 left-2">
-          <span className={`px-2 py-1 ${badge.color} rounded-lg text-[9px] font-black uppercase tracking-wider text-white`}>
+          <span className={`px-2 py-1 ${badge.color} rounded-lg text-sm font-semibold tracking-normal text-white`}>
             {badge.label}
           </span>
         </div>
         {isReserved ? (
           <button
             onClick={(e) => { e.stopPropagation(); onCancel(); }}
-            className="absolute bottom-2 left-2 right-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-rose-600/80 hover:bg-rose-600 text-white"
+            className="absolute bottom-2 left-2 right-2 py-2 rounded-lg text-sm font-semibold tracking-normal transition-all bg-danger-soft hover:bg-danger-soft text-danger"
           >
             Cancel
           </button>
@@ -438,20 +438,20 @@ const SmallBookCard = ({ book, onSelect, onAdd, onCancel, isInCart, isReserved, 
           <button
             onClick={(e) => { e.stopPropagation(); onAdd(); }}
             disabled={isInCart}
-            className={`absolute bottom-2 left-2 right-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${
+            className={`absolute bottom-2 left-2 right-2 py-2 rounded-lg text-sm font-semibold tracking-normal transition-all ${
               isInCart
-                ? 'bg-emerald-600/80 text-white cursor-default'
+                ? 'bg-success-soft text-success cursor-default'
                 : available
-                ? 'bg-blue-600/80 hover:bg-blue-600 text-white'
-                : 'bg-amber-600/90 hover:bg-amber-600 text-white'
+                ? 'bg-info-soft hover:bg-info-soft text-link'
+                : 'bg-warning-soft hover:bg-warning-soft text-warning'
             }`}
           >
             {isInCart ? 'In Selection' : available ? 'Reserve' : 'Join Queue'}
           </button>
         )}
       </div>
-      <p className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-tight">{book.title}</p>
-      <p className="text-[10px] text-slate-500 font-medium mt-0.5">{book.author}</p>
+      <p className="text-sm font-bold text-ink line-clamp-2 leading-tight">{book.title}</p>
+      <p className="text-sm text-muted font-medium mt-0.5">{book.author}</p>
     </div>
   );
 };
@@ -459,26 +459,26 @@ const SmallBookCard = ({ book, onSelect, onAdd, onCancel, isInCart, isReserved, 
 const BigBookCard = ({ book, onSelect, onAdd, onCancel, isInCart, isReserved }) => {
   const available = (book.copies_available ?? 0) > 0;
   return (
-    <div className="group cursor-pointer transition-transform duration-200 hover:-translate-y-2" onClick={onSelect}>
-      <div className={`relative aspect-[2/3] rounded-3xl overflow-hidden border transition-all duration-300 mb-3 ${
-        'border-slate-200 dark:border-white/10 group-hover:border-blue-500 shadow-sm group-hover:shadow-xl group-hover:shadow-blue-200/60 dark:group-hover:shadow-blue-900/50'
+    <div className="group cursor-pointer transition-transform duration-200" onClick={onSelect}>
+      <div className={`relative aspect-[2/3] rounded-xl overflow-hidden border transition-all duration-300 mb-3 ${
+        'border-line group-hover:border-line shadow-sm group-hover:shadow-sm '
       }`}>
-        <BookCover src={book.cover_url} alt={book.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" iconSize={24} />
+        <BookCover src={book.cover_url} alt={book.title} className="w-full h-full object-cover transition-transform duration-500" iconSize={24} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         {book.availability_status === 'Unavailable' && !isReserved && (
-          <div className="absolute top-2 left-2 px-2 py-1 bg-rose-600/90 rounded-lg">
-            <p className="text-[8px] font-black uppercase text-white">Unavailable</p>
+          <div className="absolute top-2 left-2 px-2 py-1 bg-danger-soft rounded-lg">
+            <p className="text-sm font-semibold text-white">Unavailable</p>
           </div>
         )}
         {book.availability_status === 'Limited' && !isReserved && (
-          <div className="absolute top-2 left-2 px-2 py-1 bg-amber-600/90 rounded-lg">
-            <p className="text-[8px] font-black uppercase text-white">Limited</p>
+          <div className="absolute top-2 left-2 px-2 py-1 bg-warning-soft rounded-lg">
+            <p className="text-sm font-semibold text-ink">Limited</p>
           </div>
         )}
         {isReserved ? (
           <button
             onClick={(e) => { e.stopPropagation(); onCancel(); }}
-            className="absolute bottom-0 left-0 right-0 p-3 font-black uppercase text-[9px] tracking-wider transition-all opacity-0 group-hover:opacity-100 bg-rose-600 text-white"
+            className="absolute bottom-0 left-0 right-0 p-3 font-semibold text-sm tracking-normal transition-all opacity-0 group-hover:opacity-100 bg-rose-600 text-white"
           >
             Cancel Reservation
           </button>
@@ -486,11 +486,11 @@ const BigBookCard = ({ book, onSelect, onAdd, onCancel, isInCart, isReserved }) 
           <button
             onClick={(e) => { e.stopPropagation(); onAdd(); }}
             disabled={isInCart}
-            className={`absolute bottom-0 left-0 right-0 p-3 font-black uppercase text-[9px] tracking-wider transition-all opacity-0 group-hover:opacity-100 ${
+            className={`absolute bottom-0 left-0 right-0 p-3 font-semibold text-sm tracking-normal transition-all opacity-0 group-hover:opacity-100 ${
               isInCart
-                ? 'bg-emerald-600 text-white cursor-default'
+                ? 'bg-emerald-700 text-white cursor-default'
                 : available
-                ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                ? 'bg-action hover:bg-blue-500 text-white'
                 : 'bg-amber-600 hover:bg-amber-500 text-white'
             }`}
           >
@@ -498,9 +498,9 @@ const BigBookCard = ({ book, onSelect, onAdd, onCancel, isInCart, isReserved }) 
           </button>
         )}
       </div>
-      <p className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 leading-tight">{book.title}</p>
-      <p className="text-[10px] text-slate-500 font-medium mt-0.5 truncate">{book.author}</p>
-      <p className="text-[9px] text-slate-400 dark:text-slate-700 font-black uppercase tracking-widest mt-0.5">{book.category}</p>
+      <p className="text-sm font-bold text-ink line-clamp-2 leading-tight">{book.title}</p>
+      <p className="text-sm text-muted font-medium mt-0.5 truncate">{book.author}</p>
+      <p className="text-sm text-muted font-semibold tracking-normal mt-0.5">{book.category}</p>
     </div>
   );
 };

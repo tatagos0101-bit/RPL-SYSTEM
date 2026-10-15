@@ -18,8 +18,8 @@ const NAV_LINKS = [
 ];
 
 const NOTIF_ICONS = {
-  reservation_ready: <BookMarked size={14} className="text-blue-400" />,
-  default:           <Bell size={14} className="text-slate-400" />,
+  reservation_ready: <BookMarked size={14} className="text-link" />,
+  default:           <Bell size={14} className="text-muted" />,
 };
 
 const timeAgo = (dateStr) => {
@@ -88,43 +88,30 @@ const UserLayout = () => {
   const close = () => setSidebarOpen(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 dark:bg-slate-900 font-sans transition-colors duration-300">
+    <div className="rpl-page min-h-screen flex flex-col bg-subtle font-sans transition-colors duration-300">
 
-      {/* ── TOP BAR (always visible, always dark) ── */}
-      <header className="sticky top-0 z-40 w-full bg-slate-950 border-b border-white/5 px-5 py-3.5 flex items-center justify-between flex-shrink-0">
+      {/* ── TOP BAR (always visible, theme-aware) ── */}
+      <header className="rpl-chrome rpl-header sticky top-0 z-40">
 
         {/* Left: Hamburger */}
         <button
           onClick={() => setSidebarOpen(true)}
-          className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
-          aria-label="Open menu"
+          className="p-2 text-muted hover:text-ink hover:bg-panel rounded-lg transition-all"
+          aria-label="Open menu" aria-expanded={sidebarOpen} aria-controls="member-navigation"
         >
           <Menu size={22} />
         </button>
 
-        {/* Center: Logo */}
-        <Link to="/user/home" onClick={close} className="group flex items-center gap-3 absolute left-1/2 -translate-x-1/2">
-          <div className="w-8 h-8 bg-white/10 rounded-xl p-1 overflow-hidden flex-shrink-0 group-hover:bg-white/20 transition-colors duration-200">
-            <img src="/logo.library.png" alt="RPL" className="w-full h-full object-contain transition-transform duration-500 group-hover:rotate-[20deg] group-hover:scale-110" />
-          </div>
-          <div className="leading-none hidden sm:block">
-            <p className="font-black italic uppercase tracking-tighter text-white text-base leading-none group-hover:text-blue-300 transition-colors duration-200">
-              Rizal <span className="text-blue-400">Lib</span>
-            </p>
-            <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest group-hover:text-slate-400 transition-colors duration-200">
-              Member Terminal
-            </p>
-          </div>
-        </Link>
+        <Link to="/user/home" onClick={close} className="rpl-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></Link>
 
         {/* Right: Overdue alert + Notification bell + Theme toggle + Sign out */}
-        <div className="flex items-center gap-1">
+        <div className="rpl-header-actions">
 
           {/* Overdue warning pill */}
           {overdueCount > 0 && (
             <Link
               to="/user/home"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-danger-soft text-danger hover:bg-danger-soft rounded-xl text-sm font-semibold tracking-normal transition-all"
               title={`${overdueCount} overdue book${overdueCount > 1 ? 's' : ''}`}
             >
               <AlertTriangle size={13} />
@@ -136,12 +123,12 @@ const UserLayout = () => {
           <div className="relative" ref={notifRef}>
             <button
               onClick={() => setNotifOpen((v) => !v)}
-              className="relative p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+              className="relative p-2 text-muted hover:text-ink hover:bg-panel rounded-lg transition-all"
               aria-label="Notifications"
             >
               <Bell size={18} />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-4 h-4 bg-blue-500 text-white text-[9px] font-black rounded-full flex items-center justify-center leading-none">
+                <span className="absolute top-1 right-1 w-4 h-4 bg-blue-500 text-white text-sm font-semibold rounded-full flex items-center justify-center leading-none">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
@@ -149,14 +136,14 @@ const UserLayout = () => {
 
             {/* Notification dropdown */}
             {notifOpen && (
-              <div className="fixed left-3 right-3 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-full mt-2 sm:w-80 [overflow-wrap:anywhere] bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+              <div className="fixed left-3 right-3 top-[var(--rpl-header-height)] sm:absolute sm:left-auto sm:right-0 sm:top-full mt-2 sm:w-80 [overflow-wrap:anywhere] bg-panel border border-line rounded-xl shadow-sm overflow-hidden z-50">
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-white">Notifications</p>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-line">
+                  <p className="text-sm font-semibold tracking-normal text-ink">Notifications</p>
                   {unreadCount > 0 && (
                     <button
                       onClick={handleMarkAllRead}
-                      className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-blue-400 hover:text-blue-300 transition-colors"
+                      className="flex items-center gap-1 text-sm font-semibold tracking-normal text-link hover:text-link transition-colors"
                     >
                       <CheckCheck size={11} /> Mark all read
                     </button>
@@ -168,15 +155,15 @@ const UserLayout = () => {
                   <Link
                     to="/user/home"
                     onClick={() => setNotifOpen(false)}
-                    className="flex items-start gap-3 px-4 py-3 bg-rose-950/60 border-b border-rose-900/40 hover:bg-rose-950 transition-colors"
+                    className="flex items-start gap-3 px-4 py-3 bg-danger-soft border-b border-danger hover:bg-danger-soft transition-colors"
                   >
-                    <AlertTriangle size={14} className="text-rose-400 mt-0.5 flex-shrink-0" />
+                    <AlertTriangle size={14} className="text-danger mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-xs font-bold text-rose-300 leading-snug">
+                      <p className="text-sm font-bold text-danger leading-snug">
                         {overdueCount} book{overdueCount > 1 ? 's' : ''} overdue
                       </p>
                       <FineContent>
-                      <p className="text-[10px] text-rose-500/80 font-medium">Fines are accruing — return immediately</p>
+                      <p className="text-sm text-danger font-medium">Fines are accruing — return immediately</p>
                       </FineContent>
                     </div>
                   </Link>
@@ -185,24 +172,24 @@ const UserLayout = () => {
                 {/* Notification items */}
                 <div className="max-h-72 overflow-y-auto">
                   {notifs.length === 0 ? (
-                    <p className="px-4 py-8 text-center text-xs text-slate-500 font-medium">No notifications yet</p>
+                    <p className="px-4 py-8 text-center text-sm text-muted font-medium">No notifications yet</p>
                   ) : (
                     notifs.map((n) => (
                       <button
                         key={n.id}
                         onClick={() => handleMarkRead(n.id)}
-                        className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors ${
-                          !n.is_read ? 'bg-blue-950/30' : ''
+                        className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-line last:border-0 hover:bg-panel transition-colors ${
+                          !n.is_read ? 'bg-info-soft' : ''
                         }`}
                       >
                         <span className="mt-0.5 flex-shrink-0">
                           {NOTIF_ICONS[n.type] ?? NOTIF_ICONS.default}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-xs leading-snug ${n.is_read ? 'text-slate-400' : 'text-slate-200 font-semibold'}`}>
+                          <p className={`text-sm leading-snug ${n.is_read ? 'text-muted' : 'text-ink font-semibold'}`}>
                             {n.message}
                           </p>
-                          <p className="text-[10px] text-slate-600 font-medium mt-0.5">{timeAgo(n.created_at)}</p>
+                          <p className="text-sm text-muted font-medium mt-0.5">{timeAgo(n.created_at)}</p>
                         </div>
                         {!n.is_read && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0" />
@@ -217,14 +204,14 @@ const UserLayout = () => {
 
           <button
             onClick={toggleTheme}
-            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+            className="p-2 text-muted hover:text-ink hover:bg-panel rounded-lg transition-all"
             aria-label="Toggle theme"
           >
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 text-rose-400 hover:text-white hover:bg-rose-500/20 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 text-danger hover:text-ink hover:bg-danger-soft rounded-lg font-semibold text-sm tracking-normal transition-all"
             aria-label="Sign out"
           >
             <LogOut size={15} />
@@ -236,52 +223,40 @@ const UserLayout = () => {
       {/* ── DRAWER OVERLAY ── */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+          className="fixed inset-0 bg-black/60 z-50"
           onClick={close}
         />
       )}
 
-      {/* ── SLIDE-IN DRAWER (always dark, no theme change) ── */}
-      <div className={`fixed top-0 left-0 h-full w-72 z-60 transform transition-transform duration-300 ease-in-out ${
+      {/* ── SLIDE-IN DRAWER (theme-aware) ── */}
+      <div id="member-navigation" inert={!sidebarOpen} className={`rpl-drawer fixed top-0 left-0 h-full w-72 z-60 transform transition-transform duration-300 ease-in-out ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
         style={{ zIndex: 60 }}
       >
-        <div className="h-full bg-slate-950 flex flex-col border-r border-white/5">
+        <div className="h-full bg-panel flex flex-col border-r border-line">
 
           {/* Drawer Header */}
-          <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-white/10 rounded-xl p-1 overflow-hidden flex-shrink-0">
-                <img src="/logo.library.png" alt="RPL" className="w-full h-full object-contain" />
-              </div>
-              <div className="leading-none">
-                <p className="font-black italic uppercase tracking-tighter text-white text-lg leading-none">
-                  Rizal <span className="text-blue-400">Lib</span>
-                </p>
-                <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mt-0.5">
-                  Member Terminal
-                </p>
-              </div>
-            </div>
+          <div className="px-5 py-4 border-b border-line flex items-center justify-between">
+            <p className="rpl-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></p>
             <button
               onClick={close}
               aria-label="Close menu"
-              className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-xl transition-all"
+              className="p-2 text-muted hover:text-ink hover:bg-panel rounded-lg transition-all"
             >
               <X size={20} />
             </button>
           </div>
 
           {/* User Badge */}
-          <div className="px-5 py-4 border-b border-white/5">
-            <div className="flex items-center gap-3 px-3 py-3 bg-white/5 rounded-2xl">
-              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+          <div className="px-5 py-4 border-b border-line">
+            <div className="flex items-center gap-3 px-3 py-3 bg-panel rounded-xl">
+              <div className="w-10 h-10 bg-action rounded-xl flex items-center justify-center flex-shrink-0">
                 <User size={18} className="text-white" />
               </div>
               <div className="min-w-0">
-                <p className="font-bold text-white text-sm truncate">{localStorage.getItem('userName') || 'Member'}</p>
-                <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mt-0.5">
+                <p className="font-bold text-ink text-sm truncate">{localStorage.getItem('userName') || 'Member'}</p>
+                <p className="text-sm font-semibold tracking-normal text-muted mt-0.5">
                   Verified Member
                 </p>
               </div>
@@ -290,7 +265,7 @@ const UserLayout = () => {
 
           {/* Nav Links */}
           <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 px-4 mb-3">
+            <p className="text-sm font-semibold tracking-normal text-muted px-4 mb-3">
               Navigation
             </p>
             {NAV_LINKS.map((link) => {
@@ -298,16 +273,17 @@ const UserLayout = () => {
               return (
                 <Link
                   key={link.to}
+                  aria-current={active ? 'page' : undefined}
                   to={link.to}
                   onClick={close}
-                  className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all ${
+                  className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-semibold text-sm tracking-normal transition-all ${
                     active
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50'
-                      : 'text-slate-400 hover:text-white hover:bg-white/10'
+                      ? 'bg-action text-white shadow-sm '
+                      : 'text-muted hover:text-white hover:bg-panel'
                   }`}
                   style={!active ? {} : {}}
                 >
-                  <span className={active ? 'text-white' : 'text-slate-500'}>
+                  <span className={active ? 'text-white' : 'text-muted'}>
                     {link.icon}
                   </span>
                   <span className="flex-1">{link.label}</span>
@@ -318,22 +294,22 @@ const UserLayout = () => {
           </nav>
 
           {/* Bottom Actions */}
-          <div className="px-4 pb-6 border-t border-white/5 pt-4 space-y-1">
+          <div className="px-4 pb-6 border-t border-line pt-4 space-y-1">
             <button
               onClick={toggleTheme}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest text-slate-500 hover:text-white hover:bg-white/10 transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm tracking-normal text-muted hover:text-ink hover:bg-panel transition-all"
             >
               {isDark ? <Sun size={17} /> : <Moon size={17} />}
               {isDark ? 'Light Mode' : 'Dark Mode'}
             </button>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest text-rose-500 hover:bg-rose-500/10 transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm tracking-normal text-danger hover:bg-danger-soft transition-all"
             >
               <LogOut size={17} /> Logout
             </button>
-            <p className="text-[8px] font-black uppercase tracking-widest text-slate-700 text-center pt-3">
-              RPL Member Terminal v1.0
+            <p className="text-sm font-semibold tracking-normal text-muted text-center pt-3">
+              RPL Member account v1.0
             </p>
           </div>
         </div>

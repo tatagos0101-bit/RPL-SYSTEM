@@ -73,11 +73,11 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white font-sans">
+    <div className="rpl-page rpl-public min-h-screen bg-subtle text-ink font-sans">
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-5 py-6">
         <Link
           to="/user/login"
-          className="inline-flex w-fit items-center gap-3 rounded-2xl px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all hover:bg-white hover:text-blue-600 hover:shadow-sm dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-blue-400"
+          className="inline-flex w-fit items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold tracking-normal text-muted transition-all hover:bg-panel hover:text-link hover:shadow-sm"
         >
           <ArrowLeft size={15} />
           Back to Login
@@ -86,63 +86,55 @@ export default function ForgotPasswordPage() {
         <main className="grid flex-1 items-center gap-10 py-10 lg:grid-cols-[0.9fr_1.1fr]">
           <section className="space-y-7">
             <Link to="/" className="inline-flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
-                <img src="/logo.library.png" alt="Rizal Provincial Library" className="h-full w-full object-contain" />
-              </div>
-              <div>
-                <p className="text-xl font-black italic uppercase leading-none tracking-tight">
-                  Rizal <span className="text-blue-600 dark:text-blue-400">Lib</span>
-                </p>
-                <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-400">Member Recovery</p>
-              </div>
+              <span className="rpl-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></span>
             </Link>
 
             <div>
-              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.35em] text-blue-600 dark:text-blue-400">
+              <p className="mb-3 text-sm font-semibold tracking-normal text-link">
                 Account Help
               </p>
-              <h1 className="max-w-xl text-4xl font-black italic uppercase leading-none tracking-tight md:text-6xl">
+              <h1 className="max-w-xl font-semibold leading-none tracking-normal rpl-title">
                 Reset Your Password
               </h1>
-              <p className="mt-5 max-w-md text-sm font-medium leading-7 text-slate-500 dark:text-slate-400">
+              <p className="mt-5 max-w-md text-sm font-medium leading-7 text-muted">
                 Use your email, phone number, or Member ID. If no verified contact is saved, library staff can reset your password from the members screen.
               </p>
             </div>
           </section>
 
-          <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:p-8">
+          <section className="rounded-xl border border-line bg-panel p-6 shadow-sm md:p-8">
             {error && (
-              <div className="mb-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-800 dark:bg-rose-900/20">
-                <AlertCircle size={17} className="mt-0.5 flex-shrink-0 text-rose-500" />
-                <p className="text-xs font-bold leading-relaxed text-rose-700 dark:text-rose-300">{error}</p>
+              <div className="mb-5 flex items-start gap-3 rounded-xl border border-danger bg-danger-soft px-4 py-3">
+                <AlertCircle size={17} className="mt-0.5 flex-shrink-0 text-danger" />
+                <p className="text-sm font-bold leading-relaxed text-danger">{error}</p>
               </div>
             )}
 
             {step === 'request' && (
               <form onSubmit={submitRequest} className="space-y-5">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Step 1</p>
-                  <h2 className="mt-1 text-2xl font-black tracking-tight">Find your account</h2>
+                  <p className="text-sm font-semibold tracking-normal text-muted">Step 1</p>
+                  <h2 className="mt-1 font-semibold tracking-normal rpl-section-title">Find your account</h2>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  <label className="ml-1 text-sm font-semibold tracking-normal text-muted">
                     Email, Phone, or Member ID
                   </label>
-                  <input
+                  <input aria-label="Email, Phone, or Member ID"
                     value={identifier}
                     onChange={(event) => setIdentifier(event.target.value)}
                     placeholder="email@domain.com, +63..., or RPL-K7X2M"
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-bold outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-lg border border-line bg-subtle px-4 py-4 text-base font-bold outline-none transition-all focus:ring-2 focus:ring-line text-ink"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  <label className="ml-1 text-sm font-semibold tracking-normal text-muted">
                     Recovery Method
                   </label>
-                  <div className="grid grid-cols-3 gap-2 rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+                  <div className="grid grid-cols-3 gap-2 rounded-xl bg-subtle p-1">
                     {channelOptions.map((option) => {
                       const Icon = option.icon;
                       const active = channel === option.value;
@@ -151,10 +143,10 @@ export default function ForgotPasswordPage() {
                           key={option.value}
                           type="button"
                           onClick={() => setChannel(option.value)}
-                          className={`flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+                          className={`flex items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold tracking-normal transition-all ${
                             active
-                              ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-300'
-                              : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
+                              ? 'bg-panel text-link shadow-sm text-link'
+                              : 'text-muted hover:text-ink '
                           }`}
                         >
                           <Icon size={14} />
@@ -168,7 +160,7 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex w-full items-center justify-center rounded-2xl bg-blue-600 py-4 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60 dark:shadow-blue-950"
+                  className="flex w-full items-center justify-center rounded-lg bg-action py-4 text-sm font-semibold tracking-normal text-white shadow-sm transition-all hover:bg-action-hover disabled:opacity-60"
                 >
                   {loading ? 'Checking...' : 'Send Reset Code'}
                 </button>
@@ -178,19 +170,19 @@ export default function ForgotPasswordPage() {
             {step === 'confirm' && (
               <form onSubmit={submitConfirm} className="space-y-5">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Step 2</p>
-                  <h2 className="mt-1 text-2xl font-black tracking-tight">Enter reset code</h2>
-                  <p className="mt-2 text-xs font-medium leading-6 text-slate-500 dark:text-slate-400">
+                  <p className="text-sm font-semibold tracking-normal text-link">Step 2</p>
+                  <h2 className="mt-1 font-semibold tracking-normal rpl-section-title">Enter reset code</h2>
+                  <p className="mt-2 text-sm font-medium leading-6 text-muted">
                     A reset code was prepared for your {result?.delivery_channel === 'sms' ? 'phone number' : 'email address'}.
                   </p>
                 </div>
 
                 {result?.debug_code && (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-300">
+                  <div className="rounded-xl border border-warning bg-warning-soft px-4 py-3">
+                    <p className="text-sm font-semibold tracking-normal text-warning">
                       Development reset code
                     </p>
-                    <p className="mt-1 font-mono text-2xl font-black tracking-widest text-amber-700 dark:text-amber-200">
+                    <p className="mt-1 font-sans text-2xl font-semibold tracking-normal text-warning">
                       {result.debug_code}
                     </p>
                   </div>
@@ -198,43 +190,43 @@ export default function ForgotPasswordPage() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <label className="ml-1 text-sm font-semibold tracking-normal text-muted">
                       6-Digit Code
                     </label>
-                    <input
+                    <input aria-label="6-Digit Code"
                       value={code}
                       onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="123456"
                       inputMode="numeric"
-                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 font-mono text-sm font-black tracking-widest outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-line bg-subtle px-4 py-4 font-sans text-base font-semibold tracking-normal outline-none transition-all focus:ring-2 focus:ring-line text-ink"
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                    <label className="ml-1 text-sm font-semibold tracking-normal text-muted">
                       New Password
                     </label>
-                    <input
+                    <input aria-label="New Password"
                       type="password"
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
                       minLength={6}
-                      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-bold outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      className="w-full rounded-lg border border-line bg-subtle px-4 py-4 text-base font-bold outline-none transition-all focus:ring-2 focus:ring-line text-ink"
                       required
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  <label className="ml-1 text-sm font-semibold tracking-normal text-muted">
                     Confirm Password
                   </label>
-                  <input
+                  <input aria-label="Confirm Password"
                     type="password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     minLength={6}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-bold outline-none transition-all focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                    className="w-full rounded-lg border border-line bg-subtle px-4 py-4 text-base font-bold outline-none transition-all focus:ring-2 focus:ring-line text-ink"
                     required
                   />
                 </div>
@@ -246,14 +238,14 @@ export default function ForgotPasswordPage() {
                       setStep('request');
                       setError('');
                     }}
-                    className="rounded-2xl border border-slate-200 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-all hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                    className="rounded-lg border border-line py-4 text-sm font-semibold tracking-normal text-muted transition-all hover:bg-subtle"
                   >
                     Change Method
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="rounded-2xl bg-blue-600 py-4 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60 dark:shadow-blue-950"
+                    className="rounded-lg bg-action py-4 text-sm font-semibold tracking-normal text-white shadow-sm transition-all hover:bg-action-hover disabled:opacity-60"
                   >
                     {loading ? 'Saving...' : 'Reset Password'}
                   </button>
@@ -263,15 +255,15 @@ export default function ForgotPasswordPage() {
 
             {step === 'help' && (
               <div className="space-y-5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-300">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-warning-soft text-warning">
                   <AlertCircle size={30} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-300">
+                  <p className="text-sm font-semibold tracking-normal text-warning">
                     Staff reset required
                   </p>
-                  <h2 className="mt-1 text-2xl font-black tracking-tight">Visit the librarian desk</h2>
-                  <p className="mt-3 text-sm font-medium leading-7 text-slate-500 dark:text-slate-400">
+                  <h2 className="mt-1 font-semibold tracking-normal rpl-section-title">Visit the librarian desk</h2>
+                  <p className="mt-3 text-sm font-medium leading-7 text-muted">
                     A librarian can verify your ID and create a temporary password for you.
                   </p>
                 </div>
@@ -282,7 +274,7 @@ export default function ForgotPasswordPage() {
                     setError('');
                     setResult(null);
                   }}
-                  className="rounded-2xl bg-slate-900 px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-slate-800 dark:bg-white dark:text-slate-900"
+                  className="rounded-lg bg-panel px-6 py-4 text-sm font-semibold tracking-normal text-ink transition-all hover:bg-subtle"
                 >
                   Try Another Identifier
                 </button>
@@ -291,21 +283,21 @@ export default function ForgotPasswordPage() {
 
             {step === 'done' && (
               <div className="space-y-5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-success-soft text-success">
                   <CheckCircle2 size={32} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-300">
+                  <p className="text-sm font-semibold tracking-normal text-success">
                     Password changed
                   </p>
-                  <h2 className="mt-1 text-2xl font-black tracking-tight">You can sign in now</h2>
-                  <p className="mt-3 text-sm font-medium leading-7 text-slate-500 dark:text-slate-400">
+                  <h2 className="mt-1 font-semibold tracking-normal rpl-section-title">You can sign in now</h2>
+                  <p className="mt-3 text-sm font-medium leading-7 text-muted">
                     Your old reset codes were closed after this change.
                   </p>
                 </div>
                 <Link
                   to="/user/login"
-                  className="inline-flex rounded-2xl bg-blue-600 px-6 py-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-blue-700"
+                  className="inline-flex rounded-xl bg-action px-6 py-4 text-sm font-semibold tracking-normal text-white transition-all hover:bg-action-hover"
                 >
                   Return to Login
                 </Link>

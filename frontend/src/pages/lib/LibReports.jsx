@@ -201,16 +201,16 @@ const LibReports = () => {
   const previewRows = activeRows.slice(0, 80);
 
   return (
-    <div className="min-h-screen w-full bg-transparent px-4 py-6 pb-20 text-slate-900 dark:text-white sm:px-6 lg:px-8 2xl:px-10">
+    <div className="rpl-page min-h-screen w-full bg-transparent px-4 py-6 pb-20 text-ink sm:px-6 lg:px-8 2xl:px-10">
       <header className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <p className="mb-2 text-[10px] font-black uppercase tracking-[0.35em] text-blue-600 dark:text-blue-400">
+          <p className="mb-2 text-sm font-semibold tracking-normal text-link">
             Librarian Terminal
           </p>
-          <h1 className="text-3xl font-black uppercase tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+          <h1 className="font-semibold tracking-normal text-ink rpl-title">
             Reports
           </h1>
-          <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+          <p className="mt-2 max-w-3xl text-sm font-medium leading-6 text-muted">
             Print official borrower and return records, export CSV files, and review entry gate logs.
           </p>
         </div>
@@ -220,7 +220,7 @@ const LibReports = () => {
             type="button"
             onClick={loadReports}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 transition hover:border-blue-200 hover:text-blue-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-3 text-sm font-semibold tracking-normal text-muted transition hover:border-line hover:text-link disabled:opacity-60"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
             Refresh
@@ -229,7 +229,7 @@ const LibReports = () => {
             type="button"
             onClick={handleCsvExport}
             disabled={loading || activeRows.length === 0}
-            className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
+            className="inline-flex items-center gap-2 rounded-lg border border-success bg-success-soft px-4 py-3 text-sm font-semibold tracking-normal text-success transition hover:bg-success-soft disabled:opacity-50"
           >
             <Download size={14} />
             CSV
@@ -238,7 +238,7 @@ const LibReports = () => {
             type="button"
             onClick={handlePrint}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-lg bg-action px-4 py-3 text-sm font-semibold tracking-normal text-white transition hover:bg-action-hover disabled:opacity-50"
           >
             <Printer size={14} />
             Print
@@ -247,23 +247,23 @@ const LibReports = () => {
       </header>
 
       {error && (
-        <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+        <div className="mb-5 rounded-xl border border-danger bg-danger-soft px-4 py-3 text-sm font-bold text-danger">
           {error}
         </div>
       )}
 
       <section className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.38fr)]">
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+        <div className="rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex flex-wrap gap-2">
             {reportOptions.map((option) => (
               <button
                 key={option.key}
                 type="button"
                 onClick={() => setReportType(option.key)}
-                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest transition ${
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold tracking-normal transition ${
                   reportType === option.key
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-200/50 dark:shadow-blue-900/40'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white'
+                    ? 'bg-action text-white shadow-sm '
+                    : 'bg-subtle text-muted hover:bg-subtle hover:text-ink '
                 }`}
               >
                 {option.key === 'transactions' ? <FileText size={14} /> : <ShieldCheck size={14} />}
@@ -274,17 +274,17 @@ const LibReports = () => {
 
           <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_repeat(2,minmax(160px,0.35fr))]">
             <label className="block">
-              <span className="mb-1.5 block text-[9px] font-black uppercase tracking-widest text-slate-400">
+              <span className="mb-1.5 block text-sm font-semibold tracking-normal text-muted">
                 Search
               </span>
               <span className="relative block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <input
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
+                <input aria-label="Member, ID, book, note..."
                   type="text"
                   value={filters.query}
                   onChange={(e) => updateFilter('query', e.target.value)}
                   placeholder="Member, ID, book, note..."
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-4 text-sm font-bold text-slate-700 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                  className="w-full rounded-lg border border-line bg-subtle py-3 pl-9 pr-4 text-base font-bold text-muted outline-none transition focus:ring-2 focus:ring-line"
                 />
               </span>
             </label>
@@ -334,21 +334,21 @@ const LibReports = () => {
             <button
               type="button"
               onClick={resetFilters}
-              className="self-end rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+              className="self-end rounded-lg border border-line bg-panel px-4 py-3 text-sm font-semibold tracking-normal text-muted transition hover:bg-subtle hover:text-ink"
             >
               Clear Filters
             </button>
           </div>
         </div>
 
-        <aside className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+        <aside className="rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-info-soft text-link">
               <CalendarDays size={18} />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Monthly PDF</p>
-              <h2 className="text-lg font-black text-slate-950 dark:text-white">Circulation summary</h2>
+              <p className="text-sm font-semibold tracking-normal text-muted">Monthly PDF</p>
+              <h2 className="font-semibold text-ink rpl-section-title">Circulation summary</h2>
             </div>
           </div>
           <div className="grid grid-cols-[1fr_1fr] gap-3">
@@ -362,14 +362,14 @@ const LibReports = () => {
               })}
             />
             <label className="block">
-              <span className="mb-1.5 block text-[9px] font-black uppercase tracking-widest text-slate-400">Year</span>
+              <span className="mb-1.5 block text-sm font-semibold tracking-normal text-muted">Year</span>
               <input
                 type="number"
                 min="2020"
                 max="2100"
                 value={monthly.year}
                 onChange={(e) => setMonthly((current) => ({ ...current, year: Number(e.target.value) || DEFAULT_YEAR }))}
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="w-full rounded-lg border border-line bg-subtle px-4 py-3 text-base font-bold text-muted outline-none transition focus:ring-2 focus:ring-line"
               />
             </label>
           </div>
@@ -377,7 +377,7 @@ const LibReports = () => {
             type="button"
             onClick={handleMonthlyDownload}
             disabled={monthlyLoading}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700 disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-blue-200"
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-panel px-4 py-3 text-sm font-semibold tracking-normal text-link transition hover:bg-action-hover disabled:opacity-60 hover:bg-info-soft"
           >
             {monthlyLoading ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
             Download Monthly PDF
@@ -392,26 +392,26 @@ const LibReports = () => {
         <MetricCard label="Preview Rows" value={previewRows.length} />
       </section>
 
-      <section className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
-        <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
+      <section className="overflow-hidden rounded-xl border border-line bg-panel shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Preview</p>
-            <h2 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">{activeTitle}</h2>
+            <p className="text-sm font-semibold tracking-normal text-muted">Preview</p>
+            <h2 className="font-semibold tracking-normal text-ink rpl-section-title">{activeTitle}</h2>
           </div>
-          <p className="text-xs font-bold text-slate-400">
+          <p className="text-sm font-bold text-muted">
             Showing {previewRows.length} of {activeRows.length} matching records
           </p>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-blue-600">
+          <div className="flex items-center justify-center py-16 text-link">
             <RefreshCw size={26} className="animate-spin" />
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left">
               <thead>
-                <tr className="border-b border-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                <tr className="border-b border-line text-sm font-semibold tracking-normal text-muted">
                   {activeColumns.map((column) => (
                     <th key={column.key} className="px-5 py-4">{column.label}</th>
                   ))}
@@ -419,9 +419,9 @@ const LibReports = () => {
               </thead>
               <tbody>
                 {previewRows.map((row) => (
-                  <tr key={`${reportType}-${row.no}`} className="border-b border-slate-50 text-xs hover:bg-blue-50/50 dark:border-slate-700 dark:hover:bg-slate-700/40">
+                  <tr key={`${reportType}-${row.no}`} className="border-b border-line text-sm hover:bg-info-soft hover:bg-subtle">
                     {activeColumns.map((column) => (
-                      <td key={column.key} className="px-5 py-4 font-semibold text-slate-600 dark:text-slate-300">
+                      <td key={column.key} className="px-5 py-4 font-semibold text-muted">
                         {row[column.key]}
                       </td>
                     ))}
@@ -429,7 +429,7 @@ const LibReports = () => {
                 ))}
                 {previewRows.length === 0 && (
                   <tr>
-                    <td colSpan={activeColumns.length} className="px-5 py-14 text-center text-xs font-black uppercase tracking-widest text-slate-400">
+                    <td colSpan={activeColumns.length} className="px-5 py-14 text-center text-sm font-semibold tracking-normal text-muted">
                       No matching records
                     </td>
                   </tr>
@@ -445,23 +445,23 @@ const LibReports = () => {
 
 const DateInput = ({ label, value, onChange }) => (
   <label className="block">
-    <span className="mb-1.5 block text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+    <span className="mb-1.5 block text-sm font-semibold tracking-normal text-muted">{label}</span>
     <input
       type="date"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+      className="w-full rounded-lg border border-line bg-subtle px-4 py-3 text-base font-bold text-muted outline-none transition focus:ring-2 focus:ring-line"
     />
   </label>
 );
 
 const SelectInput = ({ label, value, onChange, options }) => (
   <label className="block min-w-[150px]">
-    <span className="mb-1.5 block text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+    <span className="mb-1.5 block text-sm font-semibold tracking-normal text-muted">{label}</span>
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+      className="w-full rounded-lg border border-line bg-subtle px-4 py-3 text-base font-bold text-muted outline-none transition focus:ring-2 focus:ring-line"
     >
       {options.map(([optionValue, optionLabel]) => (
         <option key={optionValue} value={optionValue}>{optionLabel}</option>
@@ -471,9 +471,9 @@ const SelectInput = ({ label, value, onChange, options }) => (
 );
 
 const MetricCard = ({ label, value }) => (
-  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-5">
-    <p className="text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">{value}</p>
-    <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+  <div className="rounded-xl border border-line bg-panel p-4 shadow-sm sm:p-5">
+    <p className="text-2xl font-semibold tracking-normal text-ink sm:text-3xl">{value}</p>
+    <p className="mt-1 text-sm font-semibold tracking-normal text-muted">{label}</p>
   </div>
 );
 

@@ -55,41 +55,41 @@ export default function BookEditDialog({ book, categories, onClose, onSaved }) {
   return (
     <dialog ref={dialog} aria-labelledby="book-edit-title"
       onCancel={(event) => { event.preventDefault(); if (!saving) onClose(); }}
-      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-0 text-slate-900 shadow-2xl backdrop:bg-slate-950/60 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-xl border border-line bg-panel p-0 text-ink shadow-sm backdrop:bg-panel">
       <form onSubmit={save} className="p-5 sm:p-7">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-blue-600">Book inventory</p>
-            <h2 id="book-edit-title" className="flex items-center gap-2 text-2xl font-black"><Pencil size={20} /> Edit book</h2>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Update this book's information and save your changes.</p>
+            <p className="mb-1 text-sm font-semibold tracking-normal text-link">Book inventory</p>
+            <h2 id="book-edit-title" className="flex items-center gap-2 font-semibold rpl-section-title"><Pencil size={20} /> Edit book</h2>
+            <p className="mt-2 text-sm text-muted">Update this book's information and save your changes.</p>
           </div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="Close book editor"
-            className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"><X size={20} /></button>
+            className="rounded-lg p-2 text-muted hover:bg-subtle disabled:opacity-50"><X size={20} /></button>
         </div>
-        {error && <div role="alert" className="mb-5 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"><AlertCircle size={18} className="shrink-0" />{error}</div>}
+        {error && <div role="alert" className="mb-5 flex items-start gap-2 rounded-xl border border-danger bg-danger-soft p-3 text-sm text-danger"><AlertCircle size={18} className="shrink-0" />{error}</div>}
         <div className="grid gap-4 sm:grid-cols-2">
           {fields.map(({ name, label, type = 'text', ...constraints }) => (
             <label key={name} className={`block ${name === 'cover_url' ? 'sm:col-span-2' : ''}`}>
-              <span className="mb-1.5 block text-xs font-bold text-slate-600 dark:text-slate-300">{label}{constraints.required ? ' *' : ''}</span>
+              <span className="mb-1.5 block text-sm font-bold text-muted">{label}{constraints.required ? ' *' : ''}</span>
               <input name={name} type={type} value={form[name]} {...constraints}
                 step={type === 'number' ? 1 : undefined}
                 list={name === 'category' ? 'edit-book-categories' : undefined}
                 disabled={saving}
                 onChange={(event) => { setForm((current) => ({ ...current, [name]: event.target.value })); setError(''); }}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-800" />
+                className="w-full rounded-lg border border-line bg-subtle px-3 py-2.5 text-base outline-none focus:border-line focus:ring-2 focus:ring-line disabled:opacity-60" />
             </label>
           ))}
         </div>
         <datalist id="edit-book-categories">{categories.filter((category) => category !== 'All').map((category) => <option key={category} value={category} />)}</datalist>
-        <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
+        <p className="mt-4 text-sm leading-5 text-muted">
           Available copies are calculated automatically. Copies on loan cannot be removed;
           reducing the total retires copies while keeping their loan history.
         </p>
-        <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-5 dark:border-slate-800">
+        <div className="mt-6 flex justify-end gap-3 border-t border-line pt-5">
           <button type="button" onClick={onClose} disabled={saving}
-            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300">Cancel</button>
+            className="rounded-lg border border-line px-4 py-2.5 text-sm font-bold text-muted disabled:opacity-50">Cancel</button>
           <button type="submit" disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+            className="flex items-center gap-2 rounded-lg bg-action px-5 py-2.5 text-sm font-bold text-white hover:bg-action-hover disabled:opacity-60">
             {saving && <RefreshCw size={16} className="animate-spin" />}{saving ? 'Saving…' : 'Save changes'}
           </button>
         </div>

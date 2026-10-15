@@ -60,27 +60,27 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center px-4 py-10">
-      <form onSubmit={submit} className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl">
+    <div className="rpl-page min-h-screen bg-panel text-ink flex items-center justify-center px-4 py-10">
+      <form onSubmit={submit} className="w-full max-w-md bg-panel border border-line rounded-xl p-6 shadow-sm">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-11 h-11 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
-            <KeyRound size={20} className="text-blue-400" />
+          <div className="w-11 h-11 rounded-xl bg-info-soft border border-line flex items-center justify-center">
+            <KeyRound size={20} className="text-link" />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-400">Account Security</p>
-            <h1 className="text-2xl font-black italic uppercase tracking-tight">Change Password</h1>
+            <p className="text-sm font-semibold tracking-normal text-link">Account Security</p>
+            <h1 className="font-semibold tracking-normal rpl-title">Change Password</h1>
           </div>
         </div>
 
-        <p className="mb-6 text-sm leading-6 text-slate-400">
+        <p className="mb-6 text-sm leading-6 text-muted">
           Choose a new password to finish setting up your account. After it is saved,
           you will go to your homepage.
         </p>
 
         {error && (
-          <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-2xl border border-rose-800/60 bg-rose-950/40 px-4 py-3">
-            <AlertCircle size={15} className="text-rose-400 mt-0.5 flex-shrink-0" />
-            <p className="text-xs font-bold text-rose-300">{error}</p>
+          <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-xl border border-danger bg-danger-soft px-4 py-3">
+            <AlertCircle size={15} className="text-danger mt-0.5 flex-shrink-0" />
+            <p className="text-sm font-bold text-danger">{error}</p>
           </div>
         )}
 
@@ -91,14 +91,14 @@ export default function ChangePasswordPage() {
             ['confirm', 'Confirm New Password'],
           ].map(([key, label]) => (
             <label key={key} className="block">
-              <span className="block mb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">{label}</span>
-              <span className="flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-800/80 px-4 py-3 focus-within:border-blue-500">
-                <Lock size={15} className="text-slate-500" />
+              <span className="block mb-1.5 text-sm font-semibold tracking-normal text-muted">{label}</span>
+              <span className="flex items-center gap-2 rounded-xl border border-line bg-subtle px-4 py-3 focus-within:border-line">
+                <Lock size={15} className="text-muted" />
                 <input
                   type={show[key] ? 'text' : 'password'}
                   value={form[key]}
                   onChange={(event) => update(key, event.target.value)}
-                  className="min-w-0 flex-1 bg-transparent outline-none text-sm font-semibold text-white placeholder:text-slate-600"
+                  className="min-w-0 flex-1 bg-transparent outline-none text-base font-semibold text-ink placeholder:text-muted"
                   autoComplete={key === 'current' ? 'current-password' : 'new-password'}
                   required
                   disabled={saving}
@@ -106,7 +106,7 @@ export default function ChangePasswordPage() {
                 <button
                   type="button"
                   onClick={() => setShow((prev) => ({ ...prev, [key]: !prev[key] }))}
-                  className="text-slate-500 hover:text-slate-300"
+                  className="text-muted hover:text-ink"
                   aria-label={show[key] ? `Hide ${label}` : `Show ${label}`}
                 >
                   {show[key] ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -119,7 +119,7 @@ export default function ChangePasswordPage() {
         <button
           type="submit"
           disabled={saving}
-          className="mt-6 w-full flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-3.5 text-[11px] font-black uppercase tracking-widest text-white hover:bg-blue-700 disabled:opacity-60"
+          className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg bg-action px-5 py-3.5 text-sm font-semibold tracking-normal text-white hover:bg-action-hover disabled:opacity-60"
         >
           {saving ? <RefreshCw size={15} className="animate-spin" /> : <Check size={15} />}
           {saving ? 'Updating' : 'Update Password'}

@@ -13,7 +13,7 @@ import {
 
 const LoadingGate = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-950 text-slate-500 dark:text-slate-400">
-    <div className="text-[10px] font-black uppercase tracking-[0.35em]">
+    <div className="text-sm font-semibold tracking-normal">
       Verifying Access
     </div>
   </div>
@@ -72,7 +72,7 @@ export default function RequireRole({ allowedRoles }) {
         <div role="alert" className="max-w-sm text-center text-slate-700 dark:text-slate-200">
           <p className="font-semibold">We couldn't verify your account. Please retry.</p>
           <button type="button" onClick={() => setAttempt((value) => value + 1)}
-            className="mt-4 rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white">
+            className="mt-4 rounded-lg bg-action px-5 py-3 text-sm font-bold text-white">
             Retry account verification
           </button>
         </div>

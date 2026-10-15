@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, ChevronRight, ChevronLeft, ArrowRight, X, BookOpen, LogIn, RefreshCw } from 'lucide-react';
+import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, Mail, ChevronRight, ChevronLeft, ArrowRight, X, BookOpen, LogIn, RefreshCw } from 'lucide-react';
 import BookCard from '../../components/BookCard';
 import { getBooks } from '../../api/books';
 import { getStoredAuth } from '../../api/authRoutes';
@@ -8,32 +8,32 @@ import { getStoredAuth } from '../../api/authRoutes';
 const FEATURES = [
   {
     icon: <Scan size={26} />,
-    color: 'text-blue-600 dark:text-blue-400',
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
+    color: 'text-link text-link',
+    bg: 'bg-info-soft bg-info-soft',
     title: 'Biometric Face Entry',
-    desc: 'Walk into the library with just your face. Our kiosk verifies your identity in under 2 seconds — no card, no ID needed.',
+    desc: 'Enrolled members can use facial verification at the entrance station. Ask library staff for assistance.',
   },
   {
     icon: <Sparkles size={26} />,
-    color: 'text-violet-600 dark:text-violet-400',
-    bg: 'bg-violet-100 dark:bg-violet-900/30',
-    title: 'AI Recommendations',
-    desc: 'Our AI studies your borrowing history and reading patterns to suggest books you\'ll actually want to read next.',
+    color: 'text-link text-link',
+    bg: 'bg-info-soft bg-info-soft',
+    title: 'Reading recommendations',
+    desc: 'Explore recommendations based on borrowing activity and your reading history.',
   },
   {
     icon: <QrCode size={26} />,
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    color: 'text-success text-success',
+    bg: 'bg-success-soft bg-success-soft',
     title: 'QR Scan Borrow & Return',
-    desc: 'Every book has a QR code. Scan at the counter to borrow, scan again to return. No paperwork, no waiting.',
+    desc: 'Library staff use book QR codes to help process borrowing and returns at the counter.',
   },
 ];
 
 const STATS = [
-  { val: '7,000+', label: 'Books Available' },
-  { val: '< 2s',   label: 'Face Scan Entry' },
-  { val: '100%',   label: 'QR Scan Accuracy' },
-  { val: '≥ 90%',  label: 'Face Recognition' },
+  { val: 'Discover', label: 'Browse the collection' },
+  { val: 'Reserve', label: 'Choose your next book' },
+  { val: 'Borrow', label: 'Visit the library counter' },
+  { val: 'Read', label: 'Keep track of your loans' },
 ];
 
 const GenreRow = ({ genre, books, onSelect }) => {
@@ -61,28 +61,28 @@ const GenreRow = ({ genre, books, onSelect }) => {
     <div>
       <div className="px-4 md:px-8 lg:px-12 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-7">
         <div className="min-w-0">
-          <h3 className="text-2xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white">
+          <h3 className="font-semibold tracking-normal text-ink rpl-subheading">
             {genre}
           </h3>
-          <div className="h-1 w-12 bg-blue-600 dark:bg-blue-500 mt-2 rounded-full" />
+          <div className="h-1 w-12 bg-action bg-blue-500 mt-2 rounded-full" />
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <button
+          <button aria-label="Previous"
             onClick={() => scroll(-1)}
             disabled={!canScrollLeft}
-            className="p-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-blue-600 hover:border-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:border-blue-600 dark:hover:text-white transition-all disabled:opacity-30 disabled:pointer-events-none"
+            className="p-2 rounded-full border border-line text-muted hover:bg-action hover:border-line hover:text-white transition-all disabled:opacity-30 disabled:pointer-events-none"
           >
             <ChevronLeft size={16} />
           </button>
-          <button
+          <button aria-label="Next"
             onClick={() => scroll(1)}
             disabled={!canScrollRight}
-            className="p-2 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-blue-600 hover:border-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:border-blue-600 dark:hover:text-white transition-all disabled:opacity-30 disabled:pointer-events-none"
+            className="p-2 rounded-full border border-line text-muted hover:bg-action hover:border-line hover:text-white transition-all disabled:opacity-30 disabled:pointer-events-none"
           >
             <ChevronRight size={16} />
           </button>
           <Link to="/browse"
-            className="ml-1 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-full hover:border-blue-400 dark:hover:border-blue-600">
+            className="ml-1 text-sm font-semibold tracking-normal text-muted hover:text-link transition-colors flex items-center gap-1.5 border border-line px-4 py-2 rounded-full hover:border-line">
             View All <ChevronRight size={11} />
           </Link>
         </div>
@@ -160,138 +160,49 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen min-w-0 [overflow-wrap:anywhere] bg-white dark:bg-slate-950 font-sans transition-colors duration-300">
+    <div className="rpl-page rpl-public rpl-landing min-h-screen min-w-0 [overflow-wrap:anywhere] bg-panel font-sans transition-colors duration-300">
 
-      {/* ── HERO ── */}
-      <section className="relative pt-36 pb-28 px-6 overflow-hidden bg-gradient-to-b from-slate-50 to-white dark:from-slate-950 dark:to-slate-950">
-        {/* Soft background accents */}
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 dark:bg-blue-600/8 blur-[120px] rounded-full -z-10 translate-x-1/3 -translate-y-1/4 pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-300/10 dark:bg-indigo-700/10 blur-[100px] rounded-full -z-10 -translate-x-1/4 translate-y-1/4 pointer-events-none" />
-
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Badge */}
-          <span className="animate-fade-in inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-full text-[10px] font-black uppercase tracking-[0.3em] mb-8 border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors duration-200">
-            Rizal Province · Calabarzon
-          </span>
-
-          {/* Seal */}
-          <div className="animate-fade-in delay-75 flex justify-center mb-7">
-            <div className="w-[88px] h-[88px] rounded-full bg-white dark:bg-slate-800 shadow-2xl shadow-blue-100/60 dark:shadow-black/50 ring-4 ring-white dark:ring-slate-700 flex items-center justify-center overflow-hidden p-1.5 hover:scale-110 hover:shadow-blue-200/80 dark:hover:shadow-blue-900/60 transition-all duration-300 animate-float">
-              <img src="/logo.library.png" alt="Rizal Provincial Library" className="w-full h-full object-contain" />
-            </div>
-          </div>
-
-          <p className="animate-fade-in delay-100 text-[11px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500 mb-5">
-            Rizal Provincial Library
-          </p>
-
-          <h1 className="animate-fade-in-up delay-150 text-[clamp(2.25rem,11vw,3rem)] sm:text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-[0.95] text-slate-900 dark:text-white mb-6">
-            Your Story <br />
-            <span className="text-blue-600 dark:text-blue-500">Starts Here.</span>
-          </h1>
-
-          <p className="animate-fade-in-up delay-200 text-slate-500 dark:text-slate-400 text-lg md:text-xl mb-12 max-w-2xl mx-auto font-medium leading-relaxed">
-            Browse <span className="font-black text-slate-800 dark:text-slate-200">7,000+ books</span>, reserve titles online, and enter the library using your face — the Rizal Province digital library portal.
-          </p>
-
-          {/* Search */}
-          <form
-            onSubmit={handleSearch}
-            className="animate-fade-in-up delay-300 flex flex-col md:flex-row gap-3 p-2.5 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_20px_60px_rgba(37,99,235,0.10)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] border border-slate-200 dark:border-slate-700 max-w-2xl mx-auto mb-8 hover:shadow-[0_24px_70px_rgba(37,99,235,0.15)] transition-shadow duration-300"
-          >
-            <div className="min-w-0 flex-1 flex items-center gap-3 px-4">
-              <Search size={17} className="text-slate-400 dark:text-slate-500 flex-shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search title, author, or genre..."
-                className="min-w-0 w-full flex-1 bg-transparent py-3 outline-none text-slate-700 dark:text-slate-200 font-medium placeholder:text-slate-400 dark:placeholder:text-slate-600 text-sm"
-              />
-            </div>
-            <button
-              type="submit"
-              className="group px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 hover:shadow-lg hover:shadow-blue-300/40 dark:hover:shadow-blue-900/60"
-            >
-              Search
-            </button>
-          </form>
-
-          {/* CTAs */}
-          <div className="animate-fade-in-up delay-400 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/browse"
-              className="group flex items-center justify-center gap-2 px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-blue-600 dark:hover:bg-blue-600 dark:hover:text-white transition-all shadow-lg hover:shadow-blue-300/40 dark:hover:shadow-blue-900/60 hover:-translate-y-0.5">
-              Browse Collection <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform duration-200" />
-            </Link>
-            <Link to="/login"
-              className="flex items-center justify-center gap-2 px-8 py-4 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-full font-black uppercase text-[10px] tracking-widest hover:border-blue-600 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-all hover:-translate-y-0.5">
-              Member Login
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS STRIP ── */}
-      <section className="py-12 bg-blue-600">
-        <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-white text-center">
-          {STATS.map((s, i) => (
-            <div key={s.label} className="animate-fade-in-up group cursor-default" style={{ animationDelay: `${i * 80}ms` }}>
-              <p className="text-3xl md:text-4xl font-black tracking-tighter italic mb-1 group-hover:scale-110 transition-transform duration-200">{s.val}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-blue-200">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── FEATURES ── */}
-      <section className="py-24 px-6 bg-white dark:bg-slate-950 transition-colors duration-300">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600 dark:text-blue-400 mb-3">
-              What Makes Us Different
+      {/* Discovery keeps the existing search/navigation workflow. */}
+      <section className="rpl-hero">
+        <div className="rpl-hero-inner">
+          <div>
+            <h1 className="text-ink rpl-title">Discover your<br />next great read.</h1>
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted">
+              Explore the Rizal Provincial Library collection, reserve a title, and make room for your next story.
             </p>
-            <h2 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white">
-              A Smarter Way <br /> to Use the Library.
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-5">
-            {FEATURES.map((f, i) => (
-              <div key={f.title}
-                className="animate-fade-in-up group bg-slate-50 dark:bg-slate-900 rounded-[2.5rem] p-6 md:p-10 border border-slate-100 dark:border-slate-800 hover:shadow-xl hover:shadow-slate-100 dark:hover:shadow-black/30 transition-all duration-300 hover:-translate-y-2 hover:border-blue-100 dark:hover:border-slate-700"
-                style={{ animationDelay: `${i * 100}ms` }}
-              >
-                <div className={`w-12 h-12 ${f.bg} rounded-2xl flex items-center justify-center ${f.color} mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
-                  {f.icon}
-                </div>
-                <h3 className="text-lg font-black italic uppercase tracking-tighter text-slate-900 dark:text-white mb-3 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200">
-                  {f.title}
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
-                  {f.desc}
-                </p>
-                <div className="mt-6 h-0.5 w-0 group-hover:w-12 bg-blue-600/40 rounded-full transition-all duration-500" />
+            <form onSubmit={handleSearch} className="rpl-hero-search">
+              <div className="min-w-0 flex-1 flex items-center gap-3 px-4">
+                <Search size={20} className="text-muted shrink-0" />
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Search the library catalog" placeholder="Search by title or author"
+                  className="min-w-0 w-full bg-transparent py-3 text-base text-ink" />
               </div>
-            ))}
+              <button type="submit" className="rounded-lg bg-action px-7 py-3 text-base font-semibold text-white hover:bg-action-hover">Search</button>
+            </form>
+            <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-semibold">
+              <Link to="/browse" className="inline-flex items-center gap-2 text-link hover:underline">Browse collection <ChevronRight size={16} /></Link>
+              <Link to="/login" className="text-muted hover:underline">Member login</Link>
+            </div>
           </div>
+          <img src="/RPL.png" alt="Rizal Provincial Library seal" className="rpl-hero-seal" />
         </div>
       </section>
 
       {/* ── BOOK SHOWCASE ── */}
-      <section className="py-20 bg-slate-100 dark:bg-slate-900 transition-colors duration-300">
-        <div className="max-w-full">
+      <section className="rpl-collection bg-panel transition-colors duration-300">
+        <div className="max-w-[1440px] mx-auto">
           <div className="px-4 md:px-8 lg:px-12 mb-12">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600 dark:text-blue-400 mb-3">
+                <p className="text-sm font-semibold tracking-normal text-link mb-3">
                   Our Collection
                 </p>
-                <h2 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-slate-900 dark:text-white">
+                <h2 className="font-semibold tracking-normal text-ink rpl-section-title">
                   Browse by Genre
                 </h2>
               </div>
               <Link to="/browse"
-                className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors">
+                className="flex items-center gap-2 text-sm font-semibold tracking-normal text-link hover:text-link transition-colors">
                 View Full Catalog <ArrowRight size={14} />
               </Link>
             </div>
@@ -299,7 +210,7 @@ const LandingPage = () => {
 
           {loadingBooks ? (
             <div className="flex items-center justify-center py-24">
-              <RefreshCw size={28} className="animate-spin text-blue-600" />
+              <RefreshCw size={28} className="animate-spin text-link" />
             </div>
           ) : (
             <div className="space-y-16">
@@ -311,26 +222,72 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* ── STATS STRIP ── */}
+      <section className="rpl-service-strip py-8 bg-panel">
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-ink text-center">
+          {STATS.map((s, i) => (
+            <div key={s.label} className="animate-fade-in-up group cursor-default" style={{ animationDelay: `${i * 80}ms` }}>
+              <p className="text-3xl md:text-4xl font-semibold tracking-normal mb-1 transition-transform duration-200">{s.val}</p>
+              <p className="text-sm font-semibold tracking-normal text-link">{s.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FEATURES ── */}
+      <section className="rpl-services py-14 px-6 bg-panel transition-colors duration-300">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-sm font-semibold tracking-normal text-link mb-3">
+              Library services
+            </p>
+            <h2 className="font-semibold tracking-normal text-ink rpl-section-title">
+              Your library, made accessible.
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-5">
+            {FEATURES.map((f, i) => (
+              <div key={f.title}
+                className="animate-fade-in-up group bg-subtle rounded-xl p-6 md:p-10 border border-line hover:shadow-sm transition-all duration-300 hover:border-line"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <div className={`w-12 h-12 ${f.bg} rounded-xl flex items-center justify-center ${f.color} mb-6 transition-transform duration-300`}>
+                  {f.icon}
+                </div>
+                <h3 className="font-semibold tracking-normal text-ink mb-3 group-hover:text-link transition-colors duration-200 rpl-subheading">
+                  {f.title}
+                </h3>
+                <p className="text-sm text-muted leading-relaxed font-medium">
+                  {f.desc}
+                </p>
+                <div className="mt-6 h-0.5 w-0 group-hover:w-12 bg-info-soft rounded-full transition-all duration-500" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── BOOK DETAIL MODAL ── */}
       {selected && (() => {
         const currentIdx = books.findIndex(b => b.id === selected.id);
         return (
           <div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xl"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-black/70"
             onClick={() => setSelected(null)}
           >
             {/* Left arrow */}
             {currentIdx > 0 && (
-              <button
+              <button aria-label="Previous"
                 onClick={(e) => { e.stopPropagation(); navigateBook(-1); }}
-                className="absolute left-2 md:left-4 z-10 p-2 md:p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm hidden sm:block"
+                className="absolute left-2 md:left-4 z-10 p-2 md:p-3 bg-panel hover:bg-panel rounded-full text-ink transition-all hidden sm:block"
               >
                 <ChevronLeft size={28} />
               </button>
             )}
 
             <div
-              className="max-w-3xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl md:rounded-[3rem] overflow-hidden shadow-2xl max-h-[92vh] overflow-y-auto"
+              className="max-w-3xl w-full bg-panel border border-line rounded-xl md:rounded-xl overflow-hidden shadow-sm max-h-[92vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => { touchStartX.current = e.clientX; }}
               onMouseUp={(e) => {
@@ -357,24 +314,24 @@ const LandingPage = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                   {/* Title overlay — visible only on mobile */}
                   <div className="md:hidden absolute bottom-0 left-0 right-0 px-4 pb-4 pt-8">
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-300 mb-1">{selected.category}</p>
-                    <h2 className="text-lg font-black italic uppercase tracking-tighter leading-tight text-white line-clamp-2">
+                    <p className="text-sm font-semibold tracking-normal text-link mb-1">{selected.category}</p>
+                    <h2 className="font-semibold tracking-normal leading-tight text-ink line-clamp-2 rpl-section-title">
                       {selected.title}
                     </h2>
-                    <p className="text-blue-300 font-bold text-xs uppercase tracking-wider mt-0.5 truncate">{selected.author}</p>
+                    <p className="text-link font-bold text-sm tracking-normal mt-0.5 truncate">{selected.author}</p>
                   </div>
                   <div className="absolute top-3 left-3">
-                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                    <span className={`px-2.5 py-1 rounded-full text-sm font-semibold tracking-normal ${
                       selected.copies_available === 0
-                        ? 'bg-rose-500/90 text-white'
-                        : 'bg-emerald-500/90 text-white'
+                        ? 'bg-danger-soft text-danger'
+                        : 'bg-success-soft text-success'
                     }`}>
                       {selected.copies_available === 0 ? 'Unavailable' : 'Available'}
                     </span>
                   </div>
                   {/* Page indicator */}
-                  <div className="absolute top-3 right-3 px-2.5 py-1 bg-black/40 rounded-full backdrop-blur-sm">
-                    <span className="text-[9px] font-black text-white/70 tracking-widest">
+                  <div className="absolute top-3 right-3 px-2.5 py-1 bg-black/40 rounded-full">
+                    <span className="text-sm font-semibold text-white tracking-normal">
                       {currentIdx + 1} / {books.length}
                     </span>
                   </div>
@@ -382,9 +339,9 @@ const LandingPage = () => {
 
                 {/* Info panel */}
                 <div className="p-5 md:p-10 flex flex-col justify-between relative">
-                  <button
+                  <button aria-label="Close"
                     onClick={() => setSelected(null)}
-                    className="absolute top-4 right-4 md:top-6 md:right-6 p-2 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all z-10"
+                    className="absolute top-4 right-4 md:top-6 md:right-6 p-2 text-muted hover:text-ink hover:bg-subtle rounded-lg transition-all z-10"
                   >
                     <X size={20} />
                   </button>
@@ -392,17 +349,17 @@ const LandingPage = () => {
                   <div>
                     {/* Full title block — desktop only (mobile shows over cover) */}
                     <div className="hidden md:block">
-                      <p className="text-[9px] font-black uppercase tracking-[0.35em] text-blue-600 dark:text-blue-400 mb-3">
+                      <p className="text-sm font-semibold tracking-normal text-link mb-3">
                         {selected.category}
                       </p>
-                      <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none text-slate-900 dark:text-white mb-2">
+                      <h2 className="font-semibold tracking-normal leading-none text-ink mb-2 rpl-section-title">
                         {selected.title}
                       </h2>
-                      <p className="text-blue-600 dark:text-blue-400 font-bold text-sm uppercase tracking-wider mb-1">
+                      <p className="text-link font-bold text-sm tracking-normal mb-1">
                         {selected.author}
                       </p>
                       {selected.year && (
-                        <p className="text-slate-400 dark:text-slate-500 text-xs font-medium mb-5">
+                        <p className="text-muted text-sm font-medium mb-5">
                           Published {selected.year}
                         </p>
                       )}
@@ -410,28 +367,28 @@ const LandingPage = () => {
 
                     {/* Year on mobile */}
                     {selected.year && (
-                      <p className="md:hidden text-slate-400 dark:text-slate-500 text-xs font-medium mb-3 mt-1">
+                      <p className="md:hidden text-muted text-sm font-medium mb-3 mt-1">
                         Published {selected.year}
                       </p>
                     )}
 
                     {selected.description && (
-                      <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-5 line-clamp-3 md:line-clamp-none">
+                      <p className="text-muted text-sm leading-relaxed mb-5 line-clamp-3 md:line-clamp-none">
                         {selected.description}
                       </p>
                     )}
 
                     {/* Availability badge */}
-                    <div className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl mb-5 ${
+                    <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl mb-5 ${
                       selected.copies_available === 0
-                        ? 'bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800'
-                        : 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800'
+                        ? 'bg-danger-soft bg-danger-soft border border-danger border-danger'
+                        : 'bg-success-soft bg-success-soft border border-success border-success'
                     }`}>
-                      <BookOpen size={14} className={selected.copies_available === 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'} />
-                      <span className={`text-xs font-black uppercase tracking-widest ${
+                      <BookOpen size={14} className={selected.copies_available === 0 ? 'text-danger' : 'text-success text-success'} />
+                      <span className={`text-sm font-semibold tracking-normal ${
                         selected.copies_available === 0
-                          ? 'text-rose-600 dark:text-rose-400'
-                          : 'text-emerald-700 dark:text-emerald-400'
+                          ? 'text-danger text-danger'
+                          : 'text-success text-success'
                       }`}>
                         {selected.copies_available === 0 ? 'Currently checked out' : 'Available at library'}
                       </span>
@@ -442,14 +399,14 @@ const LandingPage = () => {
                   <div className="space-y-2.5">
                     {!isLibrarian && <Link
                       to={isMember ? `/user/reservations?reserveBook=${selected.id}` : '/login'}
-                      className="w-full flex items-center justify-center gap-2 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-[0.98]"
+                      className="w-full flex items-center justify-center gap-2 py-3.5 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal transition-all"
                     >
                       {isMember ? <BookOpen size={15} /> : <LogIn size={15} />}
                       {isMember ? 'Reserve Book' : 'Login to Reserve'}
                     </Link>}
                     <button
                       onClick={() => setSelected(null)}
-                      className="w-full py-3 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                      className="w-full py-3 border border-line text-muted rounded-lg font-semibold text-sm tracking-normal hover:border-line transition-all"
                     >
                       Close
                     </button>
@@ -459,10 +416,10 @@ const LandingPage = () => {
 
               {/* Slider bar */}
               <div
-                className="px-8 py-3 border-t border-slate-200 dark:border-white/5 flex items-center gap-4"
+                className="px-8 py-3 border-t border-line flex items-center gap-4"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <span className="text-[9px] font-black text-slate-400 dark:text-slate-600 tracking-widest tabular-nums shrink-0 w-12">
+                <span className="text-sm font-semibold text-muted tracking-normal tabular-nums shrink-0 w-12">
                   {currentIdx + 1} / {books.length}
                 </span>
                 <input
@@ -484,9 +441,9 @@ const LandingPage = () => {
 
             {/* Right arrow */}
             {currentIdx < books.length - 1 && (
-              <button
+              <button aria-label="Next"
                 onClick={(e) => { e.stopPropagation(); navigateBook(1); }}
-                className="absolute right-2 md:right-4 z-10 p-2 md:p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm hidden sm:block"
+                className="absolute right-2 md:right-4 z-10 p-2 md:p-3 bg-panel hover:bg-panel rounded-full text-ink transition-all hidden sm:block"
               >
                 <ChevronRight size={28} />
               </button>
@@ -496,54 +453,53 @@ const LandingPage = () => {
       })()}
 
       {/* ── FOOTER ── */}
-      <footer className="bg-black text-white py-16 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between gap-12 mb-12">
+      <footer className="bg-panel text-ink py-16 px-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1.4fr_1fr_1.2fr_auto] gap-10 mb-12">
             {/* Brand */}
             <div className="flex-1">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-11 h-11 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden p-1">
-                  <img src="/logo.library.png" alt="Logo" className="w-full h-full object-contain" />
-                </div>
-                <div>
-                  <p className="font-black italic uppercase tracking-tighter text-xl leading-none">
-                    Rizal <span className="text-blue-400">Lib</span>
-                  </p>
-                  <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Provincial Portal</p>
-                </div>
-              </div>
-              <p className="text-slate-400 text-sm leading-relaxed font-medium max-w-xs">
+              <p className="rpl-brand mb-6"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></p>
+              <p className="text-ink text-sm leading-relaxed font-medium max-w-xs">
                 Empowering the people of Rizal Province through modern, accessible, and technology-driven library services.
               </p>
             </div>
 
             {/* Location */}
             <div className="space-y-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-5">Location & Hours</p>
-              <div className="flex items-start gap-3 text-sm text-slate-400 font-medium">
-                <MapPin size={15} className="text-blue-400 mt-0.5 flex-shrink-0" />
-                <span>Taytay Municipal Compound,<br />Taytay, Rizal, Philippines</span>
+              <p className="text-sm font-semibold tracking-normal text-ink mb-5">Location & Hours</p>
+              <div className="flex items-start gap-3 text-sm text-ink font-medium">
+                <MapPin size={15} className="text-link mt-0.5 flex-shrink-0" />
+                <span>L. Wood Rd, Dolores,<br />Taytay, 1920 Rizal</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-400 font-medium">
-                <Clock size={15} className="text-blue-400 flex-shrink-0" />
+              <div className="flex items-center gap-3 text-sm text-ink font-medium">
+                <Clock size={15} className="text-link flex-shrink-0" />
                 <span>Mon – Fri &nbsp;|&nbsp; 8:00 AM – 5:00 PM</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-400 font-medium">
-                <Phone size={15} className="text-blue-400 flex-shrink-0" />
-                <span>(02) 8570-7777</span>
+            </div>
+
+            {/* Contact details supplied by the library */}
+            <div className="space-y-4 min-w-0">
+              <p className="text-sm font-semibold tracking-normal text-ink mb-5">Contact Us</p>
+              <div className="flex items-start gap-3 text-sm font-medium">
+                <Phone size={15} className="text-link mt-0.5 shrink-0" />
+                <div><p className="text-muted mb-1">Telephone</p><a className="text-link hover:underline" href="tel:026587276">(02) 658-7276</a></div>
+              </div>
+              <div className="flex items-start gap-3 text-sm font-medium">
+                <Mail size={15} className="text-link mt-0.5 shrink-0" />
+                <div className="min-w-0"><p className="text-muted mb-1">Email</p><a className="text-link break-words hover:underline" href="mailto:provinciallibrary_rizal@yahoo.com">provinciallibrary_rizal@yahoo.com</a></div>
               </div>
             </div>
 
             {/* Links */}
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-5">Quick Links</p>
+              <p className="text-sm font-semibold tracking-normal text-ink mb-5">Quick Links</p>
               <div className="space-y-3">
                 {[
                   { to: '/browse', label: 'Browse Catalog' },
                   { to: '/login',  label: 'Member Login' },
                 ].map((l) => (
                   <Link key={l.to} to={l.to}
-                    className="group flex items-center gap-1.5 text-sm text-slate-400 font-bold hover:text-blue-400 transition-all duration-200 uppercase tracking-widest hover:translate-x-1">
+                    className="group flex items-center gap-1.5 text-sm text-ink font-bold hover:text-link transition-all duration-200 tracking-normal hover:translate-x-1">
                     {l.label} <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                   </Link>
                 ))}
@@ -551,12 +507,9 @@ const LandingPage = () => {
             </div>
           </div>
 
-          <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-700">
+          <div className="border-t border-line pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm font-semibold tracking-normal text-muted">
               © 2025 Rizal Provincial Library · All Rights Reserved
-            </p>
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-700">
-              Powered by RPL Digital Services
             </p>
           </div>
         </div>

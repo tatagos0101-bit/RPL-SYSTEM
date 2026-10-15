@@ -3,6 +3,158 @@
 /* Tailwind v4 dark mode via .dark class on <html> */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Civic library palette. Existing Tailwind utilities share these tokens. */
+@theme {
+  --font-sans: "Segoe UI", Arial, sans-serif;
+  --color-blue-50: #f0f5fc;
+  --color-blue-100: #dce8f8;
+  --color-blue-200: #bdd2ee;
+  --color-blue-300: #91b5e4;
+  --color-blue-400: #6b9cdb;
+  --color-blue-500: #3870bb;
+  --color-blue-600: #2457a7;
+  --color-blue-700: #1c4689;
+  --color-blue-800: #193a6b;
+  --color-blue-900: #14263d;
+  --color-blue-950: #0e1c2e;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f5f7fa;
+  --color-slate-200: #dce2ea;
+  --color-slate-400: #758398;
+  --color-slate-500: #59697f;
+  --color-slate-600: #46566c;
+  --color-slate-900: #14263d;
+  --color-slate-950: #0e1c2e;
+}
+
+/* Theme roles are paired here; components use the same role in either mode. */
+:root {
+  --rpl-canvas: #f5f7fa;
+  --rpl-panel: #ffffff;
+  --rpl-subtle: #edf2f7;
+  --rpl-ink: #14263d;
+  --rpl-muted: #526279;
+  --rpl-line: #cbd5e1;
+  --rpl-link: #2457a7;
+  --rpl-action: #2457a7;
+  --rpl-action-hover: #1c4689;
+  --rpl-info-soft: #eaf1fc;
+  --rpl-success: #166534;
+  --rpl-success-soft: #eaf7ef;
+  --rpl-warning: #854d0e;
+  --rpl-warning-soft: #fff6dd;
+  --rpl-danger: #b4233b;
+  --rpl-danger-soft: #fff0f2;
+  --rpl-focus: #2457a7;
+  --rpl-header-height: 64px;
+}
+.dark {
+  color-scheme: dark;
+  --rpl-canvas: #0e1c2e;
+  --rpl-panel: #14263d;
+  --rpl-subtle: #1e334d;
+  --rpl-ink: #edf2f9;
+  --rpl-muted: #bdcadd;
+  --rpl-line: #40546f;
+  --rpl-link: #a8caff;
+  --rpl-action: #2457a7;
+  --rpl-action-hover: #1c4689;
+  --rpl-info-soft: #1e3556;
+  --rpl-success: #9ae6b4;
+  --rpl-success-soft: #193d30;
+  --rpl-warning: #f6d58a;
+  --rpl-warning-soft: #42351f;
+  --rpl-danger: #ffb3c0;
+  --rpl-danger-soft: #482637;
+  --rpl-focus: #a8caff;
+}
+@theme inline {
+  --color-canvas: var(--rpl-canvas);
+  --color-panel: var(--rpl-panel);
+  --color-subtle: var(--rpl-subtle);
+  --color-ink: var(--rpl-ink);
+  --color-muted: var(--rpl-muted);
+  --color-line: var(--rpl-line);
+  --color-link: var(--rpl-link);
+  --color-action: var(--rpl-action);
+  --color-action-hover: var(--rpl-action-hover);
+  --color-info-soft: var(--rpl-info-soft);
+  --color-success: var(--rpl-success);
+  --color-success-soft: var(--rpl-success-soft);
+  --color-warning: var(--rpl-warning);
+  --color-warning-soft: var(--rpl-warning-soft);
+  --color-danger: var(--rpl-danger);
+  --color-danger-soft: var(--rpl-danger-soft);
+}
+@layer base {
+  html { font-family: "Segoe UI", Arial, sans-serif; font-size: 16px; scroll-padding-top: calc(var(--rpl-header-height) + 16px); }
+  body { margin: 0; font-family: inherit; color: var(--rpl-ink); background: var(--rpl-canvas); line-height: 1.5; }
+  button, input, select, textarea { font-family: inherit; font-size: 1rem; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), select { min-height: 44px; }
+  input::placeholder, textarea::placeholder { color: var(--rpl-muted); opacity: 1; }
+  button:not(:disabled), select { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+  button { touch-action: manipulation; }
+  :focus-visible { outline: 3px solid var(--rpl-focus); outline-offset: 3px; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible { outline-offset: 1px; }
+  h1, h2, h3, h4 { text-wrap: balance; }
+  table { font-variant-numeric: tabular-nums; font-size: .875rem; }
+  th { background: var(--rpl-subtle); color: var(--rpl-muted); font-weight: 600; }
+  th, td { vertical-align: middle; }
+  dialog::backdrop { background: rgb(5 14 25 / 75%); }
+}
+.rpl-title { font-size: 2rem; font-weight: 600; line-height: 1.2; letter-spacing: normal; }
+.rpl-section-title { font-size: 1.5rem; font-weight: 600; line-height: 1.3; letter-spacing: normal; }
+.rpl-subheading { font-size: 1.25rem; font-weight: 600; line-height: 1.35; letter-spacing: normal; }
+.rpl-chrome { background: var(--rpl-panel); color: var(--rpl-ink); border-bottom: 1px solid var(--rpl-line); }
+.rpl-header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 10px 24px; min-height: var(--rpl-header-height); flex-shrink: 0; }
+.rpl-header:has(.rpl-header-leading) { grid-template-columns: minmax(0, 1fr) auto; }
+.rpl-header-leading { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.rpl-brand { display: inline-flex; align-items: center; gap: 10px; min-width: 0; font-family: "Segoe UI", Arial, sans-serif; font-size: 1.25rem; font-weight: 600; line-height: 1.3; color: var(--rpl-ink); text-align: left; letter-spacing: normal; }
+.rpl-brand-logo { width: 36px; height: 36px; flex-shrink: 0; object-fit: contain; background: transparent; }
+.rpl-profile-brand { font-size: .875rem; }
+.rpl-profile-brand .rpl-brand-logo { width: 28px; height: 28px; }
+.rpl-header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.rpl-header button[aria-label] { min-height: 44px; min-width: 44px; }
+.rpl-auth-brand { background: var(--rpl-panel); border-bottom: 1px solid var(--rpl-line); top: 0; left: 0; right: 0; min-height: 64px; align-items: center; }
+.rpl-drawer { max-width: calc(100vw - 24px); }
+.rpl-drawer .rpl-brand { font-size: 1.125rem; }
+.rpl-book { text-align: left; border-radius: 4px; }
+.rpl-book-cover { border-radius: 4px; }
+.rpl-hero { position: relative; padding: calc(var(--rpl-header-height) + 48px) 3rem 3.5rem; background: var(--rpl-subtle); }
+.rpl-hero-inner { max-width: 1320px; margin: auto; display: grid; grid-template-columns: minmax(0, 1fr) 240px; align-items: center; gap: 5rem; }
+.rpl-hero h1 { font-size: clamp(2.25rem, 4.5vw, 4rem); line-height: 1.1; font-weight: 600; letter-spacing: normal; }
+.rpl-hero-seal { width: 220px; height: 220px; object-fit: contain; }
+.rpl-hero-search { display: flex; gap: .75rem; margin-top: 1.75rem; max-width: 680px; }
+.rpl-hero-search > div { border: 1px solid var(--rpl-line); border-radius: 8px; background: var(--rpl-panel); }
+.rpl-collection { padding: 3rem 0; }
+.rpl-station { isolation: isolate; }
+.rpl-station-brand { width: 100%; padding: 16px; margin-bottom: 32px; }
+.rpl-scan-dialog { margin: auto; padding: 0; width: min(896px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--rpl-line); border-radius: 12px; background: var(--rpl-panel); color: var(--rpl-ink); box-shadow: 0 16px 48px rgb(0 0 0 / 20%); }
+.rpl-scan-frame { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
+.rpl-scan-heading { flex-shrink: 0; background: var(--rpl-panel); }
+.rpl-scan-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.rpl-scan-dialog::backdrop { background: rgb(5 14 25 / 80%); }
+@media (max-width: 639px) {
+  :root { --rpl-header-height: 112px; }
+  .rpl-header, .rpl-header:has(.rpl-header-leading) { grid-template-columns: auto 1fr auto; gap: 4px 12px; padding: 10px 16px; }
+  .rpl-header-leading { display: contents; }
+  .rpl-header .rpl-brand { grid-column: 1 / -1; grid-row: 1; font-size: 1.125rem; }
+  .rpl-header > button[aria-controls], .rpl-header-leading > button { grid-column: 1; grid-row: 2; }
+  .rpl-header-actions { grid-column: 2 / -1; grid-row: 2; }
+  .rpl-title { font-size: 1.75rem; }
+  .rpl-section-title { font-size: 1.25rem; }
+  .rpl-hero { padding: calc(var(--rpl-header-height) + 32px) 1.25rem 2.5rem; }
+  .rpl-hero-inner { display: block; }
+  .rpl-hero-seal { display: none; }
+  .rpl-hero-search { flex-direction: column; }
+  .rpl-scan-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}
+
 /* Biometric scan line (vertical sweep) */
 @keyframes scan {
   0%   { top: 0%; }
@@ -37,7 +189,7 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ── ENTRANCE ANIMATIONS ── */
+/* â”€â”€ ENTRANCE ANIMATIONS â”€â”€ */
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(24px); }
   to   { opacity: 1; transform: translateY(0); }

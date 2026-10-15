@@ -39,46 +39,46 @@ const EMPTY_FORM = { name: '', email: '', phone: '', location: '' };
 
 const NOTICE_STYLES = {
   overdue: {
-    shell: 'border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/30',
+    shell: 'border-danger bg-danger-soft border-danger bg-danger-soft',
     icon: 'bg-rose-600 text-white',
-    title: 'text-rose-700 dark:text-rose-300',
+    title: 'text-danger text-danger',
     button: 'bg-rose-600 hover:bg-rose-700 text-white',
   },
   'due-soon': {
-    shell: 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30',
-    icon: 'bg-amber-500 text-white',
-    title: 'text-amber-700 dark:text-amber-300',
-    button: 'bg-amber-500 hover:bg-amber-600 text-white',
+    shell: 'border-warning bg-warning-soft border-warning bg-warning-soft',
+    icon: 'bg-amber-500 text-ink',
+    title: 'text-warning text-warning',
+    button: 'bg-amber-500 hover:bg-amber-600 text-ink',
   },
   setup: {
-    shell: 'border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30',
-    icon: 'bg-blue-600 text-white',
-    title: 'text-blue-700 dark:text-blue-300',
-    button: 'bg-blue-600 hover:bg-blue-700 text-white',
+    shell: 'border-line bg-info-soft border-line bg-info-soft',
+    icon: 'bg-action text-white',
+    title: 'text-link text-link',
+    button: 'bg-action hover:bg-action-hover text-white',
   },
   clear: {
-    shell: 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30',
-    icon: 'bg-emerald-600 text-white',
-    title: 'text-emerald-700 dark:text-emerald-300',
-    button: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+    shell: 'border-success bg-success-soft border-success bg-success-soft',
+    icon: 'bg-emerald-700 text-white',
+    title: 'text-success text-success',
+    button: 'bg-emerald-700 hover:bg-emerald-700 text-white',
   },
 };
 
 const STATUS_STYLES = {
   overdue: {
     label: 'Overdue',
-    row: 'border-rose-200 bg-rose-50/70 dark:border-rose-800 dark:bg-rose-950/20',
-    badge: 'bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300',
+    row: 'border-danger bg-danger-soft border-danger bg-danger-soft',
+    badge: 'bg-danger-soft text-danger bg-danger-soft text-danger',
   },
   'due-soon': {
     label: 'Due Soon',
-    row: 'border-amber-200 bg-amber-50/70 dark:border-amber-800 dark:bg-amber-950/20',
-    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
+    row: 'border-warning bg-warning-soft border-warning bg-warning-soft',
+    badge: 'bg-warning-soft text-warning bg-warning-soft text-warning',
   },
   active: {
     label: 'Active',
-    row: 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800',
-    badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    row: 'border-line bg-panel ',
+    badge: 'bg-success-soft text-success bg-success-soft text-success',
   },
 };
 
@@ -257,38 +257,38 @@ const LibDashboard = () => {
 
   if (loading && !stats) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 dark:bg-slate-950">
-        <RefreshCw size={28} className="animate-spin text-blue-600" />
+      <div className="rpl-page flex min-h-screen items-center justify-center bg-subtle">
+        <RefreshCw size={28} className="animate-spin text-link" />
       </div>
     );
   }
 
   return (
-    <div className={`min-w-0 [overflow-wrap:anywhere] ${layoutClasses.page}`}>
+    <div className={`rpl-page min-w-0 [overflow-wrap:anywhere] ${layoutClasses.page}`}>
       <div className={layoutClasses.content}>
         <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">
+            <p className="mb-2 text-sm font-semibold tracking-normal text-muted">
               Librarian Home
             </p>
-            <h1 className="text-2xl font-black uppercase tracking-tight text-slate-950 dark:text-white min-[390px]:text-3xl sm:text-4xl">
-              {getGreeting()}, <span className="text-blue-600">Staff</span>
+            <h1 className="font-semibold tracking-normal text-ink min-[390px]: rpl-title">
+              {getGreeting()}, <span className="text-link">Staff</span>
             </h1>
-            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <p className="mt-2 text-sm font-bold tracking-normal text-muted">
               {today}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowRegModal(true)}
-              className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700 active:scale-95"
+              className="inline-flex items-center gap-2 rounded-lg bg-action px-4 py-3 text-sm font-semibold tracking-normal text-white transition hover:bg-action-hover"
             >
               <UserPlus size={14} />
               Register Member
             </button>
             <button
               onClick={() => fetchAll(true)}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 transition hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-3 text-sm font-semibold tracking-normal text-muted transition hover:border-line hover:text-link"
             >
               <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
               Refresh
@@ -374,33 +374,33 @@ const LibDashboard = () => {
 const TodayPanel = ({ notice, entrySummary }) => {
   const style = NOTICE_STYLES[notice.kind] || NOTICE_STYLES.clear;
   return (
-    <section className={`mb-6 rounded-[2rem] border p-5 shadow-sm sm:p-6 lg:p-7 ${style.shell}`}>
+    <section className={`mb-6 rounded-xl border p-5 shadow-sm sm:p-6 lg:p-7 ${style.shell}`}>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.85fr)] lg:items-stretch">
         <div className="flex min-w-0 flex-col gap-4 sm:flex-row">
-          <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${style.icon}`}>
+          <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${style.icon}`}>
             {notice.kind === 'overdue' ? <AlertCircle size={22} /> : <Library size={22} />}
           </div>
           <div className="min-w-0">
-            <p className="mb-1 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
+            <p className="mb-1 text-sm font-semibold tracking-normal text-muted">
               Today's Priority
             </p>
-            <h2 className={`text-2xl font-black tracking-tight sm:text-3xl ${style.title}`}>
+            <h2 className={`text-2xl font-semibold tracking-normal sm:text-3xl ${style.title}`}>
               {notice.title}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">
+            <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-muted">
               {notice.body}
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <Link
                 to={notice.actionHref}
-                className={`inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-[10px] font-black uppercase tracking-widest transition active:scale-95 ${style.button}`}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold tracking-normal transition ${style.button}`}
               >
                 {notice.actionLabel}
                 <ArrowRight size={14} />
               </Link>
               {notice.actionHref !== '/librarian/borrow-return' && <Link
                 to="/librarian/borrow-return"
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-700 transition hover:border-blue-200 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200"
+                className="inline-flex items-center gap-2 rounded-xl border border-line bg-panel px-4 py-3 text-sm font-semibold tracking-normal text-muted transition hover:border-line hover:text-link"
               >
                 <ArrowUpRight size={14} />
                 Borrow / Return
@@ -409,15 +409,15 @@ const TodayPanel = ({ notice, entrySummary }) => {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-white/70 bg-white/80 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+        <div className="rounded-xl border border-line bg-panel p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <p className="text-sm font-semibold tracking-normal text-muted">
               Entry Gate
             </p>
-            <Camera size={16} className="text-slate-400" />
+            <Camera size={16} className="text-muted" />
           </div>
-          <p className="text-base font-black text-slate-950 dark:text-white">{entrySummary.latestVisitor}</p>
-          <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+          <p className="text-base font-semibold text-ink">{entrySummary.latestVisitor}</p>
+          <p className="mt-1 text-sm font-medium text-muted">
             Latest scan {entrySummary.latestAccessGranted === false ? 'was denied' : 'was granted'}
           </p>
           <div className="mt-4 grid grid-cols-3 gap-2">
@@ -433,65 +433,65 @@ const TodayPanel = ({ notice, entrySummary }) => {
 
 const StatusCard = ({ icon, label, value, detail, tone, urgent = false }) => {
   const tones = {
-    blue: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300',
-    amber: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300',
-    rose: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300',
-    emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300',
+    blue: 'bg-info-soft text-link bg-info-soft text-link',
+    amber: 'bg-warning-soft text-warning bg-warning-soft text-warning',
+    rose: 'bg-danger-soft text-danger bg-danger-soft text-danger',
+    emerald: 'bg-success-soft text-success bg-success-soft text-success',
   };
   return (
-    <div className={`rounded-3xl border bg-white p-4 shadow-sm dark:bg-slate-800 sm:p-5 ${urgent ? 'border-rose-200 dark:border-rose-800' : 'border-slate-200 dark:border-slate-700'}`}>
+    <div className={`rounded-xl border bg-panel p-4 shadow-sm sm:p-5 ${urgent ? 'border-danger border-danger' : 'border-line '}`}>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tones[tone] || tones.blue}`}>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${tones[tone] || tones.blue}`}>
           {createElement(icon, { size: 18 })}
         </div>
         {urgent && <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />}
       </div>
-      <p className="text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">{value}</p>
-      <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+      <p className="text-2xl font-semibold tracking-normal text-ink sm:text-3xl">{value}</p>
+      <p className="mt-1 text-sm font-semibold tracking-normal text-muted">
         {label}
       </p>
-      <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-500">{detail}</p>
+      <p className="mt-1 text-sm font-medium text-muted">{detail}</p>
     </div>
   );
 };
 
 const MiniMetric = ({ label, value }) => (
-  <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-800">
-    <p className="text-lg font-black text-slate-950 dark:text-white">{value}</p>
-    <p className="mt-1 text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</p>
+  <div className="rounded-xl bg-subtle p-3">
+    <p className="text-lg font-semibold text-ink">{value}</p>
+    <p className="mt-1 text-sm font-semibold tracking-normal text-muted">{label}</p>
   </div>
 );
 
 const PriorityLoans = ({ loans, totalLoans, loanSearch, setLoanSearch }) => (
-  <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+  <section className="rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-6">
     <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+        <p className="text-sm font-semibold tracking-normal text-muted">
           Loan Watch
         </p>
-        <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+        <h2 className="mt-1 font-semibold tracking-normal text-ink rpl-section-title">
           Books needing staff attention
         </h2>
       </div>
       <div className="relative w-full lg:w-64">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-        <input
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
+        <input aria-label="Search member or book"
           type="text"
           placeholder="Search member or book"
           value={loanSearch}
           onChange={(e) => setLoanSearch(e.target.value)}
-          className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-4 text-xs font-bold text-slate-700 outline-none transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          className="w-full rounded-lg border border-line bg-subtle py-3 pl-9 pr-4 text-base font-bold text-muted outline-none transition focus:ring-2 focus:ring-line"
         />
       </div>
     </div>
 
     {loans.length === 0 ? (
-      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900/40">
-        <BookOpen size={30} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-        <p className="text-base font-black text-slate-900 dark:text-white">
+      <div className="rounded-xl border border-dashed border-line bg-subtle p-8 text-center">
+        <BookOpen size={30} className="mx-auto mb-3 text-ink" />
+        <p className="text-base font-semibold text-ink">
           {totalLoans === 0 ? 'No active loans right now' : 'No loans match your search'}
         </p>
-        <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-slate-500 dark:text-slate-400">
+        <p className="mx-auto mt-2 max-w-sm text-sm font-medium text-muted">
           Overdue and due-soon books will appear here first.
         </p>
       </div>
@@ -510,22 +510,22 @@ const LoanRow = ({ loan }) => {
   const style = STATUS_STYLES[status] || STATUS_STYLES.active;
   const fineAmount = Number.parseFloat(loan.fine_amount || 0);
   return (
-    <article className={`grid grid-cols-1 gap-3 rounded-3xl border p-4 transition hover:-translate-y-0.5 hover:shadow-md lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center ${style.row}`}>
+    <article className={`grid grid-cols-1 gap-3 rounded-xl border p-4 transition hover:shadow-md lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center ${style.row}`}>
       <div className="min-w-0">
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wider ${style.badge}`}>
+          <span className={`rounded-full px-2.5 py-1 text-sm font-semibold tracking-normal ${style.badge}`}>
             {style.label}
           </span>
           <FineContent>
           {fineAmount > 0 && (
-            <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-rose-700 dark:bg-slate-900 dark:text-rose-300">
+            <span className="rounded-full bg-panel px-2.5 py-1 text-sm font-semibold tracking-normal text-danger">
               Fine {formatMoney(fineAmount)}
             </span>
           )}
           </FineContent>
         </div>
-        <h3 className="text-base font-black text-slate-950 dark:text-white">{loan.book_title || 'Unknown book'}</h3>
-        <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+        <h3 className="font-semibold text-ink rpl-subheading">{loan.book_title || 'Unknown book'}</h3>
+        <p className="text-sm font-bold text-muted">
           {loan.member_name || 'Unknown member'} {loan.member_id ? `- ${loan.member_id}` : ''}
         </p>
       </div>
@@ -538,19 +538,19 @@ const LoanRow = ({ loan }) => {
 };
 
 const DateChip = ({ label, value }) => (
-  <div className="rounded-2xl bg-white/80 p-3 dark:bg-slate-900/50">
-    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-    <p className="mt-1 text-xs font-black text-slate-800 dark:text-slate-200">{value}</p>
+  <div className="rounded-xl bg-panel p-3">
+    <p className="text-sm font-semibold tracking-normal text-muted">{label}</p>
+    <p className="mt-1 text-sm font-semibold text-ink">{value}</p>
   </div>
 );
 
 const QuickActions = ({ onRegister }) => (
-  <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+  <section className="rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-6">
     <div className="mb-5">
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+      <p className="text-sm font-semibold tracking-normal text-muted">
         Immediate Tasks
       </p>
-      <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950 dark:text-white">Most used today</h2>
+      <h2 className="mt-1 font-semibold tracking-normal text-ink rpl-section-title">Most used today</h2>
     </div>
     <div className="space-y-2">
       <ActionButton onClick={onRegister} icon={UserPlus} label="Register Member" tone="blue" />
@@ -561,55 +561,55 @@ const QuickActions = ({ onRegister }) => (
 );
 
 const actionTone = {
-  emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-800',
-  blue: 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800',
-  amber: 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800',
-  violet: 'bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100 dark:bg-violet-950/30 dark:text-violet-300 dark:border-violet-800',
-  slate: 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700',
+  emerald: 'bg-success-soft text-success border-success hover:bg-success-soft bg-success-soft text-success border-success',
+  blue: 'bg-info-soft text-link border-line hover:bg-info-soft bg-info-soft text-link border-line',
+  amber: 'bg-warning-soft text-warning border-warning hover:bg-warning-soft bg-warning-soft text-warning border-warning',
+  violet: 'bg-info-soft text-link border-line hover:bg-info-soft bg-info-soft text-link border-line',
+  slate: 'bg-subtle text-muted border-line hover:bg-subtle ',
 };
 
 const ActionLink = ({ to, icon, label, tone }) => (
-  <Link to={to} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 transition ${actionTone[tone]}`}>
+  <Link to={to} className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition ${actionTone[tone]}`}>
     {createElement(icon, { size: 16 })}
-    <span className="flex-1 text-xs font-black uppercase tracking-widest">{label}</span>
+    <span className="flex-1 text-sm font-semibold tracking-normal">{label}</span>
     <ChevronRight size={14} />
   </Link>
 );
 
 const ActionButton = ({ onClick, icon, label, tone }) => (
-  <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${actionTone[tone]}`}>
+  <button onClick={onClick} className={`flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition ${actionTone[tone]}`}>
     {createElement(icon, { size: 16 })}
-    <span className="flex-1 text-xs font-black uppercase tracking-widest">{label}</span>
+    <span className="flex-1 text-sm font-semibold tracking-normal">{label}</span>
     <ChevronRight size={14} />
   </button>
 );
 
 const CollectionSnapshot = ({ overview }) => (
-  <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+  <section className="rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-6">
     <div className="mb-5">
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+      <p className="text-sm font-semibold tracking-normal text-muted">
         Collection Snapshot
       </p>
-      <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950 dark:text-white">
+      <h2 className="mt-1 font-semibold tracking-normal text-ink rpl-section-title">
         Available books
       </h2>
     </div>
     <div className="mb-4 flex items-end justify-between gap-3">
       <div>
-        <p className="text-3xl font-black tracking-tight text-slate-950 dark:text-white">
+        <p className="text-3xl font-semibold tracking-normal text-ink">
           {overview.metrics.availableBooks}
         </p>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+        <p className="text-sm font-semibold tracking-normal text-muted">
           of {overview.metrics.totalBooks} copies
         </p>
       </div>
-      <p className="text-2xl font-black text-blue-600 dark:text-blue-300">
+      <p className="text-2xl font-semibold text-link">
         {overview.metrics.inventoryAvailablePct}%
       </p>
     </div>
-    <div className="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+    <div className="h-3 overflow-hidden rounded-full bg-subtle">
       <div
-        className="h-full rounded-full bg-blue-600"
+        className="h-full rounded-full bg-action"
         style={{ width: `${overview.metrics.inventoryAvailablePct}%` }}
       />
     </div>
@@ -623,17 +623,17 @@ const CollectionSnapshot = ({ overview }) => (
 const BorrowTrendPanel = ({ trendSummary }) => {
   const maxBorrows = Math.max(1, ...trendSummary.bars.map((bar) => bar.borrows));
   return (
-    <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+    <section className="rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-6">
       <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+          <p className="text-sm font-semibold tracking-normal text-muted">
             Library Activity
           </p>
-          <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+          <h2 className="mt-1 font-semibold tracking-normal text-ink rpl-section-title">
             Borrowing trend
           </h2>
         </div>
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+        <span className="text-sm font-semibold tracking-normal text-muted">
           Last 6 months
         </span>
       </div>
@@ -648,20 +648,20 @@ const BorrowTrendPanel = ({ trendSummary }) => {
         />
       </div>
 
-      <div className="flex h-52 items-end gap-1 rounded-3xl bg-slate-50 p-3 dark:bg-slate-900/40 sm:gap-3 sm:p-4">
+      <div className="flex h-52 items-end gap-1 rounded-xl bg-subtle p-3 sm:gap-3 sm:p-4">
         {trendSummary.bars.map((bar) => {
           const heightPct = bar.borrows > 0 ? Math.max(12, Math.round((bar.borrows / maxBorrows) * 100)) : 6;
           return (
             <div key={`${bar.month}-${bar.index}`} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
               <div className="flex h-36 w-full items-end">
                 <div
-                  className={`w-full rounded-t-2xl transition-all ${bar.borrows > 0 ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-700'}`}
+                  className={`w-full rounded-t-2xl transition-all ${bar.borrows > 0 ? 'bg-action' : 'bg-subtle '}`}
                   style={{ height: `${heightPct}%` }}
                   title={`${bar.month}: ${bar.borrows} borrows`}
                 />
               </div>
-              <p className="text-[10px] font-black text-slate-700 dark:text-slate-300">{bar.borrows}</p>
-              <p className="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              <p className="text-sm font-semibold text-muted">{bar.borrows}</p>
+              <p className="text-sm font-semibold tracking-normal text-muted">
                 {bar.month?.split(' ')[0] || 'N/A'}
               </p>
             </div>
@@ -673,22 +673,22 @@ const BorrowTrendPanel = ({ trendSummary }) => {
 };
 
 const ActivityMetric = ({ icon, label, value }) => (
-  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/40">
-    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-blue-700 shadow-sm dark:bg-slate-800 dark:text-blue-300">
+  <div className="rounded-xl border border-line bg-subtle p-4">
+    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-panel text-link shadow-sm">
       {createElement(icon, { size: 18 })}
     </div>
-    <p className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">{value}</p>
-    <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</p>
+    <p className="text-2xl font-semibold tracking-normal text-ink">{value}</p>
+    <p className="mt-1 text-sm font-semibold tracking-normal text-muted">{label}</p>
   </div>
 );
 
 const EntryActivityPanel = ({ entryLogs, entrySummary }) => (
-  <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+  <section className="rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-6">
     <div className="mb-5">
-      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 dark:text-slate-500">
+      <p className="text-sm font-semibold tracking-normal text-muted">
         Entry Activity
       </p>
-      <h2 className="mt-1 text-xl font-black tracking-tight text-slate-950 dark:text-white">
+      <h2 className="mt-1 font-semibold tracking-normal text-ink rpl-section-title">
         Recent gate scans
       </h2>
     </div>
@@ -702,9 +702,9 @@ const EntryActivityPanel = ({ entryLogs, entrySummary }) => (
         <EntryRow key={log.id} log={log} />
       ))}
       {entryLogs.length === 0 && (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center dark:border-slate-700 dark:bg-slate-900/40">
-          <Camera size={26} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-          <p className="text-sm font-black text-slate-900 dark:text-white">No entry logs yet</p>
+        <div className="rounded-xl border border-dashed border-line bg-subtle p-6 text-center">
+          <Camera size={26} className="mx-auto mb-3 text-ink" />
+          <p className="text-sm font-semibold text-ink">No entry logs yet</p>
         </div>
       )}
     </div>
@@ -714,24 +714,24 @@ const EntryActivityPanel = ({ entryLogs, entrySummary }) => (
 const isEntryInside = (log) => Boolean(log?.granted && (log?.is_inside ?? !log?.time_out));
 
 const EntryRow = ({ log }) => (
-  <div className="flex items-center gap-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/40">
-    <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${log.granted ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'}`}>
+  <div className="flex items-center gap-3 rounded-xl border border-line bg-subtle p-3">
+    <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl ${log.granted ? 'bg-success-soft text-success bg-success-soft text-success' : 'bg-danger-soft text-danger bg-danger-soft text-danger'}`}>
       {log.granted ? <CheckCircle2 size={17} /> : <XCircle size={17} />}
     </div>
     <div className="min-w-0 flex-1">
-      <p className="text-sm font-black text-slate-950 dark:text-white">
+      <p className="text-sm font-semibold text-ink">
         {log.member_name || 'Unknown visitor'}
       </p>
-      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+      <p className="text-sm font-bold tracking-normal text-muted">
         {log.entry_type === 'face_scan' ? 'Face Scan' : 'Manual'} - {formatTime(log.accessed_at)}
       </p>
     </div>
     {isEntryInside(log) ? (
-      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+      <span className="rounded-full bg-warning-soft px-2.5 py-1 text-sm font-semibold tracking-normal text-warning">
         Inside
       </span>
     ) : (
-      <span className="text-[10px] font-bold text-slate-400">{log.time_out ? formatTime(log.time_out) : ''}</span>
+      <span className="text-sm font-bold text-muted">{log.time_out ? formatTime(log.time_out) : ''}</span>
     )}
   </div>
 );
@@ -750,49 +750,49 @@ const RegisterMemberModal = ({
   onClose,
   onSubmit,
 }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6 backdrop-blur-xl">
-    <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-slate-100 bg-white p-8 shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:p-10">
-      <button
+  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6">
+    <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-panel p-8 shadow-sm sm:p-10">
+      <button aria-label="Close"
         onClick={onClose}
-        className="absolute right-6 top-6 rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-white/10 dark:hover:text-white"
+        className="absolute right-6 top-6 rounded-lg p-2 text-muted transition hover:bg-subtle hover:text-ink"
       >
         <X size={20} />
       </button>
 
-      <h2 className="mb-1 text-3xl font-black uppercase tracking-tight text-slate-900 dark:text-white">
+      <h2 className="mb-1 font-semibold tracking-normal text-ink rpl-section-title">
         Register Member
       </h2>
-      <p className="mb-7 border-b border-slate-100 pb-5 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:border-slate-800">
+      <p className="mb-7 border-b border-line pb-5 text-sm font-semibold tracking-normal text-muted">
         Create a new library member account
       </p>
 
       {regResult && (
         <div className="flex flex-col items-center space-y-4 py-4 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-emerald-400 bg-emerald-100 dark:bg-emerald-900/30">
-            <CheckCircle2 size={28} className="text-emerald-500" />
+          <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-success bg-success-soft">
+            <CheckCircle2 size={28} className="text-success" />
           </div>
           <div>
-            <p className="mb-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Member Registered</p>
-            <p className="text-xl font-black text-slate-900 dark:text-white">{regResult.name}</p>
-            <p className="text-sm text-slate-500">{regResult.email || 'No email provided'}</p>
+            <p className="mb-1 text-sm font-semibold tracking-normal text-success">Member Registered</p>
+            <p className="text-xl font-semibold text-ink">{regResult.name}</p>
+            <p className="text-sm text-muted">{regResult.email || 'No email provided'}</p>
           </div>
-          <div className="w-full space-y-3 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-left dark:border-slate-700 dark:bg-slate-800">
+          <div className="w-full space-y-3 rounded-xl border border-line bg-subtle px-5 py-4 text-left">
             <div>
-              <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Member ID</p>
-              <p className="font-mono text-lg font-black text-blue-600 dark:text-blue-400">{regResult.member_id}</p>
+              <p className="mb-1 text-sm font-semibold tracking-normal text-muted">Member ID</p>
+              <p className="font-sans text-lg font-semibold text-link">{regResult.member_id}</p>
             </div>
             <div>
-              <p className="mb-1 text-[9px] font-black uppercase tracking-widest text-slate-400">Temporary Password</p>
-              <p className="font-mono font-black text-slate-700 dark:text-slate-200">{regResult.temporary_password}</p>
+              <p className="mb-1 text-sm font-semibold tracking-normal text-muted">Temporary Password</p>
+              <p className="font-sans font-semibold text-muted">{regResult.temporary_password}</p>
             </div>
           </div>
-          <div className="flex w-full items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-left dark:border-amber-800/50 dark:bg-amber-900/20">
-            <Info size={14} className="mt-0.5 flex-shrink-0 text-amber-500" />
-            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Remind the member to change their password after first login.</p>
+          <div className="flex w-full items-start gap-2.5 rounded-xl border border-warning bg-warning-soft px-4 py-3 text-left">
+            <Info size={14} className="mt-0.5 flex-shrink-0 text-warning" />
+            <p className="text-sm font-medium text-warning">Remind the member to change their password after first login.</p>
           </div>
           <button
             onClick={onClose}
-            className="w-full rounded-2xl bg-blue-600 py-3 text-[10px] font-black uppercase tracking-widest text-white transition hover:bg-blue-700 active:scale-95"
+            className="w-full rounded-lg bg-action py-3 text-sm font-semibold tracking-normal text-white transition hover:bg-action-hover"
           >
             Done
           </button>
@@ -800,11 +800,11 @@ const RegisterMemberModal = ({
       )}
 
       <form onSubmit={onSubmit} className={`space-y-4 ${regResult ? 'hidden' : ''}`}>
-        <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3.5 dark:border-blue-800/60 dark:bg-blue-900/20">
-          <Info size={15} className="mt-0.5 flex-shrink-0 text-blue-500" />
+        <div className="flex items-start gap-3 rounded-xl border border-line bg-info-soft px-4 py-3.5">
+          <Info size={15} className="mt-0.5 flex-shrink-0 text-link" />
           <div>
-            <p className="text-xs font-black text-blue-700 dark:text-blue-300">A unique temporary password will be generated.</p>
-            <p className="mt-0.5 text-[10px] text-blue-600/70 dark:text-blue-400/70">The member will be reminded to change this after first login.</p>
+            <p className="text-sm font-semibold text-link">A unique temporary password will be generated.</p>
+            <p className="mt-0.5 text-sm text-link">The member will be reminded to change this after first login.</p>
           </div>
         </div>
 
@@ -814,8 +814,8 @@ const RegisterMemberModal = ({
         <FormInput label="Address / Barangay" required value={form.location} onChange={(value) => setForm({ ...form, location: value })} placeholder="Brgy. San Jose, Antipolo" />
 
         <div>
-          <label className="mb-1.5 block text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-            Valid Government ID <span className="text-rose-500">*</span>
+          <label className="mb-1.5 block text-sm font-semibold tracking-normal text-muted">
+            Valid Government ID <span className="text-danger">*</span>
           </label>
           <input
             ref={idFileRef}
@@ -839,29 +839,29 @@ const RegisterMemberModal = ({
             <button
               type="button"
               onClick={() => idFileRef.current?.click()}
-              className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 py-7 transition hover:border-blue-400 hover:bg-blue-50/40 dark:border-slate-600 dark:bg-slate-800/50 dark:hover:border-blue-500 dark:hover:bg-blue-900/10"
+              className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-line bg-subtle py-7 transition hover:border-line hover:bg-info-soft"
             >
-              <Upload size={20} className="text-slate-400" />
+              <Upload size={20} className="text-muted" />
               <div className="text-center">
-                <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Click to upload government ID</p>
-                <p className="mt-0.5 text-[10px] text-slate-400">JPG, PNG, WEBP, or PDF - max 10 MB</p>
+                <p className="text-sm font-bold text-muted">Click to upload government ID</p>
+                <p className="mt-0.5 text-sm text-muted">JPG, PNG, WEBP, or PDF - max 10 MB</p>
               </div>
             </button>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800">
+            <div className="overflow-hidden rounded-xl border border-line bg-subtle">
               {idPreview ? (
                 <img src={idPreview} alt="ID preview" className="max-h-40 w-full object-contain" />
               ) : (
                 <div className="flex items-center gap-3 px-4 py-3">
-                  <ImageIcon size={18} className="flex-shrink-0 text-slate-400" />
-                  <p className="truncate text-sm font-bold text-slate-700 dark:text-slate-200">{idFile.name}</p>
+                  <ImageIcon size={18} className="flex-shrink-0 text-muted" />
+                  <p className="truncate text-sm font-bold text-muted">{idFile.name}</p>
                 </div>
               )}
-              <div className="flex border-t border-slate-200 dark:border-slate-700">
+              <div className="flex border-t border-line">
                 <button
                   type="button"
                   onClick={() => idFileRef.current?.click()}
-                  className="flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                  className="flex-1 py-2 text-sm font-semibold tracking-normal text-link transition hover:bg-info-soft"
                 >
                   Change
                 </button>
@@ -872,7 +872,7 @@ const RegisterMemberModal = ({
                     setIdPreview(null);
                     if (idFileRef.current) idFileRef.current.value = '';
                   }}
-                  className="flex-1 border-l border-slate-200 py-2 text-[10px] font-black uppercase tracking-widest text-rose-500 transition hover:bg-rose-50 dark:border-slate-700 dark:hover:bg-rose-900/20"
+                  className="flex-1 border-l border-line py-2 text-sm font-semibold tracking-normal text-danger transition hover:bg-danger-soft"
                 >
                   Remove
                 </button>
@@ -882,9 +882,9 @@ const RegisterMemberModal = ({
         </div>
 
         {regError && (
-          <div className="flex items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 p-3 dark:border-rose-800 dark:bg-rose-900/20">
-            <XCircle size={14} className="mt-0.5 flex-shrink-0 text-rose-500" />
-            <p className="text-[11px] font-bold text-rose-800 dark:text-rose-400">{regError}</p>
+          <div className="flex items-start gap-2.5 rounded-xl border border-danger bg-danger-soft p-3">
+            <XCircle size={14} className="mt-0.5 flex-shrink-0 text-danger" />
+            <p className="text-sm font-bold text-danger">{regError}</p>
           </div>
         )}
 
@@ -892,14 +892,14 @@ const RegisterMemberModal = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-2xl border border-slate-200 py-3.5 text-xs font-black uppercase tracking-widest text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="flex-1 rounded-lg border border-line py-3.5 text-sm font-semibold tracking-normal text-muted transition hover:bg-subtle"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={regLoading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 py-3.5 text-xs font-black uppercase tracking-widest text-white shadow-lg transition hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-action py-3.5 text-sm font-semibold tracking-normal text-white shadow-sm transition hover:bg-action-hover disabled:opacity-60"
           >
             {regLoading ? <RefreshCw size={14} className="animate-spin" /> : <UserPlus size={14} />}
             {regLoading ? 'Registering...' : 'Register Member'}
@@ -912,9 +912,9 @@ const RegisterMemberModal = ({
 
 const FormInput = ({ label, value, onChange, placeholder, type = 'text', required = false, optional = false }) => (
   <div>
-    <label className="mb-1.5 block text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-      {label} {required && <span className="text-rose-500">*</span>}
-      {optional && <span className="font-normal normal-case text-slate-400"> (optional)</span>}
+    <label className="mb-1.5 block text-sm font-semibold tracking-normal text-muted">
+      {label} {required && <span className="text-danger">*</span>}
+      {optional && <span className="font-normal normal-case text-muted"> (optional)</span>}
     </label>
     <input
       type={type}
@@ -922,7 +922,7 @@ const FormInput = ({ label, value, onChange, placeholder, type = 'text', require
       value={value}
       onChange={(e) => onChange(e.target.value)}
       required={required}
-      className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-600"
+      className="w-full rounded-lg border border-line bg-subtle px-4 py-3 text-base font-medium text-ink outline-none transition placeholder:text-muted focus:ring-2 focus:ring-line"
     />
   </div>
 );

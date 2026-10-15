@@ -67,33 +67,33 @@ const PublicBrowse = () => {
   }, [selected, filtered]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 text-slate-900 dark:text-white pt-28 pb-20 font-sans transition-colors duration-300">
+    <div className="rpl-page rpl-public min-h-screen bg-panel text-ink pt-[calc(var(--rpl-header-height)+2rem)] pb-20 font-sans transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
 
         {/* Header */}
-        <div className="mb-10 border-b border-slate-100 dark:border-slate-800 pb-8">
-          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-600 dark:text-blue-400 mb-3 block">
-            Digital Archive
+        <div className="mb-10 border-b border-line pb-8">
+          <span className="text-sm font-semibold tracking-normal text-link mb-3 block">
+            Public catalog
           </span>
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black italic uppercase tracking-tighter leading-none mb-4">
-            Explore <span className="text-blue-600">Collection</span>
+          <h1 className="font-semibold tracking-normal leading-none mb-4 rpl-title">
+            Explore the collection
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium max-w-2xl">
-            Access thousands of curated volumes and historical documents from the Rizal Provincial Library system.
+          <p className="text-muted font-medium max-w-2xl">
+            Find books by title or author, explore categories, and check availability.
           </p>
         </div>
 
         {/* Filters + Search (sticky) */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-12 sticky top-[68px] z-30 bg-white/90 dark:bg-slate-950/90 backdrop-blur-lg py-4 -mx-6 md:-mx-12 px-6 md:px-12 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col lg:flex-row gap-4 mb-12 sticky top-[var(--rpl-header-height)] z-30 bg-panel py-4 -mx-6 md:-mx-12 px-6 md:px-12 border-b border-line">
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border flex-shrink-0 ${
+                className={`px-6 py-2.5 rounded-full text-sm font-semibold tracking-normal transition-all border flex-shrink-0 ${
                   activeCategory === cat
-                    ? 'bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md'
-                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400'
+                    ? 'bg-action border-line border-line text-white shadow-md'
+                    : 'bg-panel border-line text-muted hover:border-line hover:text-link hover:text-link'
                 }`}
               >
                 {cat}
@@ -102,18 +102,18 @@ const PublicBrowse = () => {
           </div>
 
           <div className="relative flex-1 group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 group-focus-within:text-blue-600 transition-colors" size={18} />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-ink group-focus-within:text-link transition-colors" size={18} />
             <input
               type="text"
-              placeholder="Search by title, author, or keyword..."
+              aria-label="Search by title or author" placeholder="Search by title or author"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl py-3.5 pl-14 pr-12 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600"
+              className="w-full bg-subtle border border-line rounded-lg py-3.5 pl-14 pr-12 outline-none focus:ring-2 focus:ring-line transition-all font-medium text-muted placeholder:text-ink"
             />
             {searchQuery && (
-              <button
+              <button aria-label="Close"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-white transition-colors"
+                className="absolute right-5 top-1/2 -translate-y-1/2 text-ink hover:text-ink transition-colors"
               >
                 <X size={18} />
               </button>
@@ -123,12 +123,12 @@ const PublicBrowse = () => {
 
         {loading ? (
           <div className="flex items-center justify-center py-32">
-            <RefreshCw size={28} className="animate-spin text-blue-600" />
+            <RefreshCw size={28} className="animate-spin text-link" />
           </div>
         ) : (
           <>
             {/* Results count */}
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600 mb-6">
+            <p className="text-sm font-semibold tracking-normal text-muted mb-6">
               Showing {filtered.length} {filtered.length === 1 ? 'result' : 'results'}
               {activeCategory !== 'All' ? ` in ${activeCategory}` : ''}
             </p>
@@ -137,22 +137,22 @@ const PublicBrowse = () => {
             {filtered.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 md:gap-6">
                 {filtered.map((book) => (
-                  <div key={book.id} className="transition-all duration-300 hover:-translate-y-1">
+                  <div key={book.id} className="transition-all duration-300">
                     <BookCard book={{ ...book, name: book.title }} onClick={() => setSelected(book)} />
                   </div>
                 ))}
               </div>
             ) : (
               <div className="py-32 text-center">
-                <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Search size={32} className="text-slate-300 dark:text-slate-600" />
+                <div className="w-20 h-20 bg-subtle rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Search size={32} className="text-ink" />
                 </div>
-                <p className="text-2xl font-black italic tracking-tighter uppercase text-slate-300 dark:text-slate-600">
+                <p className="text-2xl font-semibold tracking-normal text-ink">
                   No matches found
                 </p>
                 <button
                   onClick={() => { setActiveCategory('All'); setSearchQuery(''); }}
-                  className="mt-4 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 underline underline-offset-4"
+                  className="mt-4 text-sm font-semibold tracking-normal text-link underline underline-offset-4"
                 >
                   Reset all filters
                 </button>
@@ -168,21 +168,21 @@ const PublicBrowse = () => {
         const isAvailable = (selected.copies_available ?? 0) > 0;
         return (
           <div
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xl"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70"
             onClick={() => setSelected(null)}
           >
             {/* Left arrow */}
             {currentIdx > 0 && (
-              <button
+              <button aria-label="Previous"
                 onClick={(e) => { e.stopPropagation(); navigateBook(-1); }}
-                className="absolute left-2 md:left-4 z-10 p-2 md:p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm hidden sm:block"
+                className="absolute left-2 md:left-4 z-10 p-2 md:p-3 bg-panel hover:bg-panel rounded-full text-ink transition-all hidden sm:block"
               >
                 <ChevronLeft size={28} />
               </button>
             )}
 
             <div
-              className="max-w-3xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-[1.5rem] md:rounded-[3rem] overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="max-w-3xl w-full bg-panel border border-line rounded-xl md:rounded-xl overflow-hidden shadow-sm max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => { touchStartX.current = e.clientX; }}
               onMouseUp={(e) => {
@@ -208,19 +208,19 @@ const PublicBrowse = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                   <div className="absolute bottom-5 left-5">
-                    <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                    <span className={`px-3 py-1.5 rounded-full text-sm font-semibold tracking-normal ${
                       selected.availability_status === 'Not available'
-                        ? 'bg-rose-500/90 text-white'
+                        ? 'bg-danger-soft text-danger'
                         : selected.availability_status === 'Limited'
-                        ? 'bg-amber-500/90 text-white'
-                        : 'bg-emerald-500/90 text-white'
+                        ? 'bg-warning-soft text-warning'
+                        : 'bg-success-soft text-success'
                     }`}>
                       {selected.availability_status}
                     </span>
                   </div>
                   {/* Page indicator */}
-                  <div className="absolute bottom-5 right-5 px-2.5 py-1 bg-black/40 rounded-full backdrop-blur-sm">
-                    <span className="text-[9px] font-black text-white/70 tracking-widest">
+                  <div className="absolute bottom-5 right-5 px-2.5 py-1 bg-black/40 rounded-full">
+                    <span className="text-sm font-semibold text-white tracking-normal">
                       {currentIdx + 1} / {filtered.length}
                     </span>
                   </div>
@@ -228,63 +228,63 @@ const PublicBrowse = () => {
 
                 {/* Info panel */}
                 <div className="p-5 md:p-10 flex flex-col justify-between relative">
-                  <button
+                  <button aria-label="Close"
                     onClick={() => setSelected(null)}
-                    className="absolute top-6 right-6 p-2 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all"
+                    className="absolute top-6 right-6 p-2 text-muted hover:text-ink hover:bg-subtle rounded-lg transition-all"
                   >
                     <X size={20} />
                   </button>
 
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-[0.35em] text-blue-600 dark:text-blue-400 mb-3">
+                    <p className="text-sm font-semibold tracking-normal text-link mb-3">
                       {selected.category}
                     </p>
-                    <h2 className="text-3xl font-black italic uppercase tracking-tighter leading-none text-slate-900 dark:text-white mb-2">
+                    <h2 className="font-semibold tracking-normal leading-none text-ink mb-2 rpl-section-title">
                       {selected.title}
                     </h2>
-                    <p className="text-blue-600 dark:text-blue-400 font-bold text-sm uppercase tracking-wider mb-1">
+                    <p className="text-link font-bold text-sm tracking-normal mb-1">
                       {selected.author}
                     </p>
                     {selected.year && (
-                      <p className="text-slate-400 dark:text-slate-500 text-xs font-medium mb-6">
+                      <p className="text-muted text-sm font-medium mb-6">
                         Published {selected.year}
                       </p>
                     )}
 
                     {selected.description && (
-                      <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-8">
+                      <p className="text-muted text-sm leading-relaxed mb-8">
                         {selected.description}
                       </p>
                     )}
 
                     {/* Availability badge */}
-                    <div className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl mb-8 ${
+                    <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl mb-8 ${
                       selected.availability_status === 'Unavailable'
-                        ? 'bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800'
+                        ? 'bg-danger-soft bg-danger-soft border border-danger border-danger'
                         : selected.availability_status === 'Limited'
-                        ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800'
-                        : 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800'
+                        ? 'bg-warning-soft bg-warning-soft border border-warning border-warning'
+                        : 'bg-success-soft bg-success-soft border border-success border-success'
                     }`}>
                       <BookOpen size={14} className={
-                        selected.availability_status === 'Unavailable' ? 'text-rose-500' : 
-                        selected.availability_status === 'Limited' ? 'text-amber-500' : 
-                        'text-emerald-600 dark:text-emerald-400'
+                        selected.availability_status === 'Unavailable' ? 'text-danger' :
+                        selected.availability_status === 'Limited' ? 'text-warning' :
+                        'text-success text-success'
                       } />
-                      <span className={`text-xs font-black uppercase tracking-widest ${
+                      <span className={`text-sm font-semibold tracking-normal ${
                         selected.availability_status === 'Unavailable'
-                          ? 'text-rose-600 dark:text-rose-400'
+                          ? 'text-danger text-danger'
                           : selected.availability_status === 'Limited'
-                          ? 'text-amber-600 dark:text-amber-400'
-                          : 'text-emerald-700 dark:text-emerald-400'
+                          ? 'text-warning text-warning'
+                          : 'text-success text-success'
                       }`}>
-                        {selected.availability_status === 'Unavailable' ? 'Currently checked out' : 
-                         selected.availability_status === 'Limited' ? 'Limited copies available' : 
+                        {selected.availability_status === 'Unavailable' ? 'Currently checked out' :
+                         selected.availability_status === 'Limited' ? 'Limited copies available' :
                         'Available at the library'}
                       </span>
                     </div>
 
                     {!isAvailable && !isLibrarian && (
-                      <p className="text-xs font-bold leading-relaxed text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 rounded-2xl px-4 py-3 mb-6">
+                      <p className="text-sm font-bold leading-relaxed text-warning bg-warning-soft border border-warning rounded-xl px-4 py-3 mb-6">
                         Currently not available. Reserve now to join the queue. You'll be notified when it's your turn.
                       </p>
                     )}
@@ -294,7 +294,7 @@ const PublicBrowse = () => {
                   <div className="space-y-3">
                     {!isLibrarian && <Link
                       to={isMember ? `/user/reservations?reserveBook=${selected.id}` : reserveLoginPath(selected.id)}
-                      className="w-full flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all active:scale-[0.98]"
+                      className="w-full flex items-center justify-center gap-2 py-4 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal transition-all"
                     >
                       {isMember ? <BookOpen size={15} /> : <LogIn size={15} />}
                       {isMember
@@ -303,7 +303,7 @@ const PublicBrowse = () => {
                     </Link>}
                     <button
                       onClick={() => setSelected(null)}
-                      className="w-full py-3 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:border-slate-300 dark:hover:border-slate-600 transition-all"
+                      className="w-full py-3 border border-line text-muted rounded-lg font-semibold text-sm tracking-normal hover:border-line transition-all"
                     >
                       Close
                     </button>
@@ -313,10 +313,10 @@ const PublicBrowse = () => {
 
               {/* Slider bar */}
               <div
-                className="px-8 py-3 border-t border-slate-200 dark:border-white/5 flex items-center gap-4"
+                className="px-8 py-3 border-t border-line flex items-center gap-4"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <span className="text-[9px] font-black text-slate-400 dark:text-slate-600 tracking-widest tabular-nums shrink-0 w-12">
+                <span className="text-sm font-semibold text-muted tracking-normal tabular-nums shrink-0 w-12">
                   {currentIdx + 1} / {filtered.length}
                 </span>
                 <input
@@ -338,9 +338,9 @@ const PublicBrowse = () => {
 
             {/* Right arrow */}
             {currentIdx < filtered.length - 1 && (
-              <button
+              <button aria-label="Next"
                 onClick={(e) => { e.stopPropagation(); navigateBook(1); }}
-                className="absolute right-2 md:right-4 z-10 p-2 md:p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all backdrop-blur-sm hidden sm:block"
+                className="absolute right-2 md:right-4 z-10 p-2 md:p-3 bg-panel hover:bg-panel rounded-full text-ink transition-all hidden sm:block"
               >
                 <ChevronRight size={28} />
               </button>
