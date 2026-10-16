@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 load_dotenv(Path(__file__).with_name(".env"), override=False)
 
@@ -68,9 +69,51 @@ SUPABASE_IDS_BUCKET = os.getenv("SUPABASE_IDS_BUCKET", "rpl-ids")
 STORAGE_SIGNED_URL_SECONDS = int(os.getenv("STORAGE_SIGNED_URL_SECONDS", "3600"))
 AUTO_MIGRATE = os.getenv("AUTO_MIGRATE", "false" if ENVIRONMENT == "production" else "true").lower() == "true"
 AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "lax").lower()
+RATE_LIMIT_STORAGE_URI = os.getenv("RATE_LIMIT_STORAGE_URI", "").strip()
+RATE_LIMIT_REQUIRE_SHARED = os.getenv("RATE_LIMIT_REQUIRE_SHARED", "false").lower() == "true"
+
+
+def validate_rate_limit_config(uri: str, environment: str, require_shared: bool) -> None:
+    if not uri:
+        if require_shared:
+            raise RuntimeError("RATE_LIMIT_STORAGE_URI is required when shared rate limits are enabled.")
+        return
+    try:
+        parts = urlsplit(uri)
+        valid = (parts.scheme in {"redis", "rediss"} and parts.hostname
+                 and not parts.query and not parts.fragment
+                 and (parts.port is None or 0 < parts.port < 65536)
+                 and (not parts.path or parts.path == "/" or parts.path[1:].isdigit()))
+        if environment == "production":
+            valid = valid and parts.scheme == "rediss" and bool(parts.password)
+    except ValueError:
+        valid = False
+    if not valid:
+        raise RuntimeError("RATE_LIMIT_STORAGE_URI must be a Redis URL without query/fragment; production requires authenticated rediss TLS.")
+
+
+def account_secret_errors(jwt_secret: str, librarian_code: str) -> list[str]:
+    """Shared launcher/ASGI checks. Diagnostics must never contain secret values."""
+    weak_jwt_secrets = {
+        "insecure-dev-secret-change-me",
+        "change-this-to-a-long-random-secret",
+        "rizal-lib-super-secret-key-change-in-production",
+        "secret",
+        "password",
+        "",
+    }
+    errors = []
+    normalized_secret = jwt_secret.strip()
+    if (len(normalized_secret) < 32 or normalized_secret in weak_jwt_secrets
+            or normalized_secret.startswith("change-this")):
+        errors.append("JWT_SECRET_KEY must be a random secret of at least 32 characters, not a known default.")
+    if librarian_code.strip() in {"", "change-this-to-a-secret-code", "LIB-RPL-2025"}:
+        errors.append("LIBRARIAN_AUTH_CODE must be a private, non-default registration code.")
+    return errors
 
 
 def validate_deployment_config() -> None:
+    validate_rate_limit_config(RATE_LIMIT_STORAGE_URI, ENVIRONMENT, RATE_LIMIT_REQUIRE_SHARED)
     if STORAGE_BACKEND not in {"local", "supabase"}:
         raise RuntimeError("STORAGE_BACKEND must be local or supabase.")
     if AUTH_COOKIE_SAMESITE not in {"lax", "strict", "none"}:
@@ -86,10 +129,9 @@ def validate_deployment_config() -> None:
         raise RuntimeError("Production requires a Supabase PostgreSQL DATABASE_URL.")
     if STORAGE_BACKEND != "supabase":
         raise RuntimeError("Production requires Supabase Storage; local uploads are disabled.")
-    if len(JWT_SECRET_KEY) < 32 or JWT_SECRET_KEY.startswith("change-this"):
-        raise RuntimeError("Production requires a random JWT_SECRET_KEY of at least 32 characters.")
-    if not LIBRARIAN_AUTH_CODE or LIBRARIAN_AUTH_CODE in {"change-this-to-a-secret-code", "LIB-RPL-2025"}:
-        raise RuntimeError("Production requires a private LIBRARIAN_AUTH_CODE.")
+    secret_errors = account_secret_errors(JWT_SECRET_KEY, LIBRARIAN_AUTH_CODE)
+    if secret_errors:
+        raise RuntimeError(" ".join(secret_errors))
     # Staff can set a managed PIN after startup. Kiosk verification fails closed
     # when neither a database PIN nor a safe legacy environment PIN exists.
     if not ALLOWED_ORIGINS or any(not origin.startswith("https://") for origin in ALLOWED_ORIGINS):

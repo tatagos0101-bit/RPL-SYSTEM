@@ -1,0 +1,10 @@
+# Minimal integration harness; match these pins to backend/uv.lock when updating.
+fastapi==0.135.2
+starlette==1.3.1
+limits==5.8.0
+psycopg[binary]==3.2.13
+python-dotenv==1.2.2
+python-jose==3.5.0
+redis==8.1.0
+slowapi==0.1.9
+sqlalchemy==2.0.35

@@ -78,11 +78,12 @@ an arbitrary `.env.local` file is not automatically loaded by that code.
 ## Persistence and migrations
 
 The [models](../backend/models) and [initial SQL](../supabase/migrations/20261010000100_library_schema.sql)
-describe 12 application tables:
+describe 13 application tables after the additive session upgrade:
 
 | Tables | Relationship and meaning |
 | --- | --- |
 | `users`, `face_embeddings` | Accounts hold role/status, password hashes, private-asset references, and legacy dlib encodings. Engine-specific embedding rows belong to users and record engine, dimension, source, and active state. |
+| `auth_sessions` | Expiring server-side login sessions, linked to users and bound to their current password hash via an HMAC digest. No raw JWTs are stored. |
 | `books`, `book_copies` | A title has physical copies. Copy QR codes are unique; `(book_id, copy_number)` is unique. Status includes available, borrowed, damaged, lost, and retired. Titles also keep aggregate counts and legacy QR codes. |
 | `transactions` | One loan links user, book, and optionally a physical copy for legacy compatibility. Returning changes that same row rather than adding a separate circulation event. |
 | `reservations`, `notifications` | Reservations link members to titles with queue/status/expiry information. Notifications may target a user; null user IDs denote librarian notifications. |
@@ -101,6 +102,11 @@ table-creation script against an existing database. The [schema generator](../sc
 compiles without connecting but overwrites the initial SQL file. Future upgrades
 must preserve existing data and be tested for repeatability on an isolated target.
 Production defaults to `AUTO_MIGRATE=false`; development startup can run migrations.
+The additive `20261016000100_auth_sessions.sql` creates session storage without
+rewriting existing records. Apply it before deploying session-aware code, or use
+the existing explicit Python migration path on an authorized target. The initial
+schema SQL has not been regenerated. Runtime-role preparation under
+`supabase/operations/` is a separate, explicitly authorized operation.
 Even some read routes call backfill/status-sync helpers that commit changes, so an
 HTTP GET is not necessarily free of database writes.
 
@@ -112,17 +118,25 @@ HttpOnly cookie, with Secure enabled in production; token-bearing JSON responses
 and bearer authorization remain supported. The frontend removes the old stored
 token after a new login, retains UI metadata, and sends cookies through Axios.
 
-[dependencies.py](../backend/dependencies.py) verifies the token, reloads the account,
-rejects suspended users and upload-scoped tokens, and implements role checks.
+[dependencies.py](../backend/dependencies.py) verifies the token, its server-side
+session, expiry, and password-hash binding, reloads the account, rejects suspended
+users and non-session tokens, and implements role checks. Logout revokes the
+presented cookie/bearer sessions. Password changes and resets revoke all old
+sessions; a password change issues a replacement browser cookie. Tokens issued
+before the session upgrade require a new login. Bearer transport remains supported
+for newly issued session tokens. Failed or unavailable session lookups never
+grant access.
 Only `member` and `librarian` are persisted roles. Public catalog access is anonymous.
 Resource ownership is enforced by individual routes; not every user route uses the
 strict `require_member` dependency. Librarian signup requires a private authorization
 code; the librarian registration flow issues temporary member passwords.
 
 [RequireRole.jsx](../frontend/src/components/RequireRole.jsx) verifies the profile
-and redirects accounts requiring a password change. The general backend auth
-dependency does not enforce that flag across all endpoints. Do not describe the
-redirect as a server-wide restriction. Public recovery requests return generic
+and redirects accounts requiring a password change. Backend dependencies also
+enforce this flag: authenticated profile retrieval, password change, and logout
+remain available; other protected operations are denied until completion.
+Newly registered contact details remain unverified until ownership is established;
+existing verification flags are not rewritten. Public recovery requests return generic
 librarian-help responses outside tests; email/SMS delivery is not integrated.
 
 [Kiosk routes](../backend/routers/kiosk.py) require a separate station PIN and invoke
@@ -130,6 +144,11 @@ face processing with token issuance disabled. The browser keeps that PIN in sess
 storage. A station unlock is not librarian authentication. Preserve request limits,
 safe validation errors, and [security middleware](../backend/middleware/security.py)
 that avoids reflecting credentials and raw input into errors/logs.
+Rate limits can share Redis storage across instances. Until a shared endpoint is
+configured, the default remains process-local memory. Redis failures reject
+limited requests when configured; live multi-instance and trusted-client-address
+verification are required before cutover. See the
+[security rollout procedure](SECURITY_ROLLOUT.md).
 
 Librarians manage the station PIN at `/librarian/settings`, using their current
 account password and a new 6–12 digit PIN. The [settings API](../backend/routers/librarian_settings.py)

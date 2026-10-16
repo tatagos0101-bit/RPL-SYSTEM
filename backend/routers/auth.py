@@ -8,26 +8,27 @@ import string
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from jose import jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 
-from config import JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MIN, LIBRARIAN_AUTH_CODE, ENVIRONMENT
+from config import LIBRARIAN_AUTH_CODE, ENVIRONMENT
 from database import get_db
-from dependencies import get_current_user, require_librarian
+from dependencies import get_current_user, require_librarian, oauth2_scheme
 from limiter import limiter
 from logger import security_logger
 from middleware.security import _client_ip
 from models.user import User
 from models.entry_log import EntryLog
-from services.auth_cookie import clear_auth_cookie, set_auth_cookie
+from services.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_cookie
+from services.auth_sessions import create_session_token, revoke_token_session, revoke_user_sessions
 from services.password_reset import (
     RESET_CODE_MINUTES,
     choose_reset_channel,
     create_password_reset_code,
     find_user_by_identifier,
     verify_password_reset_code,
+    expire_unused_reset_codes_for_user,
 )
 from schemas.auth import (
     LoginRequest, SignupRequest, TokenResponse,
@@ -49,9 +50,19 @@ def _hash(password: str) -> str:
 def _verify(plain: str, hashed: str) -> bool:
     return pwd_ctx.verify(plain, hashed)
 
-def _make_token(user_id: int) -> str:
-    expire = now_ph() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MIN)
-    return jwt.encode({"sub": str(user_id), "exp": expire}, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+def _make_token(user_id: int, db: Session | None = None) -> str:
+    # Compatibility for local test helpers; request handlers pass their session
+    # and commit explicitly before returning a token or cookie.
+    if db is None:
+        from database import SessionLocal
+        with SessionLocal() as owned_db:
+            token = _make_token(user_id, owned_db)
+            owned_db.commit()
+            return token
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return create_session_token(db, user)
 
 _ID_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I/L
 
@@ -81,7 +92,8 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
         security_logger.warning("LOGIN_SUSPENDED ip=%s user_id=%d", ip, user.id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended. Contact librarian.")
     security_logger.info("LOGIN_SUCCESS ip=%s user_id=%d role=%s", ip, user.id, user.role)
-    token = _make_token(user.id)
+    token = _make_token(user.id, db)
+    db.commit()
     set_auth_cookie(response, token)
     return TokenResponse(
         access_token=token,
@@ -123,7 +135,8 @@ def signup(request: Request, response: Response, body: SignupRequest, db: Sessio
     db.refresh(user)
 
     security_logger.info("SIGNUP_SUCCESS ip=%s user_id=%d role=%s", ip, user.id, user.role)
-    token = _make_token(user.id)
+    token = _make_token(user.id, db)
+    db.commit()
     set_auth_cookie(response, token)
     return TokenResponse(
         access_token=token,
@@ -185,12 +198,19 @@ def confirm_password_reset(
     user = verify_password_reset_code(db, body.identifier, body.code)
     user.password_hash = _hash(body.new_password)
     user.must_change_password = False
+    revoke_user_sessions(db, user.id)
+    expire_unused_reset_codes_for_user(db, user.id)
     db.commit()
     return PasswordResetConfirmResponse(success=True, message="Password has been reset.")
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(response: Response):
+def logout(request: Request, response: Response,
+           token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    # Idempotent, including expired/missing cookies and suspended accounts.
+    for credential in {token, request.cookies.get(AUTH_COOKIE_NAME)}:
+        revoke_token_session(db, credential)
+    db.commit()
     clear_auth_cookie(response)
 
 
@@ -363,7 +383,9 @@ def _legacy_process_entry_face(
     _last_seen_by_ip[ip] = {"user_id": matched_user.id, "ts": time()}
 
     security_logger.info("FACE_ENTRY_SUCCESS user_id=%d", matched_user.id)
-    token = _make_token(matched_user.id) if issue_token else None
+    token = _make_token(matched_user.id, db) if issue_token else None
+    if issue_token:
+        db.commit()
     if issue_token and response is not None and token:
         set_auth_cookie(response, token)
     return FaceAuthResponse(
@@ -526,7 +548,9 @@ def process_entry_face(
     _last_seen_by_ip[ip] = {"user_id": matched_user.id, "ts": time()}
     security_logger.info("FACE_ENTRY_SUCCESS user_id=%d", matched_user.id)
 
-    token = _make_token(matched_user.id) if issue_token else None
+    token = _make_token(matched_user.id, db) if issue_token else None
+    if issue_token:
+        db.commit()
     if issue_token and response is not None and token:
         set_auth_cookie(response, token)
 

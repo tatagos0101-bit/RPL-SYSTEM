@@ -1,17 +1,17 @@
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from config import JWT_SECRET_KEY, JWT_ALGORITHM
 from database import get_db
+from models.auth_session import AuthSession
 from models.user import User
 from services.auth_cookie import AUTH_COOKIE_NAME
+from services.auth_sessions import session_claims, session_is_current
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
-def get_current_user(
+def get_session_user(
     request: Request,
     token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
@@ -21,26 +21,25 @@ def get_current_user(
         detail="Invalid or expired token",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        auth_token = token or request.cookies.get(AUTH_COOKIE_NAME)
-        if not auth_token:
-            raise credentials_error
-        payload = jwt.decode(auth_token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        if payload.get("scope") == "upload":
-            raise credentials_error
-        user_id_str = payload.get("sub")
-        if user_id_str is None:
-            raise credentials_error
-        user_id = int(user_id_str)
-    except (JWTError, ValueError, TypeError):
+    auth_token = token or request.cookies.get(AUTH_COOKIE_NAME)
+    claims = session_claims(auth_token) if auth_token else None
+    if claims is None:
         raise credentials_error
-
+    user_id, sid = claims
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_error
     if user.status == "suspended":
         raise credentials_error
+    if not session_is_current(db.get(AuthSession, sid), user):
+        raise credentials_error
     return user
+
+
+def get_current_user(current_user: User = Depends(get_session_user)) -> User:
+    if current_user.must_change_password:
+        raise HTTPException(status_code=403, detail="Password change required.")
+    return current_user
 
 
 def require_librarian(current_user: User = Depends(get_current_user)) -> User:

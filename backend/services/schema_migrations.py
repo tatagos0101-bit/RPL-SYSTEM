@@ -35,5 +35,7 @@ def upgrade_schema(conn, metadata) -> None:
     for table in metadata.sorted_tables:
         name = conn.dialect.identifier_preparer.quote(table.name)
         conn.execute(text(f"ALTER TABLE public.{name} ENABLE ROW LEVEL SECURITY"))
+        if table.name == "auth_sessions":
+            conn.execute(text(f"REVOKE ALL ON TABLE public.{name} FROM PUBLIC"))
         for role in sorted(roles):
             conn.execute(text(f"REVOKE ALL ON TABLE public.{name} FROM {role}"))

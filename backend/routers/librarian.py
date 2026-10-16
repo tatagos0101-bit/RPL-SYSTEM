@@ -35,6 +35,7 @@ from models.notification import Notification
 from models.reservation import Reservation
 from models.transaction import Transaction
 from models.user import User
+from services.auth_sessions import revoke_user_sessions
 from services.loan_policy import sync_overdue_loans
 from services.book_copy_service import ensure_book_copies
 from services.reservation_policy import (
@@ -410,8 +411,8 @@ async def register_member(
         email         = email or None,
         password_hash = _pwd_ctx.hash(temporary_password),
         must_change_password = True,
-        email_verified = bool(email),
-        phone_verified = bool(phone),
+        email_verified = False,
+        phone_verified = False,
         role          = "member",
         phone         = phone.strip() if phone else None,
         location      = location.strip(),
@@ -453,13 +454,14 @@ def reset_member_password(
     db:      Session = Depends(get_db),
     _:       User    = Depends(require_librarian),
 ):
-    member = db.query(User).filter(User.id == user_id, User.role == "member").first()
+    member = db.query(User).filter(User.id == user_id, User.role == "member").with_for_update().populate_existing().first()
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
     temporary_password = _generate_temporary_password()
     member.password_hash = _pwd_ctx.hash(temporary_password)
     member.must_change_password = True
+    revoke_user_sessions(db, member.id)
     expire_unused_reset_codes_for_user(db, member.id)
     db.commit()
 

@@ -88,6 +88,7 @@ def verify_password_reset_code(
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired reset code.")
 
+    user = db.query(User).filter(User.id == user.id).with_for_update().populate_existing().one()
     reset = (
         db.query(PasswordResetCode)
         .filter(
@@ -97,6 +98,7 @@ def verify_password_reset_code(
             PasswordResetCode.expires_at > _now(),
         )
         .order_by(PasswordResetCode.created_at.desc())
+        .with_for_update()
         .first()
     )
     if not reset:

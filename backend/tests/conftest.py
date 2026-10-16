@@ -15,6 +15,8 @@ os.environ["ENVIRONMENT"] = "test"
 os.environ["ALLOWED_ORIGINS"] = "http://testserver"
 os.environ["STORAGE_BACKEND"] = "local"
 os.environ["AUTO_MIGRATE"] = "false"
+os.environ["RATE_LIMIT_STORAGE_URI"] = ""
+os.environ["RATE_LIMIT_REQUIRE_SHARED"] = "false"
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
