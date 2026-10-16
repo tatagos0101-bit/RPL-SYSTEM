@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from typing import Literal, Optional
 from datetime import datetime
 from decimal import Decimal
 
@@ -43,6 +43,7 @@ class RecommendedBook(BaseModel):
     cover_url:        Optional[str]
     copies_available: int
     reason:           str    # "Because you read X" or "Trending this month"
+    source:           Literal["collaborative", "content", "popular", "new"]
 
 
 class GoalUpdateIn(BaseModel):

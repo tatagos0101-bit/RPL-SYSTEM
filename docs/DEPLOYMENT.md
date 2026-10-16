@@ -79,6 +79,29 @@ Apply future additive schema changes explicitly with `python migrate.py` using
 the cloud database settings before releasing them. Startup does not perform DDL
 on every serverless cold start. `/health` checks database connectivity.
 
+### Personalized recommendation upgrade
+
+Before deploying the recommendation API, run the existing `python migrate.py`
+upgrade from `backend/` against the explicitly selected database. This creates
+`book_interactions` and adds history/reservation indexes to existing tables;
+repeated execution preserves rows. The upgrade enables RLS and revokes `anon` and
+`authenticated` table access, including on the new table. Do not regenerate or
+reapply the initial schema SQL. Keep production `AUTO_MIGRATE=false`.
+
+Deploy the backend before the frontend. No new credentials, ML dependencies,
+external inference service, or scheduled training job are needed. Existing loans
+provide initial signals; favorites and latest detail views accumulate afterward.
+Missing feedback endpoints produce a recoverable favorites error while the
+catalog remains usable. Rolling back application code can
+leave the additive table/indexes in place; do not drop member feedback.
+
+The opt-in `backend/tests/test_recommendations_postgres.py` check requires an empty,
+disposable localhost database named `rpl_recommendation_test`, selected with
+`RECOMMENDATION_TEST_DATABASE_URL`. It applies migrations, checks RLS/privileges,
+races favorite/view updates, and benchmarks synthetic activity. Never point this
+test at Supabase or an existing library database. Normal backend tests skip it
+unless explicitly configured. Local timings do not establish cloud performance.
+
 ## 3. Frontend Vercel project
 
 Use repository root `.` with the Vite preset. Root `vercel.json` installs using

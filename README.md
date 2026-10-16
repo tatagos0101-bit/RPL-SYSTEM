@@ -23,8 +23,11 @@ projects, environment variables, migrations, and initial administrator access.
   updates, face enrollment/login, and a password-change screen for temporary
   passwords issued by staff.
 - **Member dashboard:** active loans, due dates, fines, borrowing history,
-  activity, reading goals, and recommendations based on borrowing categories and
-  trending titles. Returned loans remain part of historical statistics.
+  activity, and reading goals. Returned loans remain part of historical statistics.
+- **Browse Books recommendations:** the first section suggests books using item
+  similarity learned from favorites, book-detail views, and borrowing history.
+  Members can favorite books on cards or in details. New readers see community
+  popularity, with newest books filling gaps when activity is sparse.
 - **Reservations:** signed-in members select and reserve books, view queue or
   pickup status, and cancel reservations. Available books become ready for pickup;
   unavailable books join a queue. Returns can promote waiting reservations.
@@ -184,8 +187,11 @@ frontend tests, plus live cloud workflows and desktop/mobile browser checks.
 - **Email/SMS delivery is not integrated:** public password-recovery requests
   direct users to a librarian. Staff can issue temporary password resets;
   notifications currently appear in the application.
-- **Recommendations use database rules:** categories and recent borrowing counts
-  drive suggestions; the system does not train an ML recommendation model.
+- **Recommendation quality is not yet measured on real readers:** item-based
+  collaborative filtering runs on demand, supplemented by author/category matches
+  and popularity. It has no separately trained model or external AI service.
+  Synthetic ranking tests verify behavior, not real-world accuracy. Feedback is
+  stored privately in the database; deploy the additive migration before this API.
 - **InsightFace is optional:** the included deployed runtime uses dlib. Selecting
   InsightFace requires its separate dependencies and model setup.
 - **Design documents can describe planned work:** files under `docs/superpowers/`

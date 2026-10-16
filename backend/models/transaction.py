@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, String, Enum, DateTime, ForeignKey, Numeric, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -6,6 +6,7 @@ from database import Base
 
 class Transaction(Base):
     __tablename__ = "transactions"
+    __table_args__ = (Index("ix_transactions_recommendation_history", "user_id", "book_id", "borrow_date"),)
 
     id           = Column(Integer, primary_key=True, index=True)
     user_id      = Column(Integer, ForeignKey("users.id"), nullable=False)

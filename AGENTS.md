@@ -125,7 +125,8 @@ The README recommends Python 3.12 and Node.js 22.12 or newer. Commands require i
 - Count historical borrows using `borrow_date`, including loans now marked as returns. Preserve
   Philippine date boundaries and distinguish period activity from current inventory/overdue snapshots.
 - Preserve librarian-only reports, owner-scoped transcripts, CSV formula protection, and print HTML escaping.
-  Fine totals are assessed amounts, not proof of payments; recommendations are database rules, not trained ML.
+  Fine totals are assessed amounts, not proof of payments. Recommendations use on-demand item-based
+  collaborative filtering with content/popularity fallbacks; there is no separately trained model or measured real-reader accuracy.
 - Do not claim official reporting compliance, complete exports beyond pagination limits, or measured accuracy
   without verification. Test returned-loan history, month boundaries, empty data, and access restrictions.
 

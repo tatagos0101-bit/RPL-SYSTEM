@@ -243,8 +243,35 @@ provides offline attendance, borrowing, returns, or reservations.
 [Report routes](../backend/routers/reports.py) and [PDF service](../backend/services/report_service.py)
 produce owner-scoped reading transcripts and librarian monthly reports. Dashboard
 and user endpoints provide trends, reading goals, activity, and genre breakdowns.
-[Recommendation service](../backend/services/recommendation.py) uses category history,
-recent borrowing popularity, and fallback books; it does not train an ML model.
+[Recommendation service](../backend/services/recommendation.py) computes item-based
+cosine similarities from member/book signals in SQL. A borrow contributes 5,
+a current favorite 3, and a detail view 1, each once per member/book. Historical
+loans include returned books. Only active members contribute community signals;
+the requesting member is excluded from the peer vectors used for similarities.
+Collaborative matches precede author/category matches, then popularity, then new
+books; availability takes priority over these tiers. Previously borrowed books
+and pending/ready reservations are excluded. Popularity uses current favorites
+and views/borrows within 30 days; that window is a ranking rule, not data retention.
+
+`book_interactions` stores one private row per member/book with favorite state and
+latest view time, not a raw click stream. Member-only `/api/user/favorites` (GET),
+`/api/user/favorites/{book_id}` (PUT/DELETE), and `/api/user/book-views/{book_id}`
+(POST) derive ownership from authentication. Atomic upserts change only the
+submitted fields. Direct browser database access remains revoked. Recommendations
+retain the list API and add per-book `source` (`collaborative`, `content`, `popular`,
+or `new`) and an explanation without other members' identities or histories.
+
+Browse Books loads recommendations independently above search/catalog. Favorite
+changes synchronize cards and details; recommendation refreshes wait until an
+open detail modal closes. There is no separate training job, dense in-memory
+interaction matrix, external AI service, or measured real-reader accuracy.
+
+The member header and Browse Books presentation reuse the civic theme from
+`ui-update`: Segoe UI, semantic light/dark colors, the RPL seal, and regular-case
+headings and controls. The visual reference was the production release
+[`dpl_hYYWEWKfAwp4eQbFZugvMA4DkK3i`](https://rpl-system-7h9tt475a-tatagos0101-5211.vercel.app),
+checked on October 16, 2026 with synthetic member/book responses. This records the
+design reference, not deployment of the recommendation feature.
 
 Borrow counts use `borrow_date`, including rows now typed as returns. Monthly
 reports mix period circulation/visits with current overdue and inventory snapshots;

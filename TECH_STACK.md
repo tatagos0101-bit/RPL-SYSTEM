@@ -13,7 +13,7 @@ This is not verification of the deployed revision or live cloud configuration.
 | Facial recognition | face-recognition/dlib with optional InsightFace; OpenCV, NumPy, and Pillow support image processing. |
 | Presentation checks | Main uses brightness/texture heuristics that static photos can pass. Separate uncommitted MiniFASNet ONNX work is excluded from this release; physical-camera acceptance remains pending. |
 | Library tooling | Physical-copy QR labels via qrcode, workbook parsing via openpyxl, PDF generation via ReportLab, and browser CSV/print exports. |
-| Recommendations | Database rules using borrowing categories and recent popularity; no trained recommendation model. |
+| Recommendations | On-demand item-based collaborative filtering (cosine similarity), with author/category and popularity fallbacks. Favorites, views, and loans are aggregated in SQL; no external AI service or separately trained model. |
 | Deployment | Vercel frontend and FastAPI configurations with Supabase persistence; Docker/Railway artifacts also remain. |
 | Verification | pytest backend regressions, Node's built-in frontend helper tests, ESLint, and Vite build. |
 

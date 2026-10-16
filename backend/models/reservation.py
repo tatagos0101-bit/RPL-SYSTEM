@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Enum, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Enum, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -6,6 +6,7 @@ from database import Base
 
 class Reservation(Base):
     __tablename__ = "reservations"
+    __table_args__ = (Index("ix_reservations_member_status_book", "user_id", "status", "book_id"),)
 
     id             = Column(Integer, primary_key=True, index=True)
     user_id        = Column(Integer, ForeignKey("users.id"), nullable=False)
