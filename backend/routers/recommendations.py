@@ -5,14 +5,15 @@ from datetime import datetime, timedelta
 
 from timezone_utils import now_ph
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, extract
 
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, require_member
 from limiter import limiter
 from models.book import Book
+from models.book_interaction import BookInteraction
 from models.entry_log import EntryLog
 from models.reading_goal import ReadingGoal
 from models.transaction import Transaction
@@ -32,14 +33,56 @@ def _now() -> datetime:
     return now_ph()
 
 
-# ── AI Recommendations ────────────────────────────────────────────────────────
+# ── Member feedback and recommendations ───────────────────────────────────────
+
+def recommendation_member(current_user: User = Depends(require_member)) -> User:
+    # These member operations require completion of the first-login password change.
+    if current_user.must_change_password:
+        raise HTTPException(status_code=403, detail="Change your password before continuing")
+    return current_user
+
+
+@router.get("/api/user/favorites", response_model=list[int])
+def favorites(current_user: User = Depends(recommendation_member), db: Session = Depends(get_db)):
+    return [row[0] for row in db.query(BookInteraction.book_id).filter(
+        BookInteraction.user_id == current_user.id, BookInteraction.is_favorite.is_(True),
+    ).order_by(BookInteraction.book_id).all()]
+
+
+def _feedback(db, member, book_id, **changes):
+    if db.get(Book, book_id) is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    from services.book_interactions import update_interaction
+    update_interaction(db, member.id, book_id, **changes)
+    return Response(status_code=204)
+
+
+@router.put("/api/user/favorites/{book_id}", status_code=204)
+@limiter.limit("60/minute")
+def favorite_book(request: Request, book_id: int, current_user: User = Depends(recommendation_member),
+                  db: Session = Depends(get_db)):
+    return _feedback(db, current_user, book_id, favorite=True)
+
+
+@router.delete("/api/user/favorites/{book_id}", status_code=204)
+@limiter.limit("60/minute")
+def unfavorite_book(request: Request, book_id: int, current_user: User = Depends(recommendation_member),
+                    db: Session = Depends(get_db)):
+    return _feedback(db, current_user, book_id, favorite=False)
+
+
+@router.post("/api/user/book-views/{book_id}", status_code=204)
+@limiter.limit("60/minute")
+def view_book(request: Request, book_id: int, current_user: User = Depends(recommendation_member),
+              db: Session = Depends(get_db)):
+    return _feedback(db, current_user, book_id, viewed=True)
 
 @router.get("/api/recommendations", response_model=list[RecommendedBook])
 @limiter.limit("20/minute")
 def get_recommendations(
     request:      Request,
     limit:        int  = Query(10, ge=1, le=30),
-    current_user: User    = Depends(get_current_user),
+    current_user: User    = Depends(recommendation_member),
     db:           Session = Depends(get_db),
 ):
     from services.recommendation import get_recommendations as _rec

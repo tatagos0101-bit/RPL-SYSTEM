@@ -27,6 +27,15 @@ def upgrade_schema(conn, metadata) -> None:
                 table = conn.dialect.identifier_preparer.quote(table_name)
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {definition}"))
 
+    # create_all does not add indexes to tables that already exist.
+    for table_name, index_name in (
+        ("transactions", "ix_transactions_recommendation_history"),
+        ("reservations", "ix_reservations_member_status_book"),
+    ):
+        for index in metadata.tables[table_name].indexes:
+            if index.name == index_name:
+                index.create(bind=conn, checkfirst=True)
+
     if conn.dialect.name != "postgresql":
         return
     # App users authenticate with FastAPI, not Supabase Auth. No browser/Data API
