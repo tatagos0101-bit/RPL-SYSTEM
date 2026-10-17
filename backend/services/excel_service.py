@@ -4,7 +4,7 @@ Excel bulk import service.
 Expected .xlsx column headers (case-insensitive):
   Title | Author | Category | Year | ISBN | Copies | Location | Cover URL
 
-Any rows missing Title or Author are skipped.
+Invalid rows are reported with their original workbook row number.
 Duplicate ISBNs (already in DB) are also skipped.
 """
 import io
@@ -21,7 +21,7 @@ def _sanitize(value: str, max_length: int = 500) -> str:
     """Strip formula-injection prefixes and control characters from a cell string."""
     value = _CONTROL_CHARS.sub("", value)
     value = _FORMULA_PREFIX.sub("", value).strip()
-    return value[:max_length]
+    return value
 
 
 # Map flexible header names → canonical field names
@@ -76,45 +76,17 @@ def parse_excel(file_bytes: bytes) -> list[dict]:
             return None
         return _sanitize(str(val), max_length)
 
+    if not {"title", "author"}.issubset(col_map):
+        wb.close()
+        raise ValueError("Title and Author headers are required")
     books = []
-    for row in rows[1:]:
-        title  = cell(row, "title",  max_length=500)
-        author = cell(row, "author", max_length=200)
-        if not title or not author:
-            continue   # required fields missing
-
-        year_raw = cell(row, "year")
-        try:
-            year_int = int(float(year_raw)) if year_raw else None
-            year = year_int if year_int and 1000 <= year_int <= 2200 else None
-        except ValueError:
-            year = None
-
-        copies_raw = cell(row, "copies_total")
-        try:
-            copies = max(1, min(10000, int(float(copies_raw)))) if copies_raw else 1
-        except ValueError:
-            copies = 1
-
-        isbn_raw = cell(row, "isbn", max_length=20)
-        # Only keep ISBNs that look valid (digits and hyphens)
-        isbn = isbn_raw if isbn_raw and re.match(r"^[\d\-X]{8,20}$", isbn_raw, re.IGNORECASE) else None
-
-        cover_raw = cell(row, "cover_url", max_length=500)
-        # Only accept http/https URLs for cover images from spreadsheet
-        cover = cover_raw if cover_raw and re.match(r"^https?://", cover_raw, re.IGNORECASE) else None
-
-        books.append({
-            "title":            title,
-            "author":           author,
-            "category":         cell(row, "category", max_length=100) or "General",
-            "year":             year,
-            "isbn":             isbn,
-            "copies_total":     copies,
-            "copies_available": copies,
-            "location_shelf":   cell(row, "location_shelf", max_length=100),
-            "cover_url":        cover,
-        })
-
+    for row_number, row in enumerate(rows[1:], start=2):
+        if not any(value is not None for value in row):
+            continue
+        book = {field: cell(row, field) for field in col_map}
+        book["category"] = book.get("category") or "General"
+        book["copies_total"] = book.get("copies_total") or 1
+        book["_row_number"] = row_number
+        books.append(book)
     wb.close()
     return books

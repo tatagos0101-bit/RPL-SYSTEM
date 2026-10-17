@@ -131,7 +131,8 @@ async def upload_avatar(
     db.commit()
     # Keep the previous avatar until the new reference is committed successfully.
     try:
-        delete_upload(old_avatar, folder="avatars")
+        if old_avatar != current_user.avatar_url:
+            delete_upload(old_avatar, folder="avatars")
     except HTTPException:
         logger.warning("Could not delete previous avatar for user_id=%s", current_user.id)
     return {"avatar_url": resolve_upload_url(current_user.avatar_url)}

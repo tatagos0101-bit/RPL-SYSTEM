@@ -37,11 +37,18 @@ tests, lint, build and build-secret scan passed. Browser plugin not available;
 Playwright with installed Edge verified failed logout → retry → login and cart
 clearing at 320, 390, 768 and 1440 pixels, with no overflow or runtime errors.
 
-## Remaining batches
+Commit `114530e`: confirmed logout, isolated selections and shared frontend password policy.
 
-Authentication and account consistency; import/upload correctness; atomic reservations,
-quota and holds; attendance correctness; complete retrieval and interface failures.
-Database-sensitive changes require isolated PostgreSQL tests before acceptance.
+Import/upload batch: workbook rows use individual-book validation and per-row
+savepoints, retaining original row numbers and counting only successful rows.
+Full import accepts `.xlsx`; browser ISBN extraction retains `.xls` support.
+Single-book creation and physical copies now commit together. Repeat avatar
+finalization preserves the current object; cover cleanup follows commit and skips
+shared references. A saved book with a failed cover upload exposes cover-only retry.
+Notification text fields widen additively to `TEXT` for long titles/names/issue notes.
+`test_repair_imports.py` and cloud tests cover rollback, shared covers and upload
+retry. Disposable PostgreSQL additionally executes a real failed statement in the
+middle import savepoint and verifies both neighboring valid rows persist.
 
 ## Release prerequisites
 

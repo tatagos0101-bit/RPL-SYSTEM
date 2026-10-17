@@ -4,6 +4,7 @@ CRUD for books + Excel bulk upload + QR generation.
 """
 import os
 import uuid
+import logging
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, status
 from fastapi.responses import Response, StreamingResponse
 from io import BytesIO
@@ -16,6 +17,7 @@ from dependencies import require_librarian
 from models.book import Book
 from models.book_copy import BookCopy
 from models.user import User
+from models.transaction import Transaction
 from schemas.book import BookCreate, BookUpdate, BookOut, BookCopyLabelOut, BulkUploadResponse, InventoryStats
 from services.qr_service import make_qr_code, generate_qr_png, generate_bulk_pdf
 from services.book_copy_service import copy_label_payload, ensure_book_copies, get_copy_or_404, resize_book_copies
@@ -38,6 +40,14 @@ _MAGIC = {
 router = APIRouter(prefix="/api/inventory", tags=["Inventory"])
 
 
+def _clean_replaced_cover(db, previous, current):
+    if previous and previous != current and not db.query(Book.id).filter(Book.cover_url == previous).first():
+        try:
+            delete_upload(previous, folder="covers")
+        except HTTPException:
+            logging.getLogger(__name__).warning("Replaced cover cleanup failed")
+
+
 # ── Inventory stats ───────────────────────────────────────────────────────────
 
 @router.get("/stats", response_model=InventoryStats)
@@ -48,7 +58,7 @@ def inventory_stats(
     total_titles     = db.query(func.count(Book.id)).scalar()
     total_copies     = db.query(func.sum(Book.copies_total)).scalar()     or 0
     available_copies = db.query(func.sum(Book.copies_available)).scalar() or 0
-    borrowed_copies  = total_copies - available_copies
+    borrowed_copies  = db.query(Transaction).filter(Transaction.status.in_(['active', 'overdue'])).count()
     categories       = db.query(func.count(Book.category.distinct())).scalar()
 
     return InventoryStats(
@@ -80,8 +90,8 @@ def add_book(
     db.flush()   # get the auto-increment ID before commit
 
     book.qr_code = make_qr_code(book.id)
+    ensure_book_copies(db, book.id, commit=False)
     db.commit()
-    ensure_book_copies(db, book.id)
     db.refresh(book)
     return book
 
@@ -100,6 +110,7 @@ def update_book(
         raise HTTPException(status_code=404, detail="Book not found")
 
     changes = body.model_dump(exclude_unset=True)
+    previous_cover = book.cover_url
     for required in ("title", "author", "category", "copies_total"):
         if required in changes and changes[required] is None:
             raise HTTPException(422, f"{required.replace('_', ' ').capitalize()} cannot be empty.")
@@ -119,6 +130,7 @@ def update_book(
         db.rollback()
         raise HTTPException(409, "Book details conflict with another record. Refresh and try again.") from None
     db.refresh(book)
+    _clean_replaced_cover(db, previous_cover, book.cover_url)
     return book
 
 
@@ -147,7 +159,7 @@ async def upload_cover(
     db:   Session    = Depends(get_db),
     _:    User       = Depends(require_librarian),
 ):
-    book = db.query(Book).filter(Book.id == book_id).first()
+    book = db.query(Book).filter(Book.id == book_id).with_for_update().populate_existing().first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
 
@@ -176,9 +188,11 @@ async def upload_cover(
         ext = "." + (detected.split("/")[-1].replace("jpeg", "jpg"))
 
     filename = f"{book_id}_{uuid.uuid4().hex[:8]}{ext}"
+    previous_cover = book.cover_url
     book.cover_url = reference or save_upload("covers", filename, contents)
     db.commit()
     db.refresh(book)
+    _clean_replaced_cover(db, previous_cover, book.cover_url)
     return book
 
 
@@ -193,8 +207,8 @@ async def bulk_upload(
 ):
     raw, original_filename, reference = await read_upload(folder="imports", user_id=_.id, file=file, ticket=upload_ticket)
     ext = os.path.splitext(original_filename)[1].lower()
-    if ext not in (".xlsx", ".xls"):
-        raise HTTPException(status_code=400, detail="Only .xlsx or .xls files are accepted")
+    if ext != ".xlsx":
+        raise HTTPException(status_code=400, detail="Full inventory import requires .xlsx. Convert legacy .xls workbooks to .xlsx first.")
 
     from services.excel_service import parse_excel
 
@@ -213,26 +227,28 @@ async def bulk_upload(
     skipped = 0
     errors  = []
 
-    for i, row in enumerate(rows, start=2):   # start=2 because row 1 is headers
+    for row in rows:
+        i = row.pop("_row_number")
         try:
+            validated = BookCreate.model_validate(row).model_dump()
             # Skip duplicate ISBNs
-            if row.get("isbn") and db.query(Book).filter(Book.isbn == row["isbn"]).first():
+            if validated.get("isbn") and db.query(Book).filter(Book.isbn == validated["isbn"]).first():
                 skipped += 1
                 continue
 
-            book = Book(**row)
-            db.add(book)
-            db.flush()
-            book.qr_code = make_qr_code(book.id)
+            with db.begin_nested():
+                book = Book(**validated, copies_available=validated["copies_total"])
+                db.add(book)
+                db.flush()
+                book.qr_code = make_qr_code(book.id)
+                ensure_book_copies(db, book.id, commit=False)
             added += 1
 
         except Exception:
-            db.rollback()
             errors.append(f"Row {i}: Unable to import. Check the values and required fields.")
             continue
 
     db.commit()
-    ensure_book_copies(db)
 
     if reference:
         try:

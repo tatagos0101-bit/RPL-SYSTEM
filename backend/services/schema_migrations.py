@@ -38,6 +38,8 @@ def upgrade_schema(conn, metadata) -> None:
 
     if conn.dialect.name != "postgresql":
         return
+    for name in ('message', 'member_name', 'book_title'):
+        conn.execute(text(f'ALTER TABLE notifications ALTER COLUMN {name} TYPE TEXT'))
     # App users authenticate with FastAPI, not Supabase Auth. No browser/Data API
     # role may read passwords, government IDs, face embeddings, or other records.
     roles = set(conn.execute(text("SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated')")).scalars())

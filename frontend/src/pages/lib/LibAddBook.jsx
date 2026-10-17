@@ -104,6 +104,7 @@ export default function LibAddBook() {
   const [submitting, setSubmitting]   = useState(false);
   const [submitted, setSubmitted]     = useState(false);
   const [formError, setFormError]     = useState('');
+  const [coverRetry, setCoverRetry] = useState(null);
 
   // ── Category custom-input mode ────────────────────────────────────────────
   const [useCustomCategory, setUseCustomCategory] = useState(false);
@@ -208,11 +209,11 @@ export default function LibAddBook() {
     const a = form.author.trim();
     const c = form.category.trim();
     if (!t) return setFormError('Title is required.');
-    if (t.length > 500) return setFormError('Title must be at most 500 characters.');
+    if (t.length > 255) return setFormError('Title must be at most 255 characters.');
     if (!a) return setFormError('Author is required.');
-    if (a.length > 200) return setFormError('Author must be at most 200 characters.');
+    if (a.length > 180) return setFormError('Author must be at most 180 characters.');
     if (!c) return setFormError('Category is required.');
-    if (c.length > 100) return setFormError('Category must be at most 100 characters.');
+    if (c.length > 80) return setFormError('Category must be at most 80 characters.');
     if (form.year) {
       const yr = parseInt(form.year);
       if (isNaN(yr) || yr < 1000 || yr > 2200) return setFormError('Year must be between 1000 and 2200.');
@@ -225,8 +226,8 @@ export default function LibAddBook() {
       const cp = parseInt(form.copies);
       if (isNaN(cp) || cp < 1 || cp > 10000) return setFormError('Copies must be between 1 and 10,000.');
     }
-    if (form.location && form.location.trim().length > 100)
-      return setFormError('Shelf location must be at most 100 characters.');
+    if (form.location && form.location.trim().length > 80)
+      return setFormError('Shelf location must be at most 80 characters.');
     if (form.cover_url && form.cover_url.trim()) {
       if (!/^https?:\/\//i.test(form.cover_url.trim()))
         return setFormError('Cover URL must start with http:// or https://');
@@ -247,7 +248,8 @@ export default function LibAddBook() {
     })
       .then(async (res) => {
         if (coverFile) {
-          try { await uploadBookCover(res.data.id, coverFile); } catch { /* cover upload failed, book still added */ }
+          try { await uploadBookCover(res.data.id, coverFile); }
+          catch { setCoverRetry({ id: res.data.id, file: coverFile }); }
         }
         setSubmitted(true);
         setForm({ title: '', author: '', category: '', year: '', isbn: '', copies: '', location: '', cover_url: '' });
@@ -399,8 +401,8 @@ export default function LibAddBook() {
       return;
     }
     const ext = file.name.split('.').pop().toLowerCase();
-    if (!['xlsx', 'xls'].includes(ext)) {
-      setUploadError('Only .xlsx or .xls files are accepted.');
+    if (ext !== 'xlsx') {
+      setUploadError('Full inventory import requires .xlsx; convert legacy .xls first.');
       return;
     }
     setUploading(true);
@@ -464,7 +466,7 @@ export default function LibAddBook() {
                   <CheckCircle2 size={32} className="text-success" />
                 </div>
                 <h3 className="font-semibold tracking-normal mb-1 rpl-subheading">Book Added!</h3>
-                <p className="text-sm text-muted font-medium">The book has been added to the catalog.</p>
+                <p className="text-sm text-muted font-medium">{coverRetry ? "Book saved, but its cover upload was not confirmed. The cover retry control appears below shortly." : "The book has been added to the catalog."}</p>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -529,6 +531,15 @@ export default function LibAddBook() {
                     <p className="text-sm font-bold text-danger">{formError}</p>
                   </div>
                 )}
+                {coverRetry && <div role="alert" className="p-3 border border-line rounded-lg text-sm">
+                  Book saved, but its cover upload was not confirmed.
+                  <button type="button" disabled={submitting} className="ml-2 underline" onClick={async () => {
+                    setSubmitting(true);
+                    try { await uploadBookCover(coverRetry.id, coverRetry.file); setCoverRetry(null); }
+                    catch { setFormError('Cover upload still could not be confirmed. Retry the cover upload.'); }
+                    finally { setSubmitting(false); }
+                  }}>Retry cover upload</button>
+                </div>}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field label="Title"  name="title"  value={form.title}  onChange={handleFormChange} required />
@@ -554,7 +565,7 @@ export default function LibAddBook() {
                           onChange={handleFormChange}
                           placeholder="Type a new category…"
                           required
-                          maxLength={100}
+                          maxLength={80}
                           className="w-full bg-subtle border border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted"
                         />
                         {form.category && (
@@ -678,7 +689,7 @@ export default function LibAddBook() {
                       <p className="text-sm font-bold text-muted mb-3">Drag & drop .xlsx / .csv here</p>
                       <label className="px-5 py-2.5 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal cursor-pointer transition-all">
                         Browse File
-                        <input type="file" accept=".xlsx,.csv" className="hidden" onChange={handleBulkFileChange} />
+                        <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleBulkFileChange} />
                       </label>
                     </>
                   )}
@@ -892,11 +903,11 @@ export default function LibAddBook() {
                 Drag & drop your file here
               </p>
               <p className="text-sm text-muted font-medium mb-6">
-                Supports .xlsx and .csv — max 10 MB
+                Full inventory import: .xlsx — max 10 MB
               </p>
               <label className="px-7 py-3.5 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal cursor-pointer transition-all">
                 Browse File
-                <input type="file" accept=".xlsx,.csv" className="hidden"
+                <input type="file" accept=".xlsx" className="hidden"
                   onChange={(e) => { setFile(e.target.files[0]); setUploadResult(null); setUploadError(''); }} />
               </label>
             </div>
@@ -920,10 +931,11 @@ export default function LibAddBook() {
               <div className="bg-success-soft border border-success rounded-xl p-5 flex items-center gap-3">
                 <CheckCircle2 size={18} className="text-success flex-shrink-0" />
                 <p className="text-sm font-bold text-success">
-                  {uploadResult.imported ?? uploadResult.count ?? 'Books'} books imported successfully!
+                    {uploadResult.added} books imported; {uploadResult.skipped} duplicate ISBNs skipped; {uploadResult.errors?.length ?? 0} rows could not be imported.
                 </p>
               </div>
             )}
+              {uploadResult?.errors?.length > 0 && <ul role="alert" className="p-4 text-sm text-danger">{uploadResult.errors.map((message, index) => <li key={index}>{message}</li>)}</ul>}
             {uploadError && (
               <div className="bg-danger-soft border border-danger rounded-xl p-5 flex items-center gap-3">
                 <AlertCircle size={18} className="text-danger flex-shrink-0" />

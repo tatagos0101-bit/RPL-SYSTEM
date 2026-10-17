@@ -165,6 +165,11 @@ def test_direct_avatar_uses_storage_content_validation(client, db_session, cloud
     db_session.refresh(user)
     assert user.avatar_url.startswith("supabase://rpl-avatars/")
     assert client.post("/api/uploads/prepare", json={"category": "ids", "filename": "id.png", "size": len(PNG)}).status_code == 403
+    deleted = []
+    monkeypatch.setattr('routers.users.delete_upload', lambda *args, **kwargs: deleted.append(args))
+    retry = client.post("/api/user/avatar", data={"upload_ticket": prepared.json()["upload_ticket"]})
+    assert retry.status_code == 200
+    assert deleted == []
 
 
 def test_direct_upload_still_rejects_spoofed_file_content(cloud_storage, monkeypatch):
