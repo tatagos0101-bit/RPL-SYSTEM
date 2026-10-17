@@ -117,7 +117,7 @@ def reading_stats(
 
     total_visits = (
         db.query(func.count(EntryLog.id))
-        .filter(EntryLog.user_id == current_user.id)
+        .filter(EntryLog.user_id == current_user.id, EntryLog.granted.is_(True))
         .scalar()
     )
 
@@ -149,7 +149,7 @@ def activity_heatmap(
             day_expression.label("day"),
             func.count(EntryLog.id).label("cnt"),
         )
-        .filter(EntryLog.user_id == current_user.id, EntryLog.accessed_at >= since)
+        .filter(EntryLog.user_id == current_user.id, EntryLog.granted.is_(True), EntryLog.accessed_at >= since)
         .group_by(day_expression)
         .all()
     )
@@ -218,6 +218,7 @@ def reading_goals(
                 db.query(func.count(EntryLog.id))
                 .filter(
                     EntryLog.user_id == current_user.id,
+                    EntryLog.granted.is_(True),
                     EntryLog.accessed_at >= year_start,
                     EntryLog.accessed_at < year_end,
                 )

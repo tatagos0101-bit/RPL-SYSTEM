@@ -69,11 +69,11 @@ def update_profile(
 ):
     if body.name is not None:
         current_user.name = body.name
-    if body.phone is not None:
+    if "phone" in body.model_fields_set:
         if body.phone != current_user.phone:
             current_user.phone_verified = False
         current_user.phone = body.phone
-    if body.location is not None:
+    if "location" in body.model_fields_set:
         current_user.location = body.location
     db.commit()
     db.refresh(current_user)

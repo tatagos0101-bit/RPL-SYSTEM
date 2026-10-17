@@ -61,8 +61,8 @@ class UserProfileUpdate(BaseModel):
         if v is None:
             return v
         v = v.strip()
-        if len(v) > 200:
-            raise ValueError("Location must be at most 200 characters")
+        if len(v) > 120:
+            raise ValueError("Location must be at most 120 characters")
         return v or None
 
 
