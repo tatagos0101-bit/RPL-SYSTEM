@@ -1,3 +1,5 @@
+import ModalFrame from '../../components/ModalFrame';
+import { loadSections } from '../../api/loadSections';
 import { SHOW_FINES } from '../../api/fineVisibility';
 import FineContent from '../../components/FineContent';
 import { createElement, useEffect, useMemo, useState } from 'react';
@@ -160,6 +162,8 @@ const UserHome = () => {
   const [activity, setActivity] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [failedSections, setFailedSections] = useState([]);
+  const [retry, setRetry] = useState(0);
 
   const [goalsModalOpen, setGoalsModalOpen] = useState(false);
   const [goalDraft, setGoalDraft] = useState({ annual_books: 12, genres: 3, visits: 24 });
@@ -174,23 +178,12 @@ const UserHome = () => {
   const userName = localStorage.getItem('userName') || 'Member';
 
   useEffect(() => {
-    Promise.all([
-      getLoans(),
-      getFines(),
-      getReadingStats(),
-      getActivity(84),
-      getGoals(),
-    ])
-      .then(([lRes, fRes, sRes, aRes, gRes]) => {
-        setLoans(lRes.data);
-        setFines(fRes.data);
-        setStats(sRes.data);
-        setActivity(aRes.data);
-        setGoals(gRes.data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    loadSections([
+      ['loans', getLoans, setLoans], ['fines', getFines, setFines],
+      ['reading statistics', getReadingStats, setStats],
+      ['activity', () => getActivity(84), setActivity], ['goals', getGoals, setGoals],
+    ]).then(setFailedSections).finally(() => setLoading(false));
+  }, [retry]);
 
   const overview = useMemo(
     () => buildUserHomeOverview({ loans, fines, stats, activity }),
@@ -262,6 +255,7 @@ const UserHome = () => {
 
   return (
     <div className="min-w-0 [overflow-wrap:anywhere] px-4 py-6 pb-16 sm:px-6 lg:px-10">
+      {failedSections.length > 0 && <p role="alert" className="text-danger">Unavailable: {failedSections.join(', ')}. Displayed values may be incomplete. <button className="underline" onClick={() => setRetry(value => value + 1)}>Retry dashboard</button></p>}
       <header className="mb-6">
         <p className="mb-2 text-sm font-semibold tracking-normal text-muted">
           {getGreeting()}
@@ -735,7 +729,7 @@ const ActivityMetric = ({ icon, label, value }) => (
 );
 
 const GoalsModal = ({ goalDraft, setGoalDraft, goalsSaving, onClose, onSave }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-8">
       <div className="mb-7 flex items-center justify-between">
         <h3 className="font-semibold tracking-normal text-ink rpl-subheading">Set Goals</h3>
@@ -788,7 +782,7 @@ const GoalsModal = ({ goalDraft, setGoalDraft, goalsSaving, onClose, onSave }) =
         </button>
       </div>
     </div>
-  </div>
+  </ModalFrame>
 );
 
 const ReportLoanModal = ({
@@ -802,7 +796,7 @@ const ReportLoanModal = ({
   onClose,
   onSubmit,
 }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+  <ModalFrame onClose={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-8">
       {reportSuccess ? (
         <div className="py-4 text-center">
@@ -890,7 +884,7 @@ const ReportLoanModal = ({
         </>
       )}
     </div>
-  </div>
+  </ModalFrame>
 );
 
 export default UserHome;

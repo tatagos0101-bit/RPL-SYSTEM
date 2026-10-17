@@ -17,7 +17,11 @@ test('selections are isolated by account and anonymous visitor', () => {
   storage.setItem('userId', '20');
   assert.deepEqual(loadReservationCart(storage), []);
   saveReservationCart([{ id: 3 }], storage);
+  storage.setItem('rp_cart:member:20:confirmation', 'synthetic pending confirmation');
+  storage.setItem('rp_cart:member:10:confirmation', 'other account confirmation');
   clearReservationCart(storage);
+  assert.equal(storage.getItem('rp_cart:member:20:confirmation'), undefined);
+  assert.equal(storage.getItem('rp_cart:member:10:confirmation'), 'other account confirmation');
   storage.setItem('userId', '10');
   assert.deepEqual(loadReservationCart(storage), [{ id: 2 }]);
   storage.removeItem('userId');

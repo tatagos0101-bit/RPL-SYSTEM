@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, Mail, ChevronRight, ChevronLeft, ArrowRight, X, BookOpen, LogIn, RefreshCw } from 'lucide-react';
 import BookCard from '../../components/BookCard';
+import ModalFrame from '../../components/ModalFrame';
 import { getBooks } from '../../api/books';
 import { getStoredAuth } from '../../api/authRoutes';
 
@@ -272,7 +273,7 @@ const LandingPage = () => {
       {selected && (() => {
         const currentIdx = books.findIndex(b => b.id === selected.id);
         return (
-          <div
+          <ModalFrame onClose={() => setSelected(null)} aria-label="Book details"
             className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 bg-black/70"
             onClick={() => setSelected(null)}
           >
@@ -448,7 +449,7 @@ const LandingPage = () => {
                 <ChevronRight size={28} />
               </button>
             )}
-          </div>
+          </ModalFrame>
         );
       })()}
 

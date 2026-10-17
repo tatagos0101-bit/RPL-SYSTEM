@@ -1,3 +1,6 @@
+import ModalFrame from '../../components/ModalFrame';
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, User, BadgeCheck, UserPlus, MoreHorizontal, RefreshCw,
@@ -7,13 +10,12 @@ import {
 import Webcam from 'react-webcam';
 import FloatingActions from '../../components/FloatingActions';
 import {
-  getMembers,
+  getMemberStats,
   updateMemberStatus,
   enrollMemberFace,
   registerMember,
   resetMemberPassword,
 } from '../../api/librarian';
-import { memberMatchesSearch } from '../../api/memberSearch';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 
 const formatApiError = (err, fallback) => {
@@ -45,7 +47,7 @@ function FaceEnrollModal({ user, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
       <div className="bg-panel border border-line rounded-xl shadow-sm w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 relative">
         <button aria-label="Close" onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-muted hover:text-muted hover:bg-subtle transition-all">
           <X size={16}/>
@@ -82,7 +84,7 @@ function FaceEnrollModal({ user, onClose, onSuccess }) {
         </div>
         {step==='preview' && <p className="text-center text-sm text-muted tracking-normal font-bold mt-3">Position the member's face clearly in frame</p>}
       </div>
-    </div>
+    </ModalFrame>
   );
 }
 
@@ -108,7 +110,7 @@ function PasswordResetModal({ user, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
       <div className="relative w-full max-w-md rounded-xl border border-line bg-panel p-7 shadow-sm">
         <button aria-label="Close" onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-muted hover:text-muted hover:bg-subtle transition-all">
           <X size={16}/>
@@ -182,7 +184,7 @@ function PasswordResetModal({ user, onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </ModalFrame>
   );
 }
 
@@ -249,7 +251,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
     `w-full bg-subtle border ${err ? 'border-danger' : 'border-line '} focus:border-line outline-none rounded-lg px-4 py-2.5 text-base font-medium text-ink placeholder-muted transition-colors`;
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
       <div className="bg-panel border border-line rounded-xl shadow-sm w-full max-w-lg flex flex-col" style={{ maxHeight: '90vh' }}>
 
         {/* Header */}
@@ -419,7 +421,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
           </>
         )}
       </div>
-    </div>
+    </ModalFrame>
   );
 }
 
@@ -427,10 +429,8 @@ function RegisterMemberModal({ onClose, onSuccess }) {
 // Main Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LibUsers() {
-  const [users,        setUsers]        = useState([]);
   const [stats,        setStats]        = useState({ total:0, active:0, suspended:0 });
   const [search,       setSearch]       = useState('');
-  const [loading,      setLoading]      = useState(true);
   const [actionMenu,   setActionMenu]   = useState(null);
   const [actionAnchor, setActionAnchor] = useState(null);
   const closeActionMenu = useCallback(() => setActionMenu(null), []);
@@ -438,33 +438,27 @@ export default function LibUsers() {
   const [resetTarget,  setResetTarget]  = useState(null);
   const [showRegister, setShowRegister] = useState(false);
 
+  const listing = useServerPage('/api/librarian/users', { search }, '/api/librarian/users/count');
+  const { items: users, loading, reload } = listing;
+  const [operationError, setOperationError] = useState('');
   const fetchMembers = useCallback(() => {
-    setLoading(true);
-    getMembers()
-      .then(res => {
-        const d = res.data;
-        setUsers(d);
-        setStats({ total: d.length, active: d.filter(u=>u.status==='active').length, suspended: d.filter(u=>u.status==='suspended').length });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const id = setTimeout(fetchMembers, 0);
-    return () => clearTimeout(id);
-  }, [fetchMembers]);
+    reload();
+    getMemberStats().then(({ data }) => setStats(data)).catch(() => setOperationError('Member totals unavailable. Retry loading.'));
+  }, [reload]);
+  useEffect(() => { const timer = setTimeout(fetchMembers, 0); return () => clearTimeout(timer); }, [fetchMembers]);
 
   const toggleStatus = (id, cur) => {
-    updateMemberStatus(id, cur==='active'?'suspended':'active').then(fetchMembers).catch(()=>{});
+    updateMemberStatus(id, cur==='active'?'suspended':'active').then(fetchMembers).catch(() => setOperationError('Status update could not be confirmed. Refresh before retrying.'));
     setActionMenu(null);
   };
 
-  const filtered = users.filter((u) => memberMatchesSearch(u, search));
+  const filtered = users;
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8">
+        <PageControls {...listing} />
+        {operationError && <p role="alert">{operationError} <button className="underline" onClick={fetchMembers}>Retry loading</button></p>}
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">

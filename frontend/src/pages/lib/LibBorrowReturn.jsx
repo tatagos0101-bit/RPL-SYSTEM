@@ -1,3 +1,5 @@
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
 import FineContent from '../../components/FineContent';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Webcam from 'react-webcam';
@@ -8,12 +10,14 @@ import {
   Plus, Trash2, Package, IdCard, Keyboard,
 } from 'lucide-react';
 import BookCover from '../../components/BookCover';
-import { getTransactions, borrowBook, returnBook, getMemberReservations, getMemberActiveLoans, getMembers } from '../../api/librarian';
+import { borrowBook, returnBook, getMemberReservations, getMemberActiveLoans, getMembers } from '../../api/librarian';
 import { faceLookup } from '../../api/auth';
 import { getBookByScan } from '../../api/books';
 import { addScannedBookCartItem, cartItemKey, scanResultToCartItem } from '../../api/bookCopyScan';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 import { findManualMemberMatch, memberToSessionIdentity } from '../../api/manualMemberLookup';
+import BorrowingCapacity from '../../components/BorrowingCapacity';
+import useBorrowingCapacity from '../../api/useBorrowingCapacity';
 
 // ─── STATUS STYLES ─────────────────────────────────────────────────────────────
 
@@ -91,6 +95,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
   const [faceFound, setFaceFound]       = useState(false);
   const [faceError, setFaceError]       = useState('');
   const [foundMember, setFoundMember]   = useState(null);
+  const allowance = useBorrowingCapacity(foundMember?.user_id ?? null);
   const [lookupMethod, setLookupMethod] = useState('face'); // 'face' | 'manual'
   const [manualIdentifier, setManualIdentifier] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
@@ -115,6 +120,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
   const [processing, setProcessing] = useState(false);
   const [results, setResults]       = useState([]);   // per-book results
   const [confirmError, setConfirmError] = useState('');
+  const [lookupError, setLookupError] = useState('');
 
   // Native top-layer dialog keeps scanner content above navigation and traps focus.
   useEffect(() => {
@@ -160,11 +166,13 @@ const QuickScanModal = ({ onClose, onCommit }) => {
     setFaceFound(true);
     setFaceError('');
     setManualError('');
+    setLookupError('');
     try {
       const resvRes = await getMemberReservations(member.user_id);
       setMemberReservations(resvRes.data);
     } catch {
       setMemberReservations([]);
+      setLookupError('Reservations could not be loaded. Retry member lookup before borrowing.');
     }
   }, []);
 
@@ -225,11 +233,6 @@ const QuickScanModal = ({ onClose, onCommit }) => {
         return;
       }
 
-      if (match.status !== 'active') {
-        setManualError('This member is suspended. Reactivate the account before borrow/return transactions.');
-        return;
-      }
-
       await applyFoundMember(memberToSessionIdentity(match));
     } catch (err) {
       setManualError(err.response?.data?.detail || 'Member lookup failed. Please try again.');
@@ -243,6 +246,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
     setAction(mode);
     if (mode === 'return') {
       setLoansLoading(true);
+      setLookupError('');
       try {
         const res = await getMemberActiveLoans(foundMember.user_id);
         setActiveLoans(res.data);
@@ -250,6 +254,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
         setSelectedLoanIds(new Set(res.data.map((l) => l.transaction_id)));
       } catch {
         setActiveLoans([]);
+        setLookupError('Loans could not be loaded. Retry loading loans before recording a return.');
       } finally {
         setLoansLoading(false);
       }
@@ -312,10 +317,24 @@ const QuickScanModal = ({ onClose, onCommit }) => {
         }
         res.push({ book, success: true, error: null });
       } catch (err) {
-        res.push({ book, success: false, error: err.response?.data?.detail || 'Transaction failed' });
+        const detail = err.response?.data?.detail;
+        if (!err.response || err.response.status >= 500) {
+          try {
+            const { data: loans } = await getMemberActiveLoans(foundMember.user_id);
+            const active = loans.some(loan => loan.book_id === book.id && (!book.copy_id || loan.copy_id === book.copy_id));
+            if (action === 'borrow' && active) { res.push({ book, success: true, error: null }); continue; }
+          } catch { /* Keep outcome unknown until staff can verify the ledger. */ }
+          res.push({ book, success: false, error: 'Outcome unknown. Check this member’s loan history before retrying this item.' });
+          for (const remaining of bookCart.slice(res.length)) {
+            res.push({ book: remaining, success: false, error: 'Not attempted because the previous outcome needs verification.' });
+          }
+          break;
+        }
+        res.push({ book, success: false, error: typeof detail === 'string' ? detail : detail?.message || 'Transaction failed' });
       }
     }
     setResults(res);
+    allowance.refreshCapacity();
     setProcessing(false);
     setStep('done');
     onCommit();
@@ -355,6 +374,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
   return (
     <dialog ref={dialogRef} aria-label="Quick Scan Session" className="rpl-scan-dialog"
       onCancel={(event) => { event.preventDefault(); if (!processing) onClose(); }}>
+        {lookupError && <p role="alert" className="p-4 text-danger">{lookupError} <button className="underline" onClick={() => sessionMode === 'return' ? handleSelectMode('return') : applyFoundMember(foundMember)}>Retry loading</button></p>}
       <div className="w-full">
 
         {/* ── DONE SCREEN ── */}
@@ -411,7 +431,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
                 </div>
                 <div className={`p-4 border rounded-xl text-center ${failCount > 0 ? 'bg-danger-soft border-danger' : 'bg-subtle border-line'}`}>
                   <p className={`text-2xl font-semibold ${failCount > 0 ? 'text-danger' : 'text-muted'}`}>{failCount}</p>
-                  <p className={`text-sm font-semibold tracking-normal mt-0.5 ${failCount > 0 ? 'text-danger' : 'text-muted'}`}>Failed</p>
+                  <p className={`text-sm font-semibold tracking-normal mt-0.5 ${failCount > 0 ? 'text-danger' : 'text-muted'}`}>Needs review</p>
                 </div>
               </div>
 
@@ -646,6 +666,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
                             </div>
                           </div>
                         </div>
+                        <BorrowingCapacity {...allowance} />
                         <p className="text-sm font-semibold tracking-normal text-muted mb-3">What would you like to do?</p>
                         <div className="grid grid-cols-2 gap-3">
                           <button
@@ -1165,32 +1186,11 @@ export default function LibBorrowReturn() {
   const [search, setSearch]             = useState('');
   const [filter, setFilter]             = useState('all');
   const [showScanner, setShowScanner]   = useState(false);
-  const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading]           = useState(true);
 
-  const fetchTransactions = useCallback(() => {
-    setLoading(true);
-    getTransactions({ limit: 100 })
-      .then((res) => setTransactions(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const id = setTimeout(fetchTransactions, 0);
-    return () => clearTimeout(id);
-  }, [fetchTransactions]);
-
-  const filtered = transactions.filter((t) => {
-    const matchSearch =
-      (t.member_name || '').toLowerCase().includes(search.toLowerCase()) ||
-      (t.book_title  || '').toLowerCase().includes(search.toLowerCase());
-    const matchFilter =
-      filter === 'all' ||
-      t.type   === filter ||
-      t.status === filter;
-    return matchSearch && matchFilter;
-  });
+  const listing = useServerPage('/api/transactions', { search,
+    type: ['borrow', 'return'].includes(filter) ? filter : '',
+    status: ['active', 'overdue', 'returned'].includes(filter) ? filter : '' }, '/api/transactions/count');
+  const { items: filtered, loading, reload: fetchTransactions } = listing;
 
   const handleCommit = () => fetchTransactions();
 
@@ -1201,9 +1201,9 @@ export default function LibBorrowReturn() {
       .catch((err) => alert(err.response?.data?.detail || 'Return failed.'));
   };
 
-  const totalBorrowed = transactions.filter((t) => t.type === 'borrow').length;
-  const totalReturned = transactions.filter((t) => t.type === 'return').length;
-  const totalOverdue  = transactions.filter((t) => t.status === 'overdue').length;
+  const totalBorrowed = listing.totals.borrowed ?? 0;
+  const totalReturned = listing.totals.returned ?? 0;
+  const totalOverdue  = listing.totals.overdue ?? 0;
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
@@ -1216,6 +1216,7 @@ export default function LibBorrowReturn() {
       )}
 
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8">
+        <PageControls {...listing} />
 
         {/* ── HEADER ── */}
         <div className="animate-fade-in-up flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">

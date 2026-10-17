@@ -1,7 +1,9 @@
 import FineContent from '../../components/FineContent';
 import { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, Clock, Search, Bell, CheckCircle2, RefreshCw, BookOpen, List } from 'lucide-react';
-import { getDueBooks, notifyMember, returnBook, getTransactions } from '../../api/librarian';
+import { getDueBooks, returnBook } from '../../api/librarian';
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 
 const STATUS_CFG = {
@@ -29,29 +31,19 @@ export default function LibDueBooks() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [notifying, setNotifying] = useState(null);
-
-  // Active Loans state
-  const [loans, setLoans] = useState([]);
-  const [loansLoading, setLoansLoading] = useState(false);
-  const [loansFetched, setLoansFetched] = useState(false);
+  const [operationError, setOperationError] = useState('');
 
   const [search, setSearch] = useState('');
+  const loansPage = useServerPage('/api/transactions', { status: 'active', search }, '/api/transactions/count');
+  const { items: filteredLoans, loading: loansLoading, reload: fetchLoans } = loansPage;
 
   const fetchBooks = useCallback((f = 'all') => {
     setLoading(true);
+    setOperationError('');
     getDueBooks(f)
       .then((res) => setBooks(res.data))
-      .catch(() => {})
+      .catch(() => setOperationError('Could not load loans. Please retry.'))
       .finally(() => setLoading(false));
-  }, []);
-
-  const fetchLoans = useCallback(() => {
-    setLoansLoading(true);
-    getTransactions({ status: 'active', limit: 200 })
-      .then((res) => { setLoans(res.data); setLoansFetched(true); })
-      .catch(() => {})
-      .finally(() => setLoansLoading(false));
   }, []);
 
   useEffect(() => {
@@ -59,38 +51,20 @@ export default function LibDueBooks() {
     return () => clearTimeout(id);
   }, [fetchBooks]);
 
-  useEffect(() => {
-    if (tab !== 'active' || loansFetched) return undefined;
-    const id = setTimeout(fetchLoans, 0);
-    return () => clearTimeout(id);
-  }, [tab, loansFetched, fetchLoans]);
-
   const handleFilterChange = (f) => {
     setFilter(f);
     fetchBooks(f);
   };
 
-  const handleNotify = (transactionId) => {
-    setNotifying(transactionId);
-    notifyMember(transactionId)
-      .catch(() => {})
-      .finally(() => setNotifying(null));
-  };
-
   const handleReturn = (b) => {
     returnBook(b.user_id, b.book_id)
-      .then(() => fetchBooks(filter))
-      .catch(() => {});
+      .then(() => { fetchBooks(filter); fetchLoans(); })
+      .catch(() => setOperationError('Return could not be confirmed. Check loan history before retrying.'));
   };
 
   const filteredDue = books.filter((b) =>
     (b.member_name || '').toLowerCase().includes(search.toLowerCase()) ||
     b.book_title.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const filteredLoans = loans.filter((b) =>
-    (b.member_name || '').toLowerCase().includes(search.toLowerCase()) ||
-    (b.book_title || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const overdue = books.filter((b) => b.status === 'overdue').length;
@@ -100,6 +74,7 @@ export default function LibDueBooks() {
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
+      {operationError && <p role="alert" className="p-4 text-danger">{operationError} <button className="underline" onClick={() => { fetchBooks(filter); fetchLoans(); }}>Retry loading</button></p>}
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8">
 
         {/* Header */}
@@ -116,7 +91,7 @@ export default function LibDueBooks() {
         </div>
 
         {/* Tab switcher */}
-        <div className="flex gap-3 mb-7 animate-fade-in-up delay-75">
+        <div className="flex flex-wrap gap-3 mb-7 animate-fade-in-up delay-75">
           <button
             onClick={() => { setTab('due'); setSearch(''); }}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold tracking-normal transition-all duration-200 ${
@@ -148,12 +123,12 @@ export default function LibDueBooks() {
                   <AlertTriangle size={18} className="text-danger" />
                 </div>
                 <p className="font-semibold text-sm text-danger">
-                  {overdue} book{overdue > 1 ? 's are' : ' is'} overdue — send return reminders immediately.
+                  {overdue} book{overdue > 1 ? 's are' : ' is'} overdue — contact members through the library’s existing process; automated delivery is unavailable.
                 </p>
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 mb-7 animate-fade-in-up delay-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-7 animate-fade-in-up delay-100">
               <div className="bg-danger-soft border border-danger rounded-xl p-6 flex items-center gap-4 hover:shadow-sm hover:shadow-rose-100 dark:hover:shadow-rose-900/20 transition-all duration-200 cursor-default">
                 <AlertTriangle size={20} className="text-danger flex-shrink-0" />
                 <div>
@@ -184,11 +159,11 @@ export default function LibDueBooks() {
                     </button>
                   ))}
                 </div>
-                <div className="relative md:ml-auto">
+                <div className="relative min-w-0 w-full md:w-auto md:ml-auto">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
                   <input aria-label="Search member or book..." type="text" placeholder="Search member or book..."
                     value={search} onChange={(e) => setSearch(e.target.value)}
-                    className="bg-subtle border border-line rounded-lg py-2 pl-8 pr-4 text-base font-medium outline-none focus:ring-2 focus:ring-line w-52 text-muted placeholder:text-muted" />
+                    className="bg-subtle border border-line rounded-lg py-2 pl-8 pr-4 text-base font-medium outline-none focus:ring-2 focus:ring-line w-full sm:w-52 min-w-0 text-muted placeholder:text-muted" />
                 </div>
               </div>
 
@@ -203,14 +178,14 @@ export default function LibDueBooks() {
                     return (
                       <div key={b.transaction_id} className={`group flex flex-col md:flex-row md:items-center gap-4 px-6 py-5 hover:bg-info-soft hover:bg-subtle transition-all duration-200 ${cfg.row}`}>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <p className="font-bold text-sm text-ink group-hover:text-link transition-colors duration-200">{b.member_name}</p>
                             <span className="text-sm font-semibold text-muted">{b.member_id}</span>
                           </div>
                           <p className="text-sm text-muted font-medium">{b.book_title}</p>
                         </div>
 
-                        <div className="flex items-center gap-6 text-sm flex-shrink-0">
+                        <div className="flex flex-wrap items-center gap-4 text-sm min-w-0">
                           <div>
                             <p className="text-sm font-semibold tracking-normal text-muted">Borrowed</p>
                             <p className="font-sans font-bold text-muted">{fmt(b.borrow_date)}</p>
@@ -232,13 +207,13 @@ export default function LibDueBooks() {
                           {cfg.label}
                         </span>
 
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
                           <button
-                            onClick={() => handleNotify(b.transaction_id)}
-                            disabled={notifying === b.transaction_id}
+                            title="Email/SMS reminder delivery is unavailable"
+                            disabled
                             className="group/btn flex items-center gap-1.5 px-3 py-2 bg-warning-soft text-warning border border-warning rounded-lg text-sm font-semibold tracking-normal hover:bg-warning-soft transition-all duration-200 disabled:opacity-50"
                           >
-                            <Bell size={11} /> {notifying === b.transaction_id ? 'Sending...' : 'Remind'}
+                            <Bell size={11} /> Delivery unavailable
                           </button>
                           <button
                             onClick={() => handleReturn(b)}
@@ -264,11 +239,12 @@ export default function LibDueBooks() {
         {/* ── ACTIVE LOANS TAB ── */}
         {tab === 'active' && (
           <>
-            <div className="grid grid-cols-2 gap-4 mb-7 animate-fade-in-up">
+            <PageControls {...loansPage} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-7 animate-fade-in-up">
               <div className="bg-info-soft border border-line rounded-xl p-6 flex items-center gap-4 hover:shadow-sm transition-all duration-200 cursor-default">
                 <BookOpen size={20} className="text-link flex-shrink-0" />
                 <div>
-                  <p className="text-3xl font-semibold tracking-normal text-link">{loans.length}</p>
+                  <p className="text-3xl font-semibold tracking-normal text-link">{loansPage.total}</p>
                   <p className="text-sm font-semibold tracking-normal text-link">Total Active Loans</p>
                 </div>
               </div>
@@ -276,7 +252,7 @@ export default function LibDueBooks() {
                 <List size={20} className="text-muted flex-shrink-0" />
                 <div>
                   <p className="text-3xl font-semibold tracking-normal text-muted">
-                    {loans.filter((l) => loanStatus(daysLeft(l.due_date)) === 'active').length}
+                    {loansPage.totals.on_time ?? 0}
                   </p>
                   <p className="text-sm font-semibold tracking-normal text-muted">On-Time Loans</p>
                 </div>
@@ -288,10 +264,10 @@ export default function LibDueBooks() {
                 <p className="text-sm font-semibold tracking-normal text-muted">
                   All Borrowed Books
                 </p>
-                <div className="relative md:ml-auto flex items-center gap-3">
+                <div className="relative min-w-0 w-full md:w-auto md:ml-auto flex flex-wrap items-center gap-3">
                   <button
                     onClick={fetchLoans}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-subtle text-muted border border-line rounded-lg text-sm font-semibold tracking-normal hover:bg-subtle transition-all duration-200"
+                    className="flex shrink-0 items-center gap-1.5 px-3 py-2 bg-subtle text-muted border border-line rounded-lg text-sm font-semibold tracking-normal hover:bg-subtle transition-all duration-200"
                   >
                     <RefreshCw size={11} className={loansLoading ? 'animate-spin' : ''} /> Refresh
                   </button>
@@ -299,7 +275,7 @@ export default function LibDueBooks() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14} />
                     <input aria-label="Search member or book..." type="text" placeholder="Search member or book..."
                       value={search} onChange={(e) => setSearch(e.target.value)}
-                      className="bg-subtle border border-line rounded-lg py-2 pl-8 pr-4 text-base font-medium outline-none focus:ring-2 focus:ring-line w-52 text-muted placeholder:text-muted" />
+                      className="bg-subtle border border-line rounded-lg py-2 pl-8 pr-4 text-base font-medium outline-none focus:ring-2 focus:ring-line w-full sm:w-52 min-w-0 text-muted placeholder:text-muted" />
                   </div>
                 </div>
               </div>
@@ -317,7 +293,7 @@ export default function LibDueBooks() {
                     return (
                       <div key={b.id} className={`group flex flex-col md:flex-row md:items-center gap-4 px-6 py-5 hover:bg-info-soft hover:bg-subtle transition-all duration-200 ${cfg.row}`}>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <p className="font-bold text-sm text-ink group-hover:text-link transition-colors duration-200">
                               {b.member_name || '—'}
                             </p>
@@ -326,7 +302,7 @@ export default function LibDueBooks() {
                           <p className="text-sm text-muted font-medium">{b.book_title || '—'}</p>
                         </div>
 
-                        <div className="flex items-center gap-6 text-sm flex-shrink-0">
+                        <div className="flex flex-wrap items-center gap-4 text-sm min-w-0">
                           <div>
                             <p className="text-sm font-semibold tracking-normal text-muted">Borrowed</p>
                             <p className="font-sans font-bold text-muted">{fmt(b.borrow_date)}</p>

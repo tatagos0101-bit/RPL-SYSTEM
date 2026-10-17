@@ -42,6 +42,8 @@ const UserLayout = () => {
   const [notifOpen, setNotifOpen]     = useState(false);
   const [notifs, setNotifs]           = useState([]);
   const [overdueCount, setOverdueCount] = useState(0);
+  const [headerError, setHeaderError] = useState('');
+  const [headerVersion, setHeaderVersion] = useState(0);
   const notifRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -50,9 +52,15 @@ const UserLayout = () => {
   // Restricted sessions may only retrieve their profile or change their password.
   useEffect(() => {
     if (changingPassword) return;
-    getNotifications().then((r) => setNotifs(r.data)).catch(() => {});
-    getFines().then((r) => setOverdueCount(r.data.overdue_loans?.length || 0)).catch(() => {});
-  }, [changingPassword]);
+    let cancelled = false;
+    Promise.allSettled([
+      getNotifications().then(r => { if (!cancelled) setNotifs(r.data); }),
+      getFines().then(r => { if (!cancelled) setOverdueCount(r.data.overdue_loans?.length || 0); }),
+    ]).then(results => {
+      if (!cancelled) setHeaderError(results.some(result => result.status === 'rejected') ? 'Notifications or overdue status could not be loaded.' : '');
+    });
+    return () => { cancelled = true; };
+  }, [changingPassword, headerVersion]);
 
   // Close notification panel on outside click
   useEffect(() => {
@@ -68,13 +76,19 @@ const UserLayout = () => {
   const unreadCount = notifs.filter((n) => !n.is_read).length;
 
   const handleMarkRead = async (id) => {
-    await markNotificationRead(id).catch(() => {});
-    setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+    try {
+      await markNotificationRead(id);
+      setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
+      setHeaderError('');
+    } catch { setHeaderError('Notification update was not confirmed. Reload and try again.'); }
   };
 
   const handleMarkAllRead = async () => {
-    await markAllNotificationsRead().catch(() => {});
-    setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    try {
+      await markAllNotificationsRead();
+      setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setHeaderError('');
+    } catch { setHeaderError('Notification update was not confirmed. Reload and try again.'); }
   };
 
   const toggleTheme = () => {
@@ -99,6 +113,7 @@ const UserLayout = () => {
   return (
     <div className="rpl-page min-h-screen flex flex-col bg-subtle font-sans transition-colors duration-300">
       {logoutError && <p role="alert" className="p-3 bg-panel text-danger">{logoutError}</p>}
+      {headerError && <p role="alert" className="p-3 bg-panel text-danger">{headerError} <button className="underline" onClick={() => setHeaderVersion(value => value + 1)}>Retry loading</button></p>}
 
       {/* ── TOP BAR (always visible, theme-aware) ── */}
       <header className="rpl-chrome rpl-header sticky top-0 z-40">

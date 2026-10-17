@@ -141,3 +141,6 @@ test('getReportFilename makes stable CSV file names', () => {
     'entry-logs-2026-07-01-to-2026-07-31.csv',
   );
 });
+test('complete exports fail visibly when safety limit is reached', async () => {
+  await assert.rejects(fetchAllPaginated(async () => [{ id: 1 }, { id: 2 }], { limit: 2, maxPages: 1 }), /complete export cannot/);
+});

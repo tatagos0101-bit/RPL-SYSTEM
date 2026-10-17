@@ -5,7 +5,16 @@ export const reservationCartKey = (storage = localStorage) => {
   return userId ? `${RESERVATION_CART_KEY}:member:${userId}` : `${RESERVATION_CART_KEY}:anonymous`;
 };
 
-export const clearReservationCart = (storage = localStorage) => storage.removeItem(reservationCartKey(storage));
+export const clearReservationCart = (storage = localStorage) => {
+  storage.removeItem(reservationCartKey(storage));
+  storage.removeItem(`${reservationCartKey(storage)}:confirmation`);
+};
+
+export const pendingConfirmationKey = () => `${reservationCartKey()}:confirmation`;
+export const loadPendingConfirmation = () => {
+  try { return JSON.parse(localStorage.getItem(pendingConfirmationKey()) || 'null'); }
+  catch { return null; }
+};
 
 export const bookToReservationCartItem = (book) => ({
   id: book.id,

@@ -92,9 +92,54 @@ success. A synthetic dataset of 1,005 books, 205 members and 205 historical loan
 verifies search beyond old first-page limits, last pages, totals and role denial.
 Focused retrieval/authentication regression: 9 passed.
 
+Commit `e464d5e`: retrieval APIs and unavailable reminder delivery.
+
+Interface reliability batch: server pages replace fixed first-100/1,000 lists;
+search, filters and counts cover the full dataset. Independent dashboard sections
+render successes even when another request fails. Report export safety caps now
+raise an explicit error. Notifications update only after server confirmation.
+Shared native dialogs contain/restore focus and support Escape; the application
+error boundary offers recovery. Book-slot usage appears in member browsing,
+reservations and librarian circulation. Unknown reservation outcomes preserve the
+same confirmation ID across reloads; circulation stops on an unknown write and
+keeps successful/unattempted items visible for reconciliation.
+
+Browser evidence: local Vite app, synthetic intercepted APIs, Playwright with
+installed Edge (Browser plugin unavailable), at 320, 390, 768 and 1440 pixels.
+Checked queue agreement after availability conflict, unknown confirmation/reload/
+safe retry, cancellation/Escape, member/public catalogs, inventory/member/transaction
+pagination, loan-page failure/retry, long titles/names, cover-only retry, scanner
+manual-ID flow, five-slot display, focus restoration and unknown circulation outcomes.
+The 320px loan screen's clipped search/numbers were found visually and corrected.
+Reruns showed no page overflow or unexpected browser runtime errors. Synthetic
+screenshots were inspected locally and are excluded from Git.
+Landing-page book dialogs also passed Escape/focus restoration. Deliberately
+malformed synthetic count data triggered the error boundary; safe reload recovered
+at all four widths. This intentional failure was separate from normal-flow checks.
+
+## Validation summary
+
+- Full backend suite: **192 passed, 1 skipped**, including the isolated repair
+  PostgreSQL acceptance test. The skip is the separate recommendation PostgreSQL
+  test, whose dedicated environment was not configured in this repair run.
+- After final lock/retrieval refinements: **10 reservation/PostgreSQL** and
+  **9 retrieval/authentication** focused tests passed.
+- Frontend helper/build-scanner tests: **60 passed**. ESLint and production build
+  passed; built-artifact credential scan passed for all 67 output files.
+- Browser scenarios above passed at all four widths using synthetic responses.
+  No production patrons, biometrics, database or Storage objects were accessed.
+- Existing dependency/deprecation warnings remain; no dependency upgrades were
+  made for this repair batch. No backend lint command is configured.
+
 ## Release prerequisites
 
-Prepare additive migrations and collision/overcommit preflight. Never silently repair
-historical records. After separately authorized release: migration, backend, frontend,
-then smoke checks. Redis/runtime-role cutovers, PAD acceptance, biometric policy,
-message delivery and new operational workflows remain separate.
+The additive migration and collision/overcommit preflight are implemented and locally
+validated. The [rollout checklist](REPAIR_ROLLOUT.md) is prepared, not executed.
+Production-shaped migration rehearsal, production role/access checks and live smoke
+checks remain release gates. Never silently repair historical records. After separate
+authorization: migration/runtime access, backend, frontend, then smoke checks.
+No merge, push, deployment or production infrastructure changes were performed.
+PAD camera acceptance, biometric policy, real notification delivery, Redis/runtime-role
+cutovers and damage-management workflows remain separate projects. Circulation carts
+remain per-item; only reservation confirmation is an atomic batch. Expiry is
+request-driven, and durable offline transactions are not implemented.
