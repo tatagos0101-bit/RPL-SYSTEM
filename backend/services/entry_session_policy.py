@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from config import ENTRY_MIN_VISIT_SECONDS, ENTRY_REENTRY_GAP_SECONDS
 from models.entry_log import EntryLog
 from models.user import User
-from timezone_utils import PH_TZ, now_ph
+from timezone_utils import PH_TZ, now_ph, as_ph
 
 
 def _naive_ph(dt: datetime) -> datetime:
@@ -31,12 +31,14 @@ def record_entry_scan(
     - Scan within 2 minutes after time_out updates the same session's time_out.
     - Scan 2+ minutes after time_out starts a new visit.
     """
-    seen_at = _naive_ph(seen_at or now_ph())
+    db.query(User).filter(User.id == user.id).with_for_update().populate_existing().one()
+    seen_at = as_ph(seen_at or now_ph())
 
     latest = (
         db.query(EntryLog)
         .filter(EntryLog.user_id == user.id, EntryLog.granted == True)
-        .order_by(desc(EntryLog.accessed_at))
+        .order_by(desc(EntryLog.accessed_at), desc(EntryLog.id))
+        .populate_existing()
         .first()
     )
 
@@ -54,7 +56,7 @@ def record_entry_scan(
         return log, "time_in"
 
     if latest.time_out is None:
-        age_seconds = (seen_at - _naive_ph(latest.accessed_at)).total_seconds()
+        age_seconds = (seen_at - as_ph(latest.accessed_at)).total_seconds()
         if age_seconds < ENTRY_MIN_VISIT_SECONDS:
             return latest, "still_inside"
 
@@ -62,9 +64,9 @@ def record_entry_scan(
         db.flush()
         return latest, "time_out"
 
-    gap_seconds = (seen_at - _naive_ph(latest.time_out)).total_seconds()
+    gap_seconds = (seen_at - as_ph(latest.time_out)).total_seconds()
     if gap_seconds < ENTRY_REENTRY_GAP_SECONDS:
-        latest.time_out = seen_at
+        latest.time_out = max(seen_at, as_ph(latest.time_out))
         db.flush()
         return latest, "time_out_updated"
 

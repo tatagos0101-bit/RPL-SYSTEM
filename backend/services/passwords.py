@@ -6,7 +6,7 @@ MAX_LOGIN_BYTES = 1024
 
 
 def validate_new_password(value: str) -> str:
-    if not 8 <= len(value) <= 128 or not any(c.isdigit() for c in value):
+    if not 8 <= len(value) <= 128 or not any(c.isdecimal() for c in value):
         raise ValueError("Password must have 8–128 characters and at least one digit")
     return value
 

@@ -8,7 +8,7 @@ def normalize_email(value):
 
 
 def email_matches(db, value):
-    return db.query(User).filter(func.lower(User.email) == normalize_email(value)).limit(2).all()
+    return db.query(User).filter(func.lower(func.trim(User.email)) == normalize_email(value)).limit(2).all()
 
 
 def find_email_user(db, value):

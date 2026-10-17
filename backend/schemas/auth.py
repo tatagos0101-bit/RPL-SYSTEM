@@ -18,7 +18,7 @@ class LoginRequest(BaseModel):
 
 class SignupRequest(BaseModel):
     name:      str
-    email:     EmailStr
+    email:     EmailStr = Field(max_length=180)
     password:  str
     role:      Literal["member", "librarian"] = "member"
     phone:     Optional[str] = None

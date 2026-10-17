@@ -50,6 +50,16 @@ Notification text fields widen additively to `TEXT` for long titles/names/issue 
 retry. Disposable PostgreSQL additionally executes a real failed statement in the
 middle import savepoint and verifies both neighboring valid rows persist.
 
+Commit `cedeb06`: import/upload repairs, notification text migration and accurate
+inventory borrowed counts. Full backend regression passed with this batch included.
+
+Attendance/account follow-up: website face login no longer creates either granted
+or denied attendance records. Station transitions lock members in stable order and
+write aware Philippine timestamps, preserving legacy interpretation. PostgreSQL
+round-trip and overlapping-scan tests pass. Input limits match account columns;
+signup conflicts return a safe error. New-password Unicode digit handling now
+matches the frontend policy; legacy login size regression uses the separate bound.
+
 ## Release prerequisites
 
 Prepare additive migrations and collision/overcommit preflight. Never silently repair

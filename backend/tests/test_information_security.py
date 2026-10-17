@@ -24,7 +24,7 @@ def member(db, *, status="active", email="audit@example.test"):
 
 
 def test_invalid_password_and_pin_are_not_reflected(client):
-    sentinel = "PRIVATE_SENTINEL_" * 12
+    sentinel = "PRIVATE_SENTINEL_" * 70
     response = client.post("/api/auth/login", json={"email": "RPL-AUDIT", "password": sentinel})
     assert response.status_code == 422
     assert sentinel not in response.text

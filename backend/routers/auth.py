@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from services.passwords import hash_password, verify_password, needs_legacy_replacement
 from services.email_identity import find_email_user, email_matches, normalize_email
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_, and_
 
 from config import LIBRARIAN_AUTH_CODE, ENVIRONMENT
@@ -136,7 +137,11 @@ def signup(request: Request, response: Response, body: SignupRequest, db: Sessio
         member_id=_generate_member_id(db),
     )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, 'Unable to register. Account details conflict with an existing record.') from None
     db.refresh(user)
 
     security_logger.info("SIGNUP_SUCCESS ip=%s user_id=%d role=%s", ip, user.id, user.role)
@@ -468,7 +473,7 @@ def process_entry_face(
     if issue_token and len(detected_faces) > 1:
         return FaceAuthResponse(matched=False, message="multiple_faces")
 
-    now = now_ph().replace(tzinfo=None)
+    now = now_ph()
     faces = []
     first_match = None
     recorded_user_ids = set()
@@ -476,7 +481,7 @@ def process_entry_face(
 
     def log_unknown_face_once() -> None:
         nonlocal unknown_logged
-        if unknown_logged:
+        if unknown_logged or issue_token:
             return
         unknown_logged = True
         security_logger.info("FACE_UNRECOGNIZED entry_gate")
@@ -506,8 +511,12 @@ def process_entry_face(
                 time_out=now,
             ))
 
-    for face in detected_faces:
-        match = face_engine_service.find_match_for_face(db, face, purpose="login" if issue_token else "gate")
+    matches = [face_engine_service.find_match_for_face(db, face, purpose="login" if issue_token else "gate") for face in detected_faces]
+    user_ids = sorted({match.user.id for match in matches if match is not None})
+    # Stable order prevents overlapping multi-face frames from reversing member locks.
+    db.query(User).filter(User.id.in_(user_ids)).order_by(User.id).with_for_update().populate_existing().all()
+    for face, match in zip(detected_faces, matches):
+
         if match is None or match.user.status == "suspended":
             log_unknown_face_once()
             faces.append({
@@ -520,7 +529,9 @@ def process_entry_face(
             continue
         matched_user = match.user
 
-        if matched_user.id in recorded_user_ids:
+        if issue_token:
+            session_action = 'authenticated'
+        elif matched_user.id in recorded_user_ids:
             session_action = "seen_in_frame"
         else:
             _, session_action = record_entry_scan(db, matched_user, seen_at=now)
@@ -544,7 +555,8 @@ def process_entry_face(
         if first_match is None:
             first_match = (matched_user, face_result)
 
-    db.commit()
+    if not issue_token:
+        db.commit()
 
     if first_match is None:
         return FaceAuthResponse(matched=False, faces=faces, message="not_recognized")
