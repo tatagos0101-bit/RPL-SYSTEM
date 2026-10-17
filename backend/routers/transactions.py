@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from config import LOAN_DAYS, FINE_PER_DAY
+from services.list_queries import transaction_query
 from database import get_db
 from dependencies import get_current_user, require_librarian, require_member
 from services.borrowing_capacity import borrowing_capacity, assert_slots, free_title_capacity
@@ -237,6 +238,7 @@ def return_book(
 
 @router.get("/api/transactions", response_model=list[TransactionOut])
 def get_transactions(
+    search: str = Query('', max_length=200),
     type:    str = Query("", description="Filter: borrow | return"),
     status:  str = Query("", description="Filter: active | returned | overdue"),
     skip:    int = Query(0,  ge=0),
@@ -245,20 +247,21 @@ def get_transactions(
     _:       User    = Depends(require_librarian),
 ):
     sync_overdue_loans(db)
-    if type and type not in ("borrow", "return"):
-        raise HTTPException(status_code=400, detail="Type filter must be 'borrow' or 'return'")
-    if status and status not in ("active", "returned", "overdue"):
-        raise HTTPException(status_code=400, detail="Status filter must be 'active', 'returned', or 'overdue'")
+    q = transaction_query(db, search, type, status)
 
-    q = db.query(Transaction)
-    if type:
-        q = q.filter(Transaction.type == type)
-    if status:
-        q = q.filter(Transaction.status == status)
-
-    txs = q.order_by(desc(Transaction.borrow_date)).offset(skip).limit(limit).all()
+    txs = q.order_by(desc(Transaction.borrow_date), desc(Transaction.id)).offset(skip).limit(limit).all()
     return [_enrich(tx) for tx in txs]
 
+
+@router.get('/api/transactions/count')
+def transaction_counts(search: str = Query('', max_length=200), type: str = Query(''), status: str = Query(''),
+                       db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    sync_overdue_loans(db)
+    return dict(total=transaction_query(db, search, type, status).count(),
+                on_time=transaction_query(db, status='active').filter(Transaction.due_date > now_ph() + timedelta(days=3)).count(),
+                borrowed=transaction_query(db, type='borrow').count(),
+                returned=transaction_query(db, type='return').count(),
+                overdue=transaction_query(db, status='overdue').count())
 
 # ── Member: active loans ──────────────────────────────────────────────────────
 

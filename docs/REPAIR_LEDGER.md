@@ -82,6 +82,16 @@ same-ID retries, aware timestamps and overlapping scans all pass. PostgreSQL
 NO KEY UPDATE member locks also permit notification FK KEY SHARE during promotion;
 a dedicated overlap test guards against that deadlock.
 
+Commit `a4f86c7`: quota, reservation, inventory and database integrity batch.
+
+Retrieval backend: shared searchable member/transaction queries, stable pagination
+ordering, independent count endpoints, on-time totals, and stable catalog ordering.
+Librarian registration fields match column limits and concurrent conflicts are
+reported safely. Reminder delivery returns 501 instead of reporting a fictitious
+success. A synthetic dataset of 1,005 books, 205 members and 205 historical loans
+verifies search beyond old first-page limits, last pages, totals and role denial.
+Focused retrieval/authentication regression: 9 passed.
+
 ## Release prerequisites
 
 Prepare additive migrations and collision/overcommit preflight. Never silently repair

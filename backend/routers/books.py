@@ -45,7 +45,7 @@ def list_books(
         q = q.filter(Book.copies_available > 0)
 
     total = q.count()
-    items = q.order_by(Book.title).offset(skip).limit(limit).all()
+    items = q.order_by(Book.title, Book.id).offset(skip).limit(limit).all()
 
     return BookListResponse(total=total, skip=skip, limit=limit, items=items)
 

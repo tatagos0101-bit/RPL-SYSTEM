@@ -20,10 +20,12 @@ import secrets
 import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
-from services.reservation_confirmation import cancel_locked_reservation
 from services.passwords import hash_password
+from services.list_queries import member_query
+from services.reservation_confirmation import cancel_locked_reservation
 from services.email_identity import email_matches
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, desc, and_, or_
 
 from database import get_db
@@ -297,21 +299,9 @@ def list_members(
     db:     Session = Depends(get_db),
     _:      User    = Depends(require_librarian),
 ):
-    if status and status not in ("active", "suspended"):
-        raise HTTPException(status_code=400, detail="Status filter must be 'active' or 'suspended'")
+    q = member_query(db, search, status)
 
-    q = db.query(User).filter(User.role == "member")
-
-    if status:
-        q = q.filter(User.status == status)
-    if search:
-        like = f"%{search}%"
-        conditions = [User.name.ilike(like), User.email.ilike(like), User.member_id.ilike(like)]
-        if search.isdigit():
-            conditions.append(User.id == int(search))
-        q = q.filter(or_(*conditions))
-
-    members = q.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    members = q.order_by(User.created_at.desc(), User.id.desc()).offset(skip).limit(limit).all()
 
     result = []
     for m in members:
@@ -342,6 +332,11 @@ def list_members(
         ))
     return result
 
+
+@router.get("/users/count")
+def count_members(search: str = Query("", max_length=200), status: str = Query(""),
+                  db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    return {"total": member_query(db, search, status).count()}
 
 # ── Member stats ──────────────────────────────────────────────────────────────
 
@@ -374,10 +369,10 @@ def _generate_temporary_password(length: int = 14) -> str:
 
 @router.post("/users/register", status_code=201)
 async def register_member(
-    name:     str              = Form(...),
-    email:    str | None       = Form(None),
-    phone:    str | None       = Form(None),
-    location: str              = Form(...),
+    name:     str              = Form(..., max_length=120),
+    email:    str | None       = Form(None, max_length=180),
+    phone:    str | None       = Form(None, max_length=30),
+    location: str              = Form(..., max_length=120),
     id_image: UploadFile | None = File(None),
     upload_ticket: str | None = Form(None),
     db:       Session          = Depends(get_db),
@@ -423,7 +418,11 @@ async def register_member(
         member_id     = _generate_member_id(db),
     )
     db.add(new_user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, 'Registration conflicts with an existing account. Refresh and check before retrying.') from None
     db.refresh(new_user)
 
     return {
@@ -578,15 +577,7 @@ def notify_member(
     if dl >= 0:
         raise HTTPException(status_code=400, detail="Book is not yet overdue")
 
-    # Placeholder — Phase 5 will wire real email/SMS here
-    return {
-        "success":     True,
-        "notified":    tx.user.name if tx.user else "Unknown",
-        "book":        tx.book.title if tx.book else "Unknown",
-        "days_overdue": abs(dl),
-        "fine":        float(_calc_fine(tx.due_date)),
-        "message":     "Reminder logged. Email/SMS will be wired in Phase 5.",
-    }
+    raise HTTPException(501, 'Overdue reminder delivery is unavailable. No email or SMS was sent.')
 
 
 # ── Reservation notifications ─────────────────────────────────────────────────
