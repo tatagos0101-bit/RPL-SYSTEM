@@ -1,9 +1,45 @@
 # Authentication and infrastructure security rollout
 
-Source preparation is not a live deployment. Production migrations, credentials,
-Vercel integration settings, database roles, and Redis provisioning remain unchanged.
+Source preparation is not a live deployment. The October 17 release below records
+the applied session migration and deployed source. Credentials, Vercel integration
+settings, database runtime roles, and Redis provisioning remain unchanged.
 Use isolated PostgreSQL and Redis first; SQLite/mocked tests do not validate live
 pooler behavior, PostgreSQL locking/policies, or multi-instance Redis counters.
+
+## October 17 production release
+
+With user authorization, `main` was fast-forwarded to security commit `9e0a9d9`.
+The `rpl-system` and `rpl-system-api` Vercel production targets both reached READY
+on that commit. Pending PAD work remains in the original `photo-spoofing` worktree
+and was neither merged nor deployed.
+
+- Applied only `20261016000100_auth_sessions.sql` before releasing the API.
+  Verified the session columns, RLS, browser-role denial, and runtime grants;
+  existing recommendation tables/indexes were already present. No global backfills
+  or existing patron/loan record changes were performed. `AUTO_MIGRATE=false` remains.
+- Built production candidates without switching the live domains, then checked
+  API health and real session behavior using a temporary synthetic member. Login,
+  Secure/HttpOnly/SameSite cookies, required password change, old-token revocation,
+  replacement cookies, and logout passed. Removed the synthetic account/sessions.
+- After the main push, both public origins passed health (database, Supabase storage,
+  dlib), anonymous-access rejection, and validation-input disclosure checks.
+  The frontend build credential scanner passed; a separate check of 59 live public
+  assets found no matches for the available production credential values/signatures.
+- Live Edge browser checks passed at 390x900 and 1440x900: synthetic member login,
+  required password change, reload persistence, profile/reservations, and sign-out
+  after its API request completed. Secure/HttpOnly cookies were present at login
+  and cleared at logout, with no browser errors or failed requests. Screenshots
+  were inspected, and the temporary synthetic member and sessions were removed.
+- GitHub's completed dependency rescan reduced **333 open alerts to 3 moderate
+  alerts**, with **zero critical, high, or low alerts**. All three remaining alerts
+  are `GHSA-h35f-9h28-mq5c` for setuptools, duplicated across requirements, pyproject,
+  and uv.lock; this is the explicitly approved compatibility exception below.
+
+Existing stateless sessions require a new login after this release. The JWT secret
+and managed station PIN were not rotated. Shared Redis rate limits and a restricted
+runtime-role cutover remain prepared follow-up infrastructure work; this release
+does not claim those controls are enabled. Physical-camera/PAD acceptance and the
+optional InsightFace runtime remain outside this release.
 
 ## October 17 integration with current main
 
