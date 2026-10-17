@@ -10,6 +10,7 @@ from config import JWT_SECRET_KEY
 from models.password_reset import PasswordResetCode
 from models.user import User
 from timezone_utils import now_ph
+from services.email_identity import find_email_user
 
 RESET_CODE_MINUTES = 15
 RESET_CODE_LENGTH = 6
@@ -35,9 +36,11 @@ def find_user_by_identifier(db: Session, identifier: str) -> User | None:
     value = (identifier or "").strip()
     if not value:
         return None
+    if "@" in value:
+        return find_email_user(db, value)
 
     user = (
-        db.query(User).filter(User.email == value.lower()).first()
+        find_email_user(db, value)
         or db.query(User).filter(User.member_id == value.upper()).first()
     )
     if user:

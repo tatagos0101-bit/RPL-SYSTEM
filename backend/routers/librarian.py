@@ -20,7 +20,8 @@ import secrets
 import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
-from passlib.context import CryptContext
+from services.passwords import hash_password
+from services.email_identity import email_matches
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, and_, or_
 
@@ -359,7 +360,7 @@ def member_stats(
 
 # ── Register new member (librarian-assisted) ─────────────────────────────────
 
-_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 
 def _generate_temporary_password(length: int = 14) -> str:
@@ -390,7 +391,7 @@ async def register_member(
     if not location or not location.strip():
         raise HTTPException(status_code=422, detail="Address is required.")
 
-    if email and db.query(User).filter(User.email == email).first():
+    if email and email_matches(db, email):
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
     content, original_filename, reference = await read_upload(folder="ids", user_id=_.id, file=id_image, ticket=upload_ticket)
@@ -409,7 +410,7 @@ async def register_member(
     new_user = User(
         name          = name,
         email         = email or None,
-        password_hash = _pwd_ctx.hash(temporary_password),
+        password_hash = hash_password(temporary_password),
         must_change_password = True,
         email_verified = False,
         phone_verified = False,
@@ -459,7 +460,7 @@ def reset_member_password(
         raise HTTPException(status_code=404, detail="Member not found")
 
     temporary_password = _generate_temporary_password()
-    member.password_hash = _pwd_ctx.hash(temporary_password)
+    member.password_hash = hash_password(temporary_password)
     member.must_change_password = True
     revoke_user_sessions(db, member.id)
     expire_unused_reset_codes_for_user(db, member.id)
@@ -487,11 +488,13 @@ def update_member_status(
     if body.status not in ("active", "suspended"):
         raise HTTPException(status_code=400, detail="Status must be 'active' or 'suspended'")
 
-    member = db.query(User).filter(User.id == user_id, User.role == "member").first()
+    member = db.query(User).filter(User.id == user_id, User.role == "member").with_for_update().populate_existing().first()
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
     member.status = body.status
+    if body.status == "suspended":
+        revoke_user_sessions(db, member.id)
     db.commit()
 
     return {

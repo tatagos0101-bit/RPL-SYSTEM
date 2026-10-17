@@ -20,6 +20,16 @@ Website face login authenticates only; station scans record attendance.
 Regression evidence: `backend/tests/test_repair_basics.py` reproduces the previous
 behavior and asserts corrected results. No schema migration in this batch.
 
+Commit `3b9aa27`: contained corrections; 8 focused regression tests passed.
+
+Authentication batch: normalized case-insensitive identity lookup rejects collisions;
+central password policy and bcrypt-SHA256 hashes preserve legacy verification;
+long legacy passwords require replacement; suspension revokes sessions. Login and
+suspension serialize on the account row. Seed and librarian temporary passwords use
+the same hashing policy. 44 authentication, reset, session and station-PIN tests passed.
+Email uniqueness migration and PostgreSQL concurrency verification follow in the
+database batch; these application checks alone do not prevent signup races.
+
 ## Remaining batches
 
 Authentication and account consistency; import/upload correctness; atomic reservations,

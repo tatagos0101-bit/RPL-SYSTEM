@@ -113,7 +113,13 @@ HTTP GET is not necessarily free of database writes.
 
 ## Identity and authorization
 
-[Authentication routes](../backend/routers/auth.py) use bcrypt and PyJWT-signed JWTs.
+[Authentication routes](../backend/routers/auth.py) use bcrypt-SHA256 for newly set
+passwords, retain legacy bcrypt verification, and use PyJWT-signed JWTs. New passwords
+require 8–128 characters including a digit. Login accepts legacy passwords up to
+1024 UTF-8 bytes; a successfully verified legacy bcrypt password over 72 bytes
+requires replacement without adopting its unverified suffix. Email lookup ignores
+case and rejects ambiguous identities. Suspension revokes sessions; reactivation
+requires fresh login.
 Session and upload-ticket verification requires expiry and subject claims and an
 explicit HMAC algorithm. Existing correctly signed HMAC tokens retain their wire
 format; session-row and password-hash checks still apply. Asymmetric and unsigned

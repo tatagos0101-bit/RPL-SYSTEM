@@ -52,7 +52,7 @@ borrow additional books until those loans are returned.
 | Component | Implementation |
 | --- | --- |
 | Frontend | React 19, Vite 7, Tailwind CSS 4, React Router, Axios |
-| Backend | Python, FastAPI, SQLAlchemy, JWT authentication, bcrypt password hashing |
+| Backend | Python, FastAPI, SQLAlchemy, JWT authentication, bcrypt-SHA256 password hashing (legacy bcrypt verification) |
 | Production database | Supabase PostgreSQL through the transaction pooler with TLS |
 | Production uploads | Supabase Storage with signed uploads and private viewing links |
 | Face processing | `face_recognition`/dlib and OpenCV; optional InsightFace support |

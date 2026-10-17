@@ -87,14 +87,13 @@ def change_password(
     current_user: User = Depends(get_session_user),
     db: Session = Depends(get_db),
 ):
-    from passlib.context import CryptContext
-    pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    from services.passwords import hash_password, verify_password
 
     current_user = db.query(User).filter(User.id == current_user.id).with_for_update().populate_existing().one()
-    if not pwd_ctx.verify(body.current_password, current_user.password_hash):
+    if not verify_password(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
-    current_user.password_hash = pwd_ctx.hash(body.new_password)
+    current_user.password_hash = hash_password(body.new_password)
     current_user.must_change_password = False
     revoke_user_sessions(db, current_user.id)
     expire_unused_reset_codes_for_user(db, current_user.id)

@@ -1,6 +1,7 @@
 import re
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Any, Optional, Literal
+from services.passwords import validate_login_password, validate_new_password
 
 _PHONE_RE = re.compile(r"^[\d\s\-\+\(\)]{7,20}$")
 
@@ -12,9 +13,7 @@ class LoginRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_length(cls, v: str) -> str:
-        if len(v) > 128:
-            raise ValueError("Password too long")
-        return v
+        return validate_login_password(v)
 
 
 class SignupRequest(BaseModel):
@@ -29,13 +28,7 @@ class SignupRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
-        if len(v) > 128:
-            raise ValueError("Password must be at most 128 characters")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one number")
-        return v
+        return validate_new_password(v)
 
     @field_validator("name")
     @classmethod
@@ -65,8 +58,8 @@ class SignupRequest(BaseModel):
         if v is None:
             return v
         v = v.strip()
-        if len(v) > 200:
-            raise ValueError("Location must be at most 200 characters")
+        if len(v) > 120:
+            raise ValueError("Location must be at most 120 characters")
         return v or None
 
     @field_validator("auth_code")
@@ -136,11 +129,7 @@ class PasswordResetConfirmRequest(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("New password must be at least 6 characters")
-        if len(v) > 128:
-            raise ValueError("Password must be at most 128 characters")
-        return v
+        return validate_new_password(v)
 
 
 class PasswordResetConfirmResponse(BaseModel):

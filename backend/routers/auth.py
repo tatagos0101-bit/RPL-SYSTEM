@@ -8,7 +8,8 @@ import string
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from passlib.context import CryptContext
+from services.passwords import hash_password, verify_password, needs_legacy_replacement
+from services.email_identity import find_email_user, email_matches, normalize_email
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_
 
@@ -39,16 +40,15 @@ from schemas.auth import (
 )
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _hash(password: str) -> str:
-    return pwd_ctx.hash(password)
+    return hash_password(password)
 
 def _verify(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain, hashed)
+    return verify_password(plain, hashed)
 
 def _make_token(user_id: int, db: Session | None = None) -> str:
     # Compatibility for local test helpers; request handlers pass their session
@@ -82,15 +82,20 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
     ip = _client_ip(request)
     identifier = body.email.strip()
     user = (
-        db.query(User).filter(User.email == identifier.lower()).first()
+        find_email_user(db, identifier)
         or db.query(User).filter(User.member_id == identifier.upper()).first()
     )
+    if user:
+        user = db.query(User).filter(User.id == user.id).with_for_update().populate_existing().one()
     if not user or not _verify(body.password, user.password_hash):
         security_logger.warning("LOGIN_FAILED ip=%s", ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email/Member ID or password")
     if user.status == "suspended":
         security_logger.warning("LOGIN_SUSPENDED ip=%s user_id=%d", ip, user.id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended. Contact librarian.")
+    if needs_legacy_replacement(body.password, user.password_hash):
+        user.must_change_password = True
+        revoke_user_sessions(db, user.id)
     security_logger.info("LOGIN_SUCCESS ip=%s user_id=%d role=%s", ip, user.id, user.role)
     token = _make_token(user.id, db)
     db.commit()
@@ -115,13 +120,13 @@ def signup(request: Request, response: Response, body: SignupRequest, db: Sessio
             security_logger.warning("SIGNUP_BAD_LIBCODE ip=%s", ip)
             raise HTTPException(status_code=403, detail="Invalid librarian authorization code")
 
-    if db.query(User).filter(User.email == body.email).first():
+    if email_matches(db, body.email):
         security_logger.info("SIGNUP_DUPLICATE ip=%s", ip)
         raise HTTPException(status_code=400, detail="Unable to register. Contact the librarian for assistance.")
 
     user = User(
         name=body.name,
-        email=body.email,
+        email=normalize_email(body.email),
         password_hash=_hash(body.password),
         role=body.role,
         phone=body.phone,
