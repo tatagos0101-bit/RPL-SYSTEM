@@ -13,7 +13,7 @@ def _now() -> datetime:
     return now_ph()
 
 
-def sync_overdue_loans(db: Session, user_id: int | None = None) -> int:
+def sync_overdue_loans(db: Session, user_id: int | None = None, *, commit: bool = True) -> int:
     """Persist active loans whose due date has passed as overdue."""
     q = db.query(Transaction).filter(
         Transaction.status == "active",
@@ -24,13 +24,13 @@ def sync_overdue_loans(db: Session, user_id: int | None = None) -> int:
         q = q.filter(Transaction.user_id == user_id)
 
     changed = q.update({Transaction.status: "overdue"}, synchronize_session=False)
-    if changed:
+    if changed and commit:
         db.commit()
     return changed
 
 
-def member_has_overdue(db: Session, user_id: int) -> bool:
-    sync_overdue_loans(db, user_id=user_id)
+def member_has_overdue(db: Session, user_id: int, *, commit: bool = True) -> bool:
+    sync_overdue_loans(db, user_id=user_id, commit=commit)
     return (
         db.query(Transaction.id)
         .filter(Transaction.user_id == user_id, Transaction.status == "overdue")
@@ -39,6 +39,6 @@ def member_has_overdue(db: Session, user_id: int) -> bool:
     )
 
 
-def assert_can_borrow(db: Session, user_id: int) -> None:
-    if member_has_overdue(db, user_id):
+def assert_can_borrow(db: Session, user_id: int, *, commit: bool = True) -> None:
+    if member_has_overdue(db, user_id, commit=commit):
         raise HTTPException(status_code=409, detail=OVERDUE_BORROW_BLOCK_MESSAGE)

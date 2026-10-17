@@ -2,6 +2,7 @@ import FineContent from './FineContent';
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuth } from '../api/auth';
+import { isPasswordChangePath } from '../api/authRoutes';
 import { getNotifications, markNotificationRead, markAllNotificationsRead, getFines } from '../api/user';
 import { parseApiDateTime } from '../api/dateTime';
 import {
@@ -43,12 +44,14 @@ const UserLayout = () => {
   const notifRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const changingPassword = isPasswordChangePath(location.pathname);
 
-  // Load notifications + overdue count on mount
+  // Restricted sessions may only retrieve their profile or change their password.
   useEffect(() => {
+    if (changingPassword) return;
     getNotifications().then((r) => setNotifs(r.data)).catch(() => {});
     getFines().then((r) => setOverdueCount(r.data.overdue_loans?.length || 0)).catch(() => {});
-  }, []);
+  }, [changingPassword]);
 
   // Close notification panel on outside click
   useEffect(() => {

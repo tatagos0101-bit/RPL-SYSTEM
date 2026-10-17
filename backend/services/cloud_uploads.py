@@ -4,7 +4,8 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import HTTPException, UploadFile
-from jose import JWTError, jwt
+import jwt
+from jwt import InvalidTokenError
 
 from config import JWT_SECRET_KEY, JWT_ALGORITHM, STORAGE_BACKEND
 from services import storage_service as storage
@@ -36,11 +37,12 @@ def prepare_upload(folder: str, filename: str, size: int, user_id: int) -> dict:
 async def read_upload(*, folder: str, user_id: int, file: UploadFile | None, ticket: str | None) -> tuple[bytes, str, str | None]:
     if ticket:
         try:
-            claims = jwt.decode(ticket, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            claims = jwt.decode(ticket, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM],
+                                options={"require": ["exp", "sub"]})
             filename = claims.get("object", "")
             if claims.get("scope") != "upload" or claims.get("sub") != str(user_id) or claims.get("folder") != folder or not filename or Path(filename).name != filename or "/" in filename or "\\" in filename:
                 raise ValueError("Wrong upload owner or category.")
-        except (JWTError, ValueError, TypeError):
+        except (InvalidTokenError, ValueError, TypeError):
             raise HTTPException(403, "Invalid or expired upload ticket.") from None
         content = storage.read_cloud_upload(folder, filename)
         if len(content) > UPLOAD_RULES[folder][1]:

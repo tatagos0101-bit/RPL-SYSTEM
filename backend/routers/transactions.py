@@ -99,18 +99,21 @@ def borrow_book(
     db:   Session = Depends(get_db),
     _:    User    = Depends(require_librarian),
 ):
-    sync_expired_reservations(db)
-    member = db.query(User).filter(User.id == body.user_id).first()
+    # Hold member -> book locks until the loan and inventory commit together.
+    # The book lock also serializes circulation with inventory edits.
+    member = (db.query(User).filter(User.id == body.user_id)
+              .populate_existing().with_for_update().first())
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
     if member.status == "suspended":
         raise HTTPException(status_code=403, detail="Member account is suspended")
-    assert_can_borrow(db, body.user_id)
-
-    book = db.query(Book).filter(Book.id == body.book_id).first()
+    book = (db.query(Book).filter(Book.id == body.book_id)
+            .populate_existing().with_for_update().first())
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
-    ensure_book_copies(db, book.id)
+    assert_can_borrow(db, body.user_id, commit=False)
+    sync_expired_reservations(db, book_id=book.id, commit=False)
+    ensure_book_copies(db, book.id, commit=False)
     if book.copies_available < 1:
         raise HTTPException(status_code=409, detail="No copies available for borrowing")
 
@@ -119,7 +122,7 @@ def borrow_book(
         if selected_copy.book_id != book.id:
             raise HTTPException(status_code=400, detail="Physical copy does not belong to this book")
     else:
-        selected_copy = select_available_copy(db, book.id)
+        selected_copy = select_available_copy(db, book.id, commit=False)
     if not selected_copy:
         raise HTTPException(status_code=409, detail="No physical copy is available for borrowing")
     assert_copy_can_borrow(selected_copy)
@@ -181,9 +184,12 @@ def return_book(
     db:   Session = Depends(get_db),
     _:    User    = Depends(require_librarian),
 ):
-    sync_expired_reservations(db)
-    sync_overdue_loans(db, user_id=body.user_id)
-    ensure_book_copies(db, body.book_id)
+    db.query(User).filter(User.id == body.user_id).with_for_update().first()
+    book = (db.query(Book).filter(Book.id == body.book_id)
+            .populate_existing().with_for_update().first())
+    sync_expired_reservations(db, book_id=body.book_id, commit=False)
+    sync_overdue_loans(db, user_id=body.user_id, commit=False)
+    ensure_book_copies(db, body.book_id, commit=False)
     tx = (
         db.query(Transaction)
         .filter(
@@ -192,6 +198,7 @@ def return_book(
             Transaction.status.in_(["active", "overdue"]),
         )
         .filter(Transaction.copy_id == body.copy_id if body.copy_id is not None else True)
+        .populate_existing().with_for_update()
         .first()
     )
     if not tx:
@@ -207,7 +214,6 @@ def return_book(
     tx.status      = "returned"
     tx.type        = "return"
 
-    book = db.query(Book).filter(Book.id == body.book_id).first()
     if book:
         book.copies_available = min(book.copies_available + 1, book.copies_total)
         _notify_next_reservation(book.id, db)

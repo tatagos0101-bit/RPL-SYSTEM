@@ -39,7 +39,10 @@ def ensure_book_copies(db: Session, book_id: int | None = None, *, commit: bool 
 
     changed = 0
     for book in query.all():
-        existing_by_number = {copy.copy_number: copy for copy in book.copies}
+        # A caller may already have loaded book.copies before this transaction
+        # added legacy copies. Read the flushed rows, not that cached relationship.
+        existing_by_number = {copy.copy_number: copy for copy in db.query(BookCopy)
+                              .filter(BookCopy.book_id == book.id).all()}
         for copy_number in range(1, int(book.copies_total or 0) + 1):
             if copy_number in existing_by_number:
                 copy = existing_by_number[copy_number]
@@ -140,8 +143,8 @@ def get_copy_or_404(db: Session, copy_id: int) -> BookCopy:
     return copy
 
 
-def select_available_copy(db: Session, book_id: int) -> BookCopy | None:
-    ensure_book_copies(db, book_id=book_id)
+def select_available_copy(db: Session, book_id: int, *, commit: bool = True) -> BookCopy | None:
+    ensure_book_copies(db, book_id=book_id, commit=commit)
     return (
         db.query(BookCopy)
         .filter(BookCopy.book_id == book_id, BookCopy.status == "available")

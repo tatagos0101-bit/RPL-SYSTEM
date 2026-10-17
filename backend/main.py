@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from redis.exceptions import RedisError
+from limits.errors import StorageError
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -33,6 +35,13 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(RedisError)
+@app.exception_handler(StorageError)
+async def rate_limit_storage_unavailable(request, exc):
+    # Neither Redis connection errors nor rate-limit keys belong in responses/logs.
+    return JSONResponse(status_code=503, content={"detail": "Request verification is temporarily unavailable. Please try again."})
 
 
 @app.exception_handler(RequestValidationError)

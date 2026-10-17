@@ -9,12 +9,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 os.environ["DATABASE_URL"] = "sqlite+pysqlite://"
-os.environ["JWT_SECRET_KEY"] = "test-secret"
+os.environ["JWT_SECRET_KEY"] = "synthetic-test-signing-key-not-for-production"
 os.environ["LIBRARIAN_AUTH_CODE"] = "test-librarian-code"
 os.environ["ENVIRONMENT"] = "test"
 os.environ["ALLOWED_ORIGINS"] = "http://testserver"
 os.environ["STORAGE_BACKEND"] = "local"
 os.environ["AUTO_MIGRATE"] = "false"
+os.environ["RATE_LIMIT_STORAGE_URI"] = ""
+os.environ["RATE_LIMIT_REQUIRE_SHARED"] = "false"
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:

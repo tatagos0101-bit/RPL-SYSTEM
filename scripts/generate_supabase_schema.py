@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 os.environ.update(DATABASE_URL="sqlite+pysqlite://", JWT_SECRET_KEY="schema-export-only", ENVIRONMENT="test", STORAGE_BACKEND="local")
 from database import Base  # noqa: E402
 
-for model in ("user", "book", "book_copy", "transaction", "reservation", "entry_log", "face_embedding", "reading_goal", "library_settings", "notification", "password_reset", "security_alert"):
+for model in ("user", "auth_session", "book", "book_copy", "book_interaction", "transaction", "reservation", "entry_log", "face_embedding", "reading_goal", "library_settings", "notification", "password_reset", "security_alert"):
     importlib.import_module(f"models.{model}")
 
 

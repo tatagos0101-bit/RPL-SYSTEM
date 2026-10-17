@@ -2,13 +2,16 @@ from datetime import datetime
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import get_current_user
+from dependencies import get_current_user, get_session_user
+from services.auth_cookie import set_auth_cookie
+from services.auth_sessions import create_session_token, revoke_user_sessions
+from services.password_reset import expire_unused_reset_codes_for_user
 from models.notification import Notification
 from models.face_embedding import FaceEmbedding
 from models.user import User
@@ -54,7 +57,7 @@ def _build_profile(user: User, db: Session) -> UserProfile:
 
 
 @router.get("/profile", response_model=UserProfile)
-def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_profile(current_user: User = Depends(get_session_user), db: Session = Depends(get_db)):
     return _build_profile(current_user, db)
 
 
@@ -80,18 +83,24 @@ def update_profile(
 @router.put("/change-password", response_model=ChangePasswordResponse)
 def change_password(
     body: ChangePasswordRequest,
-    current_user: User = Depends(get_current_user),
+    response: Response,
+    current_user: User = Depends(get_session_user),
     db: Session = Depends(get_db),
 ):
     from passlib.context import CryptContext
     pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+    current_user = db.query(User).filter(User.id == current_user.id).with_for_update().populate_existing().one()
     if not pwd_ctx.verify(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
     current_user.password_hash = pwd_ctx.hash(body.new_password)
     current_user.must_change_password = False
+    revoke_user_sessions(db, current_user.id)
+    expire_unused_reset_codes_for_user(db, current_user.id)
+    token = create_session_token(db, current_user)
     db.commit()
+    set_auth_cookie(response, token)
     # Confirm the committed first-login state without a second profile request
     # (which also signs avatar links and can fail independently of this save).
     return ChangePasswordResponse(

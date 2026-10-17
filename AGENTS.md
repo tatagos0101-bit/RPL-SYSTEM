@@ -64,7 +64,8 @@ The README recommends Python 3.12 and Node.js 22.12 or newer. Commands require i
 - Keep production `AUTO_MIGRATE=false`; preserve PostgreSQL TLS/pooler settings, RLS, and revoked
   browser-role table access. SQLite tests alone cannot validate PostgreSQL migration behavior.
 - Review transaction boundaries and helper commits before changing inventory, loans, or reservations.
-  Existing borrow/return duplicate checks are not a concurrency or idempotency guarantee.
+  Circulation holds member/book locks through commit; helpers in that transaction must not commit.
+  Preserve concurrent PostgreSQL coverage. This is not a general request-idempotency guarantee.
 
 ## Authentication and authorization
 
@@ -77,8 +78,15 @@ The README recommends Python 3.12 and Node.js 22.12 or newer. Commands require i
 - Librarian Settings can replace the station PIN after password confirmation. Preserve database-PIN
   precedence over the environment fallback, per-request verification, and hash-only storage; never return
   PINs/digests. JWT secret rotation requires setting the PIN again; see deployment documentation.
-- Preserve first-login password-change routing, but do not claim the backend dependency globally
-  enforces `must_change_password`; it currently does not.
+- Session JWTs require an active `auth_sessions` row bound to the current password hash.
+  Preserve logout revocation and revocation of every old session on password changes/resets.
+  A successful password change replaces the current browser cookie; pre-upgrade tokens require login.
+- Enforce `must_change_password` through the backend dependency. Only profile retrieval,
+  password change, and logout are allowed authenticated operations until completion.
+- Contact details are unverified when entered during registration; do not treat presence as ownership.
+  Preserve existing verification data unless a separate correction/backfill is approved.
+- Redis rate-limit support uses `RATE_LIMIT_STORAGE_URI` and `RATE_LIMIT_REQUIRE_SHARED`.
+  Configured Redis failures must reject limited requests, never fall back silently to local memory.
 - Keep recovery errors non-enumerating and reset codes out of non-test responses/logs.
   Email/SMS recovery delivery is not integrated; librarian-assisted resets are the operational path.
 - Verify anonymous, wrong-role, suspended, and cross-owner access when changing protected behavior.

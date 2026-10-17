@@ -9,6 +9,105 @@ Authentication remains in FastAPI. Supabase Auth is not used by this application
 Database passwords and Supabase secret/service-role keys belong only in server
 environment variables. Never put them in a `VITE_*` variable or commit `.env` files.
 
+## Environment security and change boundaries
+
+For the session migration, Redis preparation, restricted database role, and the
+approval sequence for cloud changes, see [security rollout](SECURITY_ROLLOUT.md).
+The October 17 integration uses PyJWT with the existing HMAC token format and
+requires an explicit HS256, HS384, or HS512 configuration (HS256 remains the default).
+Apply `20261016000100_auth_sessions.sql` before the API release; preserve the
+recommendation schema. Runtime-role preparation now includes `book_interactions`.
+No signing-secret rotation or new circulation schema is required by this integration.
+The remaining setuptools compatibility advisory and separate pending PAD work are
+documented in the rollout guide; source preparation does not establish live safety.
+
+The frontend is React/Vite, not Next.js. Its only application configuration input
+is `VITE_API_URL`; it calls FastAPI rather than querying Supabase tables directly.
+Vite exposes `VITE_*` values to client imports. `NEXT_PUBLIC_*` is not an automatic
+public prefix here, but must still never contain privileged credentials.
+The Vite config loads only the `VITE_` prefix for development proxy configuration.
+
+| Names | Current purpose and handling |
+| --- | --- |
+| `DATABASE_URL`, `POSTGRES_URL` | Backend connection. A nonempty `DATABASE_URL` wins; `POSTGRES_URL` is the integration fallback. Shared database configuration is also used by migrations. |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Backend Storage connection. The key may be a legacy service-role JWT or a new secret key; keep it server-side under the name the application reads. |
+| `SUPABASE_SECRET_KEY` | Not read as a fallback by the current application. Do not rename/substitute credentials without verifying the affected consumer. |
+| `POSTGRES_URL_NON_POOLING`, `POSTGRES_PRISMA_URL`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_DATABASE` | Not individually read by current application tools. Integration or external maintenance consumers may still need them; verify before removing. Prisma is not configured in this repository. |
+| `SUPABASE_JWT_SECRET` | Not the application's signing secret. Rotation can affect legacy Supabase keys and external consumers. |
+| `JWT_SECRET_KEY` | Application signing secret. The launcher and ASGI startup share known-default and minimum-length checks; those checks do not measure entropy. Generate a random value. |
+| `LIBRARIAN_AUTH_CODE`, `ENTRY_STATION_PIN` | Server-only registration and kiosk configuration; preserve the managed PIN precedence described below. |
+| `SUPABASE_ANON_KEY`, `SUPABASE_PUBLISHABLE_KEY`, and `NEXT_PUBLIC_*` aliases | Not used by this SPA. Public keys cannot replace the privileged key used for backend Storage operations. |
+
+Keep real environment files out of Git and build artifacts. Existing `.gitignore`,
+`.vercelignore`, and `backend/.dockerignore` exclusions cover local environment
+files and private runtime artifacts; `.env.example` files contain placeholders.
+Never log configuration objects, database URLs, request credentials, or secret values.
+Use isolated development credentials and keep production `AUTO_MIGRATE=false`.
+
+### Vercel integration warnings and rotation
+
+The October 16, 2026 audit found integration credentials on both Vercel projects
+and `readable-secret` warnings. This is a configuration finding, not evidence that
+a value was bundled or publicly exposed. Treat this as a dated observation and
+recheck current settings before acting.
+
+The intended arrangement is a frontend without database/privileged Storage
+credentials and an API project with the required secrets. Integration-created
+variables cannot simply be converted to Secret from Vercel's variables list.
+Vercel documents disconnecting the resource from its projects, rotating its
+secrets, reconnecting with Sensitive enabled (excluding Development for that
+integration connection), and redeploying. Coordinate that process with explicit
+approval, all credential consumers, verification, and a recovery plan; revoking
+old credentials can prevent an old deployment from working as a rollback.
+Do not duplicate variables merely to dismiss warnings.
+
+Database credentials, Supabase Storage keys, `SUPABASE_JWT_SECRET`, and the
+application's `JWT_SECRET_KEY` have different consumers. Application signing-key
+rotation invalidates sessions and signed application tickets, and requires
+resetting the managed station PIN. It is not required just because an unrelated
+integration variable has a warning. Never weaken RLS or replace a privileged
+Storage credential with an anon/publishable key to bypass errors.
+
+Dashboard edits, credential rotation, database-role/policy changes, migrations,
+and deployment require separate authorization. Source edits do not perform these
+actions. The subsequent authentication changes and migration prerequisites are
+described in [security rollout](SECURITY_ROLLOUT.md); dependency and biometric
+remediation remain separate work.
+
+### Frontend artifact and header verification
+
+`npm --prefix frontend run build` now builds with Vite and runs
+`frontend/scripts/check-build-secrets.mjs`. The check fails on recognizable secret
+keys, service-role JWTs, credentialed database URLs, private keys, and exact known
+secret values available in the build process environment (including common URL
+and JSON encodings). It reads no `.env` files, makes no network calls, and prints
+only counts/categories on failure. Missing or unreadable build output fails closed.
+
+This is a regression guard, not proof that arbitrary secrets are absent. Exact
+matching skips values shorter than eight characters to avoid incidental matches;
+unavailable secrets and arbitrary transformations cannot be reliably detected.
+Do not pull production secrets into a local environment to run this check. Use
+synthetic fixtures for its tests:
+
+```powershell
+node --test frontend/scripts/*.test.mjs
+node frontend/scripts/check-build-secrets.mjs
+uv run --project backend --with pytest python -m pytest backend/tests/test_deployment_config.py -q -p no:cacheprovider
+```
+
+Both frontend Vercel configurations apply frame protection, `nosniff`, and a
+referrer policy to frontend routes, excluding API/upload/health proxy routes.
+The minimal CSP restricts framing, base URLs, and embedded objects; it is not a
+complete script-injection policy. It does not restrict camera permissions,
+scripts, images, or API connections. The proxy configuration script preserves
+these headers. After a separately authorized deployment, verify the actual HTTP
+headers on `/` and a nested frontend route, then check login, camera capture,
+private images, and API proxy behavior. Local builds do not verify edge headers.
+
+References: [Vite environment variables](https://vite.dev/guide/env-and-mode),
+[Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys),
+[Vercel Config/Secret variables and integrations](https://vercel.com/docs/environment-variables/sensitive-environment-variables).
+
 ## 1. Supabase schema and Storage
 
 Use the linked `supabase-rizal-library` resource or create a Supabase project near

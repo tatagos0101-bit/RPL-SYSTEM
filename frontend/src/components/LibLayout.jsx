@@ -4,6 +4,7 @@ import { getNotifications, markNotificationRead, markAllNotificationsRead } from
 import { getLibrarianShellClasses } from '../api/librarianShell';
 import { STAFF_LIBRARIAN_NAV_LINKS } from '../api/librarianNavigation';
 import { parseApiDateTime } from '../api/dateTime';
+import { isPasswordChangePath } from '../api/authRoutes';
 import {
   BookOpen, PlusSquare, Users,
   QrCode, FileText,
@@ -32,6 +33,7 @@ const LibLayout = () => {
   const bellRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const changingPassword = isPasswordChangePath(location.pathname);
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const shellClasses = getLibrarianShellClasses(sidebarOpen);
@@ -46,13 +48,14 @@ const LibLayout = () => {
   }, []);
 
   useEffect(() => {
+    if (changingPassword) return;
     const initialId = setTimeout(fetchNotifications, 0);
     const id = setInterval(fetchNotifications, 30_000);
     return () => {
       clearTimeout(initialId);
       clearInterval(id);
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, changingPassword]);
 
   useEffect(() => {
     const updateNow = () => setNowMs(Date.now());

@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: rpl_security_test
+      # Disposable internal-only test network. Never use this configuration live.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    command: [postgres, -c, log_statement=none, -c, log_min_error_statement=panic]
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d rpl_security_test]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:8-alpine
+    command: [redis-server, --save, "", --appendonly, "no"]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  verify:
+    build:
+      context: .
+      dockerfile: tests/security/Dockerfile
+    environment:
+      RPL_SECURITY_TEST_ONLY: "1"
+      DATABASE_URL: postgresql+psycopg://rpl_security_login@postgres/rpl_security_test
+      JWT_SECRET_KEY: synthetic-local-integration-signing-key-only
+      LIBRARIAN_AUTH_CODE: synthetic-local-integration-code-only
+      ENVIRONMENT: test
+      STORAGE_BACKEND: local
+      AUTO_MIGRATE: "false"
+      LOG_TO_FILES: "false"
+      RATE_LIMIT_STORAGE_URI: ""
+      RATE_LIMIT_REQUIRE_SHARED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+networks:
+  default:
+    internal: true

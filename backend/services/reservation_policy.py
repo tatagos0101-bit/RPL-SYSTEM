@@ -80,6 +80,8 @@ def sync_expired_reservations(
     db: Session,
     book_id: int | None = None,
     user_id: int | None = None,
+    *,
+    commit: bool = True,
 ) -> int:
     q = db.query(Reservation).filter(
         Reservation.status == "ready",
@@ -104,5 +106,6 @@ def sync_expired_reservations(
         renumber_pending_queue(db, affected_book_id)
         promote_next_pending_reservation(db, affected_book_id)
 
-    db.commit()
+    if commit:
+        db.commit()
     return len(expired)

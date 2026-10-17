@@ -11,69 +11,23 @@ import os
 sys.path.insert(0, os.path.dirname(__file__))
 
 
-_WEAK_SECRETS = {
-    "insecure-dev-secret-change-me",
-    "change-this-to-a-long-random-secret",
-    "rizal-lib-super-secret-key-change-in-production",
-    "secret",
-    "password",
-    "",
-}
-
-
 def check_env():
-    env_path = os.path.join(os.path.dirname(__file__), ".env")
-    if os.path.exists(env_path):
-        from dotenv import load_dotenv
-        load_dotenv(env_path, override=False)
+    # config loads the local .env without overriding host-provided variables.
+    # ASGI startup uses the same validation even when run.py is bypassed.
+    from config import (
+        ENVIRONMENT, JWT_SECRET_KEY, LIBRARIAN_AUTH_CODE,
+        account_secret_errors, validate_deployment_config,
+    )
 
-        with open(env_path) as f:
-            contents = f.read()
-        # Warn if database password is still the placeholder
-        if "yourpassword" in contents:
-            print("WARNING: .env still contains 'yourpassword'.")
-            print("  Update DATABASE_URL with your actual MySQL password before continuing.\n")
-    # If no .env file, environment variables must be set in the host environment (e.g. Render)
-
-    environment = os.environ.get("ENVIRONMENT", "development")
-    jwt_secret  = os.environ.get("JWT_SECRET_KEY", "")
-    lib_code    = os.environ.get("LIBRARIAN_AUTH_CODE", "")
-
-    errors   = []
-    warnings = []
-
-    # JWT secret strength checks
-    if jwt_secret in _WEAK_SECRETS:
-        msg = "JWT_SECRET_KEY is a known weak/default value."
-        if environment == "production":
-            errors.append(msg + " This is a fatal error in production.")
-        else:
-            warnings.append(msg + " Generate a strong random secret before deploying.")
-    elif len(jwt_secret) < 32:
-        msg = f"JWT_SECRET_KEY is only {len(jwt_secret)} characters (minimum 32 recommended)."
-        if environment == "production":
-            errors.append(msg)
-        else:
-            warnings.append(msg)
-
-    # Librarian auth code must be set
-    if not lib_code or lib_code in ("change-this-to-a-secret-code", "LIB-RPL-2025"):
-        msg = "LIBRARIAN_AUTH_CODE is missing or still set to a default value."
-        if environment == "production":
-            errors.append(msg + " This is a fatal error in production.")
-        else:
-            warnings.append(msg + " Set a strong code before deploying.")
-
-    for w in warnings:
-        print(f"WARNING: {w}")
-    if warnings:
-        print()
-
-    if errors:
-        for e in errors:
-            print(f"ERROR: {e}")
-        print("\nFix the above errors before running in production.")
-        sys.exit(1)
+    if ENVIRONMENT == "production":
+        try:
+            validate_deployment_config()
+        except RuntimeError as error:
+            print(f"ERROR: {error}")
+            sys.exit(1)
+    else:
+        for warning in account_secret_errors(JWT_SECRET_KEY, LIBRARIAN_AUTH_CODE):
+            print(f"WARNING: {warning}")
 
 
 def main():
@@ -85,7 +39,7 @@ def main():
         if idx + 1 < len(sys.argv):
             port = int(sys.argv[idx + 1])
 
-    # FastAPI startup validates configuration and database readiness exactly once.
+    # FastAPI startup checks database readiness; check_env makes no connection.
     from config import ENVIRONMENT
     is_prod = ENVIRONMENT == "production"
 
