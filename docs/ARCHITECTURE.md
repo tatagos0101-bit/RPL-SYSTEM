@@ -1,5 +1,7 @@
 # Rizal Provincial Library architecture
 
+Repair branch implementation checked **October 18, 2026**; see the
+[repair ledger](REPAIR_LEDGER.md) for local evidence and release limits.
 Baseline inspection: **October 14, 2026**. Station PIN management documentation
 updated **October 15, 2026** and checked against the main-branch release. Repository
 configuration alone does not verify live production state. MiniFASNet PAD work
@@ -78,7 +80,8 @@ an arbitrary `.env.local` file is not automatically loaded by that code.
 ## Persistence and migrations
 
 The [models](../backend/models) and [initial SQL](../supabase/migrations/20261010000100_library_schema.sql)
-describe 14 application tables after the session and recommendation upgrades:
+describe 15 application tables after the session, recommendation and repair upgrades
+(the applied initial SQL is intentionally unchanged):
 
 | Tables | Relationship and meaning |
 | --- | --- |
@@ -88,6 +91,7 @@ describe 14 application tables after the session and recommendation upgrades:
 | `books`, `book_copies` | A title has physical copies. Copy QR codes are unique; `(book_id, copy_number)` is unique. Status includes available, borrowed, damaged, lost, and retired. Titles also keep aggregate counts and legacy QR codes. |
 | `transactions` | One loan links user, book, and optionally a physical copy for legacy compatibility. Returning changes that same row rather than adding a separate circulation event. |
 | `reservations`, `notifications` | Reservations link members to titles with queue/status/expiry information. Notifications may target a user; null user IDs denote librarian notifications. |
+| `reservation_confirmations` | Member/request ID primary key, canonical payload fingerprint and resulting reservation IDs for atomic confirmation retries. Private backend-only access. |
 | `entry_logs`, `reading_goals` | Attendance sessions and annual user goals. Entry logs permit a null user for unidentified visitors and distinguish granted/denied access. |
 | `password_reset_codes`, `security_alerts`, `library_settings` | Hashed expiring reset codes, security events that may include face snapshots, and key/value settings. A table's presence does not prove a complete UI or operational workflow. |
 
@@ -112,6 +116,9 @@ Even some read routes call backfill/status-sync helpers that commit changes, so 
 HTTP GET is not necessarily free of database writes.
 
 ## Identity and authorization
+
+Logout clears account metadata and account-scoped selections only after server
+revocation succeeds; failed logout exposes retry. Anonymous selections are separate.
 
 [Authentication routes](../backend/routers/auth.py) use bcrypt-SHA256 for newly set
 passwords, retain legacy bcrypt verification, and use PyJWT-signed JWTs. New passwords
@@ -205,8 +212,10 @@ management UI was found. Do not infer these from design documents or invent poli
 scan = time-in, repeats before five minutes = still inside, later scan = time-out,
 and scans within two minutes of time-out = update the same session. A later scan
 starts another visit. These intervals are configurable. Unrecognized/suspended
-matches are denied without exposing the suspended identity. Face login also uses
-the attendance-processing path; it is not only an authentication operation.
+matches are denied without exposing the suspended identity. Website face login only
+authenticates; station scans record attendance. Member locks serialize overlapping
+scans. New timestamps are aware Philippine time; legacy naive values are interpreted
+as Philippine time without shifting historical rows.
 
 ## Catalog, QR codes, circulation, and reservations
 
@@ -230,19 +239,32 @@ that row, preserves its borrow date, calculates a fine, restores availability,
 and attempts promotion of the next queued reservation. Default loan/fine settings
 come from configuration; fine storage does not record payment collection.
 
-[Reservations](../backend/routers/reservations.py) accept available titles as ready
-for pickup and unavailable titles as pending. [Policy helpers](../backend/services/reservation_policy.py)
-expire ready reservations, renumber queues, and promote eligible pending entries.
-Expiry/status synchronization is request-driven; no background scheduler was found.
-Reservations are title-level, do not reduce stock, and are not exclusive copy holds:
-initial ready creation checks availability without subtracting other ready reservations.
+[Reservations](../backend/routers/reservations.py) use a five-book combined quota:
+active/overdue loans plus pending/ready reservations. Selections consume no slots or
+stock. Atomic batch confirmation requires explicit agreement to queue unavailable
+titles and stores member-scoped request IDs, payload fingerprints and reservation
+IDs in `reservation_confirmations`. A reused ID with different contents returns 409.
+The legacy single-title endpoint uses the same rules. Structured conflicts identify
+quota, duplicate reservations and changed availability.
+
+[Policy helpers](../backend/services/reservation_policy.py) expire ready holds and
+fill available capacity in stable FIFO order, ahead of new confirmations. Ready
+holds protect title-level capacity for 24 hours, including against walk-in loans and
+stock reductions; no specific physical copy is allocated. Pending reservations hold
+no stock and receive their deadline only on promotion. Expiry is request-driven,
+including every stock-changing operation. Pickup converts a reservation into a loan
+without using another slot. Existing over-limit members may return/cancel but cannot
+add commitments. Historical loan/reservation records prevent title deletion.
 
 Borrow/return handlers lock the member and then the book, and keep copy preparation,
 overdue/expiry updates, loan changes, and inventory changes in one transaction.
 Duplicate checks run after the locks; competing returns re-read the active loan.
 Disposable PostgreSQL tests cover the same copy, the same member/title, independent
-copies, and duplicate returns. The UI still sends one request per cart item, with no
-idempotency keys, atomic batch, or durable replay after an unknown outcome.
+copies, and duplicate returns. Borrow/return carts still send independent requests;
+successful items remain visible, unknown outcomes require ledger reconciliation,
+and unattempted items are identified. Reservation batches are atomic and persist a
+confirmation ID locally before submission, allowing safe retries after reload.
+These are separate workflows; neither is an offline transaction queue.
 
 ## Uploads, condition photos, and offline limits
 
@@ -262,6 +284,12 @@ category. API consumers validate ticket ownership and file content/size before u
 Private database references identify objects (`supabase://...`), not expiring
 viewing URLs; authorized endpoints resolve fresh links. Local mode exposes covers
 statically and gates private ID/avatar paths. Production rejects local persistence.
+Repeated avatar finalization never deletes the current reference. Cover replacement
+cleanup runs after commit only when no title still references the old cover. Book
+save/cover failure is reported as partial success with a cover-only retry. Full
+inventory import supports `.xlsx`, validates each row against `BookCreate`, uses
+savepoints, and reports committed counts and original workbook row numbers. Browser
+ISBN extraction still accepts `.xls`; server inventory import rejects it clearly.
 
 There is no book-condition photo capture, schema association, upload category, or
 access workflow. Loan issue reports contain a reason/note and notify librarians;
@@ -311,15 +339,20 @@ design reference, not deployment of the recommendation feature.
 
 Borrow counts use `borrow_date`, including rows now typed as returns. Monthly
 reports mix period circulation/visits with current overdue and inventory snapshots;
-fine sums are not a payment ledger. Visit filters differ by endpoint, and aggregate
-unavailable stock is not necessarily all on loan. Preserve or explicitly revise
-these definitions rather than silently relabeling metrics.
+fine sums are not a payment ledger. Denied entries are excluded from member visit
+statistics, activity and goals. Borrowed stock counts active/overdue loans rather
+than total stock minus available stock. Report date bounds are validated first.
 
 [Frontend report helpers](../frontend/src/api/reports.js) filter/paginate records,
 escape CSV formula prefixes and print HTML, and build exports. The report UI offers
 CSV, printable records, and monthly PDFs; it does not establish national reporting
-compliance. Paginated retrieval has a maximum-page cap, so export completeness must
-be checked for the intended dataset. Use [backend](../backend/timezone_utils.py)
+compliance. Paginated exports throw a visible error when the safety cap is reached;
+they never return a truncated result as a complete export. Member, catalog, inventory
+and transaction screens use server search/pagination and independent totals. Dashboard
+sections load independently and expose failed sections with retry. Overdue reminders
+explicitly report delivery unavailable until a provider exists. Shared native dialogs
+provide focus containment/Escape/restoration, and an application error boundary offers
+recovery for rendering failures. Use [backend](../backend/timezone_utils.py)
 and [frontend](../frontend/src/api/dateTime.js) time helpers when changing dates;
 some display formatting still follows the browser timezone.
 

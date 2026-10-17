@@ -119,6 +119,10 @@ at all four widths. This intentional failure was separate from normal-flow check
 
 ## Validation summary
 
+Commit `a7b1625`: reservation interface, responsive retrieval, retry/error recovery
+and shared dialog behavior. The final documentation commit records setup,
+architecture, migration requirements and the prepared release sequence.
+
 - Full backend suite: **192 passed, 1 skipped**, including the isolated repair
   PostgreSQL acceptance test. The skip is the separate recommendation PostgreSQL
   test, whose dedicated environment was not configured in this repair run.

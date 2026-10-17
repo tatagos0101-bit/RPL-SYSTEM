@@ -257,6 +257,10 @@ deployment. Preserve an export/backup and migrate those separately if they exist
 
 ## 5. Verification
 
+For the `fixing-the-issue` branch, use the [repair rollout checklist](REPAIR_ROLLOUT.md):
+validated additive migration and runtime access, then backend, then frontend.
+The repair branch has not been merged, pushed or deployed by this implementation.
+
 Check the API `/health`, open a nested frontend route directly, log in, reload,
 and confirm the session remains active. Add a book/upload its cover, register a
 member with an ID, and update that member's avatar. Confirm records in Supabase's
