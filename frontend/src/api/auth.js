@@ -1,4 +1,5 @@
 import client from './client';
+import { clearReservationCart } from './reservationCart';
 import { clearStoredAuth, persistStoredAuth } from './authRoutes';
 import {
   buildPasswordResetConfirm,
@@ -36,7 +37,8 @@ export const persistAuth = ({ user_id, name, role, must_change_password }) => {
   persistStoredAuth({ user_id, name, role, must_change_password });
 };
 
-export const clearAuth = () => {
+export const clearAuth = async () => {
+  await logout();
+  clearReservationCart();
   clearStoredAuth();
-  return logout().catch(() => {});
 };

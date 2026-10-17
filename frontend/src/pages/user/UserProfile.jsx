@@ -1,3 +1,4 @@
+import { isValidNewPassword, passwordPolicyMessage } from '../../api/passwordPolicy';
 import { useState, useEffect, useRef } from 'react';
 import {
   BadgeCheck, Mail, MapPin, Phone, Shield, BookOpen,
@@ -89,7 +90,7 @@ function PasswordChangeForm() {
     const e = {};
     if (!form.current) e.current = 'Required.';
     if (!form.next) e.next = 'Required.';
-    else if (form.next.length < 6) e.next = 'Min 6 characters.';
+    else if (!isValidNewPassword(form.next)) e.next = passwordPolicyMessage;
     if (form.next !== form.confirm) e.confirm = 'Passwords do not match.';
     return e;
   };
@@ -150,7 +151,7 @@ function PasswordChangeForm() {
           )}
           {[
             { key: 'current', label: 'Current Password', ph: 'Enter current password' },
-            { key: 'next',    label: 'New Password',     ph: 'Min 6 characters' },
+            { key: 'next',    label: 'New Password',     ph: passwordPolicyMessage },
             { key: 'confirm', label: 'Confirm New',      ph: 'Re-enter new password' },
           ].map(({ key, label, ph }) => (
             <div key={key}>
@@ -178,7 +179,7 @@ function PasswordChangeForm() {
                 <div key={i} className={`h-1 flex-1 rounded-full transition-colors duration-300 ${form.next.length >= l ? ['bg-rose-500','bg-amber-400','bg-emerald-400'][i] : 'bg-subtle'}`} />
               ))}
               <span className="text-sm font-semibold tracking-normal text-muted ml-1">
-                {form.next.length < 6 ? 'Weak' : form.next.length < 9 ? 'Fair' : form.next.length < 12 ? 'Good' : 'Strong'}
+                {!isValidNewPassword(form.next) ? 'Weak' : form.next.length < 9 ? 'Fair' : form.next.length < 12 ? 'Good' : 'Strong'}
               </span>
             </div>
           )}

@@ -30,6 +30,13 @@ the same hashing policy. 44 authentication, reset, session and station-PIN tests
 Email uniqueness migration and PostgreSQL concurrency verification follow in the
 database batch; these application checks alone do not prevent signup races.
 
+Commit `dc34712`: authentication backend. Frontend follow-up isolates member and
+anonymous selections and waits for server-confirmed logout. Retry leaves credentials
+and selections intact on failure. Password forms use the shared policy. Node helper
+tests, lint, build and build-secret scan passed. Browser plugin not available;
+Playwright with installed Edge verified failed logout → retry → login and cart
+clearing at 320, 390, 768 and 1440 pixels, with no overflow or runtime errors.
+
 ## Remaining batches
 
 Authentication and account consistency; import/upload correctness; atomic reservations,

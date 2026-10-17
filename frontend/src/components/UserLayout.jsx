@@ -35,6 +35,7 @@ const timeAgo = (dateStr) => {
 
 const UserLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const [isDark, setIsDark] = useState(
     document.documentElement.classList.contains('dark')
   );
@@ -83,15 +84,21 @@ const UserLayout = () => {
     localStorage.setItem('theme', next ? 'dark' : 'light');
   };
 
-  const handleLogout = () => {
-    clearAuth();
-    navigate('/user/login');
+  const handleLogout = async () => {
+    setLogoutError('');
+    try {
+      await clearAuth();
+      navigate('/user/login');
+    } catch {
+      setLogoutError('Sign out could not be confirmed. Please try Sign out again.');
+    }
   };
 
   const close = () => setSidebarOpen(false);
 
   return (
     <div className="rpl-page min-h-screen flex flex-col bg-subtle font-sans transition-colors duration-300">
+      {logoutError && <p role="alert" className="p-3 bg-panel text-danger">{logoutError}</p>}
 
       {/* ── TOP BAR (always visible, theme-aware) ── */}
       <header className="rpl-chrome rpl-header sticky top-0 z-40">

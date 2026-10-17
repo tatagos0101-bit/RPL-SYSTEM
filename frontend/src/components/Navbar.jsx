@@ -5,6 +5,7 @@ import { clearAuth } from '../api/auth';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   const [isDark, setIsDark] = useState(
     document.documentElement.classList.contains('dark')
   );
@@ -27,10 +28,15 @@ const Navbar = () => {
     }
   };
 
-  const handleLogout = () => {
-    clearAuth();
-    setIsOpen(false);
-    navigate(userRole === 'librarian' ? '/librarian/login' : '/user/login');
+  const handleLogout = async () => {
+    setLogoutError('');
+    try {
+      await clearAuth();
+      setIsOpen(false);
+      navigate(userRole === 'librarian' ? '/librarian/login' : '/user/login');
+    } catch {
+      setLogoutError('Sign out could not be confirmed. Please try Sign out again.');
+    }
   };
 
   const getHomePath = () => {
@@ -42,6 +48,7 @@ const Navbar = () => {
     <>
       {/* TOP NAV */}
       <nav className="rpl-chrome rpl-header fixed top-0 left-0 w-full z-50">
+        {logoutError && <p role="alert" className="absolute top-full left-0 w-full p-3 bg-panel text-danger">{logoutError}</p>}
 
         {/* Left: Hamburger + Logo */}
         <div className="rpl-header-leading">

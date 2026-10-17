@@ -1,3 +1,4 @@
+import { isValidNewPassword, passwordPolicyMessage } from '../api/passwordPolicy';
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Check, Eye, EyeOff, KeyRound, Lock, RefreshCw } from 'lucide-react';
@@ -20,8 +21,8 @@ export default function ChangePasswordPage() {
   const submit = async (event) => {
     event.preventDefault();
     if (pending.current) return;
-    if (form.next.length < 6) {
-      setError('Password was not changed. New password must be at least 6 characters.');
+    if (!isValidNewPassword(form.next)) {
+      setError(passwordPolicyMessage);
       return;
     }
     if (form.next !== form.confirm) {

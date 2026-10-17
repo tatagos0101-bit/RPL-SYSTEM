@@ -4,7 +4,7 @@ import { Trash2, Camera, AlertCircle, BookOpen, ChevronRight, Bell, Clock, Check
 import { getReservations, createReservation, cancelReservation } from '../../api/reservations';
 import { getBook } from '../../api/books';
 import {
-  RESERVATION_CART_KEY,
+  clearReservationCart,
   addReservationCartItem,
   loadReservationCart,
   saveReservationCart,
@@ -109,7 +109,7 @@ export default function UserReservations() {
       await Promise.all(cart.map((item) => createReservation(item.id)));
       setConfirmed(true);
       setCart([]);
-      localStorage.removeItem(RESERVATION_CART_KEY);
+      clearReservationCart();
       fetchReservations();
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to confirm reservations. Some books may already be reserved.');
