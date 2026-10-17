@@ -6,6 +6,8 @@ from config import PICKUP_WINDOW_HOURS
 from models.book import Book
 from models.notification import Notification
 from models.reservation import Reservation
+from models.user import User
+from services.borrowing_capacity import lock_books, free_title_capacity
 from timezone_utils import now_ph
 
 
@@ -45,35 +47,19 @@ def promote_next_pending_reservation(db: Session, book_id: int) -> Reservation |
         renumber_pending_queue(db, book_id)
         return None
 
-    reservation = (
-        db.query(Reservation)
-        .filter(
-            Reservation.book_id == book_id,
-            Reservation.status == "pending",
-        )
-        .order_by(Reservation.reserved_at, Reservation.id)
-        .first()
-    )
-    if not reservation:
-        return None
-
-    reservation.status = "ready"
-    reservation.queue_position = None
-    reservation.expires_at = _now() + timedelta(hours=PICKUP_WINDOW_HOURS)
+    pending = (db.query(Reservation).join(User).filter(
+        Reservation.book_id == book_id, Reservation.status == "pending", User.status == "active"
+    ).order_by(Reservation.reserved_at, Reservation.id).limit(free_title_capacity(db, book)).all())
+    for reservation in pending:
+        reservation.status = "ready"
+        reservation.queue_position = None
+        reservation.expires_at = _now() + timedelta(hours=PICKUP_WINDOW_HOURS)
+        db.add(Notification(user_id=reservation.user_id,
+            message=f'Your reservation for "{book.title}" is ready for pickup! You have {PICKUP_WINDOW_HOURS} hours to collect it.',
+            type="reservation_ready", book_title=book.title, reservation_id=reservation.id))
     db.flush()
     renumber_pending_queue(db, book_id)
-
-    book_title = book.title if book else "A reserved book"
-    db.add(
-        Notification(
-            user_id=reservation.user_id,
-            message=f'Your reservation for "{book_title}" is ready for pickup! You have {PICKUP_WINDOW_HOURS} hours to collect it.',
-            type="reservation_ready",
-            book_title=book_title,
-            reservation_id=reservation.id,
-        )
-    )
-    return reservation
+    return pending[0] if pending else None
 
 
 def sync_expired_reservations(
@@ -93,19 +79,25 @@ def sync_expired_reservations(
     if user_id is not None:
         q = q.filter(Reservation.user_id == user_id)
 
-    expired = q.all()
-    if not expired:
-        return 0
-
-    affected_book_ids = {reservation.book_id for reservation in expired}
+    # Book locks serialize expiry/promotion with confirmation and circulation.
+    # These transitions never add a member commitment, so no second member lock
+    # is acquired while holding a book lock.
+    book_ids = {row[0] for row in q.with_entities(Reservation.book_id).all()}
+    if book_id is not None:
+        book_ids.add(book_id)
+    elif user_id is not None:
+        book_ids.update(row[0] for row in db.query(Reservation.book_id).filter(
+            Reservation.user_id == user_id, Reservation.status.in_(["pending", "ready"])).all())
+    books = lock_books(db, book_ids)
+    # Re-query after waiting for a concurrent transaction's lock.
+    expired = db.query(Reservation).filter(Reservation.book_id.in_(book_ids),
+        Reservation.status == 'ready', Reservation.expires_at.isnot(None),
+        Reservation.expires_at <= _now()).populate_existing().all()
     for reservation in expired:
         reservation.status = "cancelled"
     db.flush()
-
-    for affected_book_id in affected_book_ids:
-        renumber_pending_queue(db, affected_book_id)
+    for affected_book_id in sorted(books):
         promote_next_pending_reservation(db, affected_book_id)
-
     if commit:
         db.commit()
     return len(expired)

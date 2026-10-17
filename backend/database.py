@@ -23,10 +23,11 @@ def init_db():
     """Create/upgrade tables explicitly (production deploys run migrate.py first)."""
     # Import all models so Base knows about them before create_all
     from models import user, auth_session, face_embedding, book, book_copy, book_interaction, transaction, reservation, entry_log, reading_goal, library_settings, notification, password_reset, security_alert  # noqa: F401
-    from services.schema_migrations import upgrade_schema
+    from services.schema_migrations import upgrade_schema, repair_preflight
 
     with engine.begin() as conn:
         if conn.dialect.name == "postgresql":
             conn.execute(text("SELECT pg_advisory_xact_lock(72851001)"))
+        repair_preflight(conn)
         Base.metadata.create_all(bind=conn)
         upgrade_schema(conn, Base.metadata)

@@ -60,6 +60,28 @@ round-trip and overlapping-scan tests pass. Input limits match account columns;
 signup conflicts return a safe error. New-password Unicode digit handling now
 matches the frontend policy; legacy login size regression uses the separate bound.
 
+Commit `b37282e`: attendance and account-input follow-up.
+
+Reservation integrity batch: centralized five-slot accounting, member-first and
+ascending-title locks, explicit queue agreement, FIFO promotion of all free capacity,
+24-hour ready holds, pickup conversion and atomic member-scoped confirmation IDs.
+Legacy single reservations and librarian cancellation use the same services.
+Walk-ins/stock reductions cannot consume ready holds. History prevents deletion.
+New partial uniqueness/FIFO indexes and confirmation storage are additive; preflight
+aborts on conflicting identities, duplicate active reservations or overcommitted holds.
+Runtime-role preparation/checks include all 15 tables and preserve browser denial.
+
+`test_repair_reservations.py` covers five reservations, three loans plus two
+reservations, five loans, preserved over-limit history, pickup conversion, explicit
+queue conflicts, batch rollback, duplicate request IDs, cancellation, expiry,
+stable deadlines, FIFO priority, multi-slot promotion, stock reduction and ownership.
+`test_repairs_postgres.py` uses an explicitly disposable localhost database: repeat
+migrations/runtime grants, real import savepoints, two readers competing for one
+copy, two tabs competing for quota, borrow versus reserve for the fifth slot,
+same-ID retries, aware timestamps and overlapping scans all pass. PostgreSQL
+NO KEY UPDATE member locks also permit notification FK KEY SHARE during promotion;
+a dedicated overlap test guards against that deadlock.
+
 ## Release prerequisites
 
 Prepare additive migrations and collision/overcommit preflight. Never silently repair

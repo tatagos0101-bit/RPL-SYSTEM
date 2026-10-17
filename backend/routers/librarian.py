@@ -20,6 +20,7 @@ import secrets
 import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
+from services.reservation_confirmation import cancel_locked_reservation
 from services.passwords import hash_password
 from services.email_identity import email_matches
 from sqlalchemy.orm import Session
@@ -770,14 +771,5 @@ def cancel_reservation_librarian(
     reservation = db.query(Reservation).filter(Reservation.id == reservation_id).first()
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
-    if reservation.status not in ("pending", "ready"):
-        raise HTTPException(status_code=400, detail="Reservation is already fulfilled or cancelled")
-
-    original_status = reservation.status
-    reservation.status = "cancelled"
-
-    renumber_pending_queue(db, reservation.book_id)
-    if original_status == "ready":
-        promote_next_pending_reservation(db, reservation.book_id)
-
+    cancel_locked_reservation(db, reservation)
     db.commit()

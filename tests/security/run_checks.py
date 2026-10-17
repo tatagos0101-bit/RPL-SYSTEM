@@ -9,7 +9,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[2]
 TABLES = (
     "users", "auth_sessions", "books", "book_copies", "book_interactions", "transactions", "reservations",
-    "notifications", "entry_logs", "reading_goals", "face_embeddings",
+    "reservation_confirmations", "notifications", "entry_logs", "reading_goals", "face_embeddings",
     "password_reset_codes", "security_alerts", "library_settings",
 )
 

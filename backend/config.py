@@ -23,7 +23,7 @@ ENVIRONMENT             = os.getenv("ENVIRONMENT", "development")
 
 FINE_PER_DAY            = int(os.getenv("FINE_PER_DAY", "5"))
 LOAN_DAYS               = int(os.getenv("LOAN_DAYS", "14"))
-PICKUP_WINDOW_HOURS     = int(os.getenv("PICKUP_WINDOW_HOURS", "24"))
+PICKUP_WINDOW_HOURS     = 24  # Fixed reservation contract; page refresh never extends it.
 
 LIBRARIAN_AUTH_CODE     = os.getenv("LIBRARIAN_AUTH_CODE", "")
 ENTRY_STATION_PIN       = os.getenv("ENTRY_STATION_PIN", "1234" if ENVIRONMENT != "production" else "")

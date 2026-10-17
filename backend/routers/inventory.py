@@ -18,6 +18,8 @@ from models.book import Book
 from models.book_copy import BookCopy
 from models.user import User
 from models.transaction import Transaction
+from models.reservation import Reservation
+from services.reservation_policy import sync_expired_reservations, promote_next_pending_reservation
 from schemas.book import BookCreate, BookUpdate, BookOut, BookCopyLabelOut, BulkUploadResponse, InventoryStats
 from services.qr_service import make_qr_code, generate_qr_png, generate_bulk_pdf
 from services.book_copy_service import copy_label_payload, ensure_book_copies, get_copy_or_404, resize_book_copies
@@ -111,6 +113,7 @@ def update_book(
 
     changes = body.model_dump(exclude_unset=True)
     previous_cover = book.cover_url
+    sync_expired_reservations(db, book_id=book_id, commit=False)
     for required in ("title", "author", "category", "copies_total"):
         if required in changes and changes[required] is None:
             raise HTTPException(422, f"{required.replace('_', ' ').capitalize()} cannot be empty.")
@@ -118,6 +121,10 @@ def update_book(
         raise HTTPException(409, "This ISBN is already assigned to another book.")
 
     resize_book_copies(db, book, changes.get("copies_total", book.copies_total))
+    held = db.query(Reservation).filter(Reservation.book_id == book.id, Reservation.status == 'ready').count()
+    if book.copies_available < held:
+        raise HTTPException(409, 'Cannot reduce available stock below ready reservation holds.')
+    promote_next_pending_reservation(db, book_id)
     if "copies_available" in changes and changes["copies_available"] != book.copies_available:
         raise HTTPException(422, "Available copies are calculated from physical copies and active loans.")
     for field, value in changes.items():
@@ -142,9 +149,12 @@ def delete_book(
     db:      Session = Depends(get_db),
     _:       User    = Depends(require_librarian),
 ):
-    book = db.query(Book).filter(Book.id == book_id).first()
+    book = db.query(Book).filter(Book.id == book_id).with_for_update().first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+    if (db.query(Transaction.id).filter(Transaction.book_id == book_id).first()
+            or db.query(Reservation.id).filter(Reservation.book_id == book_id).first()):
+        raise HTTPException(409, 'Titles with loan or reservation history cannot be deleted.')
     db.delete(book)
     db.commit()
 
