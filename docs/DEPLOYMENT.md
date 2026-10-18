@@ -13,6 +13,8 @@ environment variables. Never put them in a `VITE_*` variable or commit `.env` fi
 
 For the session migration, Redis preparation, restricted database role, and the
 approval sequence for cloud changes, see [security rollout](SECURITY_ROLLOUT.md).
+The [Redis staging checklist](REDIS_STAGING.md) records the managed API Preview
+service and Vercel checks; shared Redis is not yet enabled in production.
 The October 17 integration uses PyJWT with the existing HMAC token format and
 requires an explicit HS256, HS384, or HS512 configuration (HS256 remains the default).
 Apply `20261016000100_auth_sessions.sql` before the API release; preserve the

@@ -188,7 +188,12 @@ authorized and in flight are not retroactively cancelled by logout/reset.
 
 ## 2. Shared Redis limits
 
-Redis support is prepared, not provisioned. `redis==8.1.0` is pinned in both Python
+The [October 18 staging evidence and provider preflight](REDIS_STAGING.md) record
+the direct Vercel preview checks, managed Upstash staging provision, and successful
+shared-counter/credential-failure tests across two Vercel previews. Production
+activation and actual frontend/kiosk acceptance remain pending.
+
+Redis is provisioned for API Preview only. `redis==8.1.0` is pinned in both Python
 manifests and the uv lockfile; Docker installs requirements and Vercel uses uv.
 Existing route limits remain unchanged. The added backend variables are:
 
