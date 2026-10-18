@@ -41,7 +41,11 @@ see the [repair ledger](docs/REPAIR_LEDGER.md) and [rollout checklist](docs/REPA
   suspend/reactivate accounts, issue temporary password resets, manage inventory,
   import `.xlsx` workbooks with per-row validation/savepoints, and process
   borrowing/returns for individual copies. Failed cover uploads can be retried
-  after a successful book save without creating another title.
+  after a successful book save without creating another title. Book creation and
+  workbook imports retain request IDs and server receipts for interrupted-response
+  recovery; bulk ISBN retries skip confirmed rows. QR lists and reservations use
+  server pagination. Complete QR export downloads every matching identity in bounded
+  PDF batches and assembles a ZIP with a label-count manifest.
 - **Entrance station:** a station PIN unlocks camera scanning and recent entry
   logs. Recognized enrolled faces create time-in/out sessions; frames can contain
   multiple people. Kiosk scans do not issue login tokens; website face login does
@@ -51,7 +55,7 @@ see the [repair ledger](docs/REPAIR_LEDGER.md) and [rollout checklist](docs/REPA
   library records; the application does not certify academic credits.
 
 Default policies are a 14-day loan and a PHP 5 daily overdue fine, configured by
-`LOAN_DAYS` and `FINE_PER_DAY`. The reservation pickup window is fixed at 24 hours
+`LOAN_DAYS` and `FINE_PER_DAY`; the checkout summary reads these values from the API. The reservation pickup window is fixed at 24 hours
 from ready status; refreshing never extends it. Members with overdue loans cannot
 borrow additional books until those loans are returned.
 
@@ -68,7 +72,7 @@ borrow additional books until those loans are returned.
 
 Authentication and member/librarian authorization are handled by FastAPI;
 Supabase Auth is not used. New browser logins use HttpOnly cookies, secure in
-production. PostgreSQL holds the application's 15 tables, including accounts,
+production. PostgreSQL holds the application's 16 tables, including accounts,
 password hashes, face embeddings, books/copies, loans, reservations, entry logs,
 notifications, and goals. Browser Data API roles cannot directly read those tables.
 The additive migration also stores private confirmation IDs, prevents normalized

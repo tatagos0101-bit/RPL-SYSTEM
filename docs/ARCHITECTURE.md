@@ -80,7 +80,7 @@ an arbitrary `.env.local` file is not automatically loaded by that code.
 ## Persistence and migrations
 
 The [models](../backend/models) and [initial SQL](../supabase/migrations/20261010000100_library_schema.sql)
-describe 15 application tables after the session, recommendation and repair upgrades
+describe 16 application tables after the session, recommendation and repair upgrades
 (the applied initial SQL is intentionally unchanged):
 
 | Tables | Relationship and meaning |
@@ -92,6 +92,7 @@ describe 15 application tables after the session, recommendation and repair upgr
 | `transactions` | One loan links user, book, and optionally a physical copy for legacy compatibility. Returning changes that same row rather than adding a separate circulation event. |
 | `reservations`, `notifications` | Reservations link members to titles with queue/status/expiry information. Notifications may target a user; null user IDs denote librarian notifications. |
 | `reservation_confirmations` | Member/request ID primary key, canonical payload fingerprint and resulting reservation IDs for atomic confirmation retries. Private backend-only access. |
+| `inventory_writes` | Librarian/request ID primary key, operation, payload fingerprint and committed book/import result. The receipt commits with inventory; only its owner can reconcile it. Browser roles have no table access. |
 | `entry_logs`, `reading_goals` | Attendance sessions and annual user goals. Entry logs permit a null user for unidentified visitors and distinguish granted/denied access. |
 | `password_reset_codes`, `security_alerts`, `library_settings` | Hashed expiring reset codes, security events that may include face snapshots, and key/value settings. A table's presence does not prove a complete UI or operational workflow. |
 
@@ -290,6 +291,27 @@ save/cover failure is reported as partial success with a cover-only retry. Full
 inventory import supports `.xlsx`, validates each row against `BookCreate`, uses
 savepoints, and reports committed counts and original workbook row numbers. Browser
 ISBN extraction still accepts `.xls`; server inventory import rejects it clearly.
+The browser saves an account-scoped request ID before sending book creation or
+workbook import, and reconciles `/api/inventory/write-requests/{id}` before retrying.
+`inventory_writes` stores the outcome in the same transaction; concurrent retries
+serialize on the librarian row. A reused ID with different contents returns 409.
+Workbook hashes bind retries to the original bytes, and committed outcomes replay
+before consuming another upload ticket. Legacy clients without request IDs retain
+legacy behavior. ISBN rows retain confirmed outcomes and frozen retry payloads.
+Do not clear browser recovery data while an outcome is unknown; another browser
+or a newly generated request ID does not identify the original operation.
+
+Copy-label and librarian-reservation lists have matching search/count endpoints
+and stable server pagination. Empty copy selection is rejected. Explicit complete
+QR export captures matching copy IDs, fetches PDFs in batches of 200, and creates a
+browser ZIP only after all batches succeed, with a label-count manifest. Missing
+identities or failed batches abort the download. The snapshot fixes membership,
+not mutable title metadata. Large ZIPs require browser memory; standard ZIP size
+limits fail visibly. Each server request stays bounded instead of rendering the
+entire collection inside one serverless invocation. Member-list loan counts and
+face-enrollment flags use page-scoped aggregate queries rather than one query per
+member. `/api/books/policy` supplies checkout loan days, fine and server-calculated
+Philippine-time due-date preview; the actual transaction response is authoritative.
 
 There is no book-condition photo capture, schema association, upload category, or
 access workflow. Loan issue reports contain a reason/note and notify librarians;
@@ -297,9 +319,9 @@ they are not photographic evidence. Future condition photos require agreed priva
 access, ownership, retention, and transaction/copy linkage rather than reuse of
 public cover storage.
 
-No service worker, IndexedDB transaction queue, or synchronization/reconciliation
-implementation was found. Browser storage retains UI/auth metadata and catalog
-selections; the entrance-station Offline label reflects connectivity. Neither
+No service worker, IndexedDB transaction queue, or durable offline synchronization
+exists. Browser storage retains UI/auth metadata, catalog selections and inventory
+request recovery state; online receipt lookup is required for reconciliation; the entrance-station Offline label reflects connectivity. Neither
 provides offline attendance, borrowing, returns, or reservations.
 
 ## Analytics and reporting

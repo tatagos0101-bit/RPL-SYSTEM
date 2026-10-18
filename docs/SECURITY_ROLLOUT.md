@@ -245,7 +245,8 @@ login inherits the group, owns no application objects, and cannot assume a more
 privileged role. Keep migration credentials outside the application's runtime.
 
 Run `check_runtime_access.sql` as that login: all boolean checks must be true and
-all 14 tables present. Also test sequence-backed inserts, updates/deletes, actual
+all application tables present (16 on the repair branch; the original security
+release had 14). Also test sequence-backed inserts, updates/deletes, actual
 runtime policies, denied DDL/TRUNCATE, and denied anon/authenticated access using
 synthetic data. Metadata checks alone are insufficient. Verify TLS and Supabase
 transaction-pooler connectivity using the new login before changing Vercel.

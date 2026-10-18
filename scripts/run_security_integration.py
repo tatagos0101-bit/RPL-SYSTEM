@@ -24,6 +24,8 @@ FILES = (
     "backend/schemas/__init__.py", "backend/schemas/transaction.py", "backend/schemas/report.py",
     "backend/services/book_copy_service.py", "backend/services/loan_policy.py",
     "backend/services/reservation_policy.py",
+    "backend/models/inventory_write.py", "backend/services/borrowing_capacity.py",
+    "backend/services/list_queries.py",
     "supabase/migrations/20261010000100_library_schema.sql",
     "supabase/migrations/20261016000100_auth_sessions.sql",
     "supabase/operations/prepare_runtime_role.sql", "supabase/operations/check_runtime_access.sql",

@@ -19,13 +19,13 @@ deployments require separate authorization. Preserve the independent PAD branch.
    Existing members above five commitments are preserved and blocked only from
    new commitments. No historical attendance timestamps are shifted.
 4. Apply the validated migration during the authorized maintenance window. Changes:
-   `reservation_confirmations`, active member/title uniqueness, FIFO index,
+   `reservation_confirmations`, `inventory_writes`, active member/title uniqueness, FIFO index,
    normalized-email uniqueness, and notification message/name/title `TEXT` fields.
    Existing confirmation IDs and historical reservations must survive future upgrades.
 5. If using the restricted backend runtime role, apply the reviewed
-   `supabase/operations/prepare_runtime_role.sql` update for all 15 tables; verify
-   using `check_runtime_access.sql` as that runtime login. The new confirmation
-   table needs CRUD through its backend RLS policy; browser roles remain revoked.
+   `supabase/operations/prepare_runtime_role.sql` update for all 16 tables; verify
+   using `check_runtime_access.sql` as that runtime login. The confirmation and inventory receipt
+   tables need CRUD through its backend RLS policy; browser roles remain revoked.
    This does not authorize a new runtime-role or Redis production cutover.
 6. Deploy the backend, retaining cloud TLS/pooler settings and server-only secrets.
    Check health, cookie login/logout, password replacement, member/librarian/owner
@@ -34,7 +34,11 @@ deployments require separate authorization. Preserve the independent PAD branch.
 7. Deploy the frontend after the API checks. Verify five-slot usage, selection
    disclaimer, safe retry after an interrupted confirmation, 24-hour deadline,
    pickup conversion, return/cancel, cover-only retry and pagination on mobile.
-   Inspect failed requests and confirm successful operations in the ledger.
+   Also verify lost-response recovery for a non-ISBN book and workbook, partial
+   ISBN import retry after reload, configured loan policy, reservation cancellation
+   failure/retry, and complete QR export beyond one page. Do not clear pending
+   browser inventory recovery state during the rollout. Inspect failed requests
+   and confirm successful operations in the ledger.
 8. Resume traffic only after the smoke checks pass. If a release fails, stop new
    writes and investigate; rolling back to the old backend would remove hold/quota
    enforcement. Prefer a forward correction. Do not drop additive tables/indexes

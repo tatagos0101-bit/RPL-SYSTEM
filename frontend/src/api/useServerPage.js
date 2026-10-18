@@ -20,8 +20,16 @@ export default function useServerPage(path, filters = {}, countPath = null) {
           client.get(path, { params: { ...params, skip: page * 20, limit: 20 } }),
           countPath ? client.get(countPath, { params }) : Promise.resolve(null),
         ]);
-        if (!cancelled) setState({ items: rows.data.items ?? rows.data, total: counts?.data.total ?? rows.data.total,
-          totals: counts?.data ?? {}, loading: false, error: '' });
+        if (!cancelled) {
+          const total = counts?.data.total ?? rows.data.total;
+          const lastPage = Math.max(0, Math.ceil(total / 20) - 1);
+          if (page > lastPage) {
+            setPagination({ key, page: lastPage });
+          } else {
+            setState({ items: rows.data.items ?? rows.data, total,
+              totals: counts?.data ?? {}, loading: false, error: '' });
+          }
+        }
       } catch {
         if (!cancelled) setState(previous => ({ ...previous, loading: false, error: 'Could not load this page. Please retry.' }));
       }

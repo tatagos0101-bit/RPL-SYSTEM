@@ -178,6 +178,22 @@ Apply future additive schema changes explicitly with `python migrate.py` using
 the cloud database settings before releasing them. Startup does not perform DDL
 on every serverless cold start. `/health` checks database connectivity.
 
+### Inventory retry and list repair upgrade
+
+The `fixing-the-issue` repair release requires the additive `inventory_writes`
+table before its frontend ships. Run the existing migration path, retain receipts
+across upgrades, and update restricted runtime grants using
+`supabase/operations/prepare_runtime_role.sql` (16 application tables). Receipts
+are private to the backend and scoped to the originating librarian. Keep
+`AUTO_MIGRATE=false`, preserve RLS/browser-role revocations, and deploy the backend
+before the frontend. The complete QR export uses bounded PDF requests so it does
+not require a longer Vercel function duration. It assembles the ZIP in browser
+memory and reports interruption instead of offering a partial archive.
+
+Follow the staged [repair rollout](REPAIR_ROLLOUT.md), including an isolated
+production-shaped migration rehearsal and approval for the live maintenance
+window. Local synthetic tests are not evidence of a production migration.
+
 ### Personalized recommendation upgrade
 
 Before deploying the recommendation API, run the existing `python migrate.py`

@@ -1,3 +1,4 @@
+import useReadResource from '../../api/useReadResource';
 import ModalFrame from '../../components/ModalFrame';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
@@ -14,7 +15,8 @@ const PublicBrowse = () => {
   const { isLoggedIn, role } = getStoredAuth();
   const isLibrarian = isLoggedIn && role === 'librarian';
   const isMember = isLoggedIn && role === 'member';
-  const [categories, setCategories] = useState([]);
+  const categoryResource = useReadResource(getCategories);
+  const categories = ['All', ...(categoryResource.data || []).map(item => item.category)];
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [selected, setSelected] = useState(null);
@@ -24,9 +26,6 @@ const PublicBrowse = () => {
 
   const listing = useServerPage('/api/books', { search: searchQuery, category: activeCategory === 'All' ? '' : activeCategory });
   const { items: books, loading } = listing;
-  useEffect(() => {
-    getCategories().then(({ data }) => setCategories(['All', ...data.map(c => c.category)])).catch(() => setCategories(['All']));
-  }, []);
   const filtered = books;
 
   const navigateBook = (dir) => {
@@ -59,7 +58,8 @@ const PublicBrowse = () => {
   return (
     <div className="rpl-page rpl-public min-h-screen bg-panel text-ink pt-[calc(var(--rpl-header-height)+2rem)] pb-20 font-sans transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
-        <PageControls {...listing} />
+        {categoryResource.error && <p role="alert" className="text-danger">Categories could not be loaded. <button onClick={categoryResource.retry}>Retry categories</button></p>}
+          <PageControls {...listing} />
 
         {/* Header */}
         <div className="mb-10 border-b border-line pb-8">

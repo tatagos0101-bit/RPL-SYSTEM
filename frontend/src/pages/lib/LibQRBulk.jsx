@@ -1,31 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
+import { useState } from 'react';
 import { Download, Printer, RefreshCw, Search } from 'lucide-react';
-import { bulkCopyQRPdf, getBookCopies, getCopyQRImage } from '../../api/librarian';
+import { bulkCopyQRPdf, exportAllCopyQRs, getCopyQRImage } from '../../api/librarian';
 import { API_BASE_URL } from '../../api/urls';
 
 export default function LibQRBulk() {
-  const [copies, setCopies] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(new Set());
   const [downloading, setDownloading] = useState(null);
 
-  useEffect(() => {
-    getBookCopies({ limit: 10000 })
-      .then((res) => setCopies(Array.isArray(res.data) ? res.data : []))
-      .catch(() => setCopies([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return copies;
-    return copies.filter((copy) =>
-      copy.title.toLowerCase().includes(query) ||
-      copy.author.toLowerCase().includes(query) ||
-      copy.qr_code.toLowerCase().includes(query)
-    );
-  }, [copies, search]);
+  const listing = useServerPage('/api/inventory/book-copies', { search }, '/api/inventory/book-copies/count');
+  const { items: filtered, loading } = listing;
+  const [downloadError, setDownloadError] = useState('');
+  const [exportProgress, setExportProgress] = useState('');
+  const [retryDownload, setRetryDownload] = useState(null);
 
   const toggleSelect = (id) => {
     setSelected((prev) => {
@@ -39,6 +28,7 @@ export default function LibQRBulk() {
   const clearAll = () => setSelected(new Set());
 
   const downloadQR = (copy) => {
+    setDownloadError(''); setRetryDownload(null);
     setDownloading(copy.id);
     getCopyQRImage(copy.id)
       .then((res) => {
@@ -49,24 +39,24 @@ export default function LibQRBulk() {
         a.click();
         URL.revokeObjectURL(url);
       })
-      .catch(() => {})
+      .catch(() => { setDownloadError('QR download failed. Please retry.'); setRetryDownload(() => () => downloadQR(copy)); })
       .finally(() => setDownloading(null));
   };
 
-  const downloadBulk = () => {
-    const ids = selected.size > 0 ? [...selected] : filtered.map((copy) => copy.id);
-    setDownloading('bulk');
-    bulkCopyQRPdf(ids)
-      .then((res) => {
-        const url = URL.createObjectURL(res.data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'Copy-QR-Codes.pdf';
-        a.click();
-        URL.revokeObjectURL(url);
-      })
-      .catch(() => {})
-      .finally(() => setDownloading(null));
+  const downloadBulk = async (all = false) => {
+    if (!all && !selected.size) return;
+    const ids = [...selected];
+    setDownloadError(''); setRetryDownload(null); setDownloading('bulk'); setExportProgress('Preparing export…');
+    try {
+      const res = await (all ? exportAllCopyQRs(search, (done, total) => setExportProgress(`Preparing ${done} of ${total} labels…`)) : bulkCopyQRPdf(ids));
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a'); a.href = url;
+      a.download = all ? 'All-Copy-QR-Codes.zip' : 'Copy-QR-Codes.pdf';
+      a.click(); URL.revokeObjectURL(url);
+    } catch {
+      setDownloadError('Export failed. Your selection is preserved. Selected PDFs allow up to 1,000 copies; use all matching for larger exports.');
+      setRetryDownload(() => () => downloadBulk(all));
+    } finally { setDownloading(null); setExportProgress(''); }
   };
 
   return (
@@ -96,23 +86,27 @@ export default function LibQRBulk() {
             )}
             <button
               onClick={selectAll}
+              disabled={loading || !!listing.error}
               className="group flex items-center gap-2 px-5 py-3 bg-panel border border-line text-muted rounded-lg font-semibold text-sm tracking-normal hover:border-line hover:shadow-md transition-all duration-200"
             >
               <Printer size={14} /> Select Visible
             </button>
             <button
-              onClick={downloadBulk}
-              disabled={downloading === 'bulk' || filtered.length === 0}
+              onClick={() => downloadBulk(false)}
+              disabled={!!downloading || selected.size === 0}
               className="group flex items-center gap-2 px-5 py-3 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold text-sm tracking-normal transition-all duration-200 shadow-sm"
             >
               {downloading === 'bulk'
                 ? <RefreshCw size={14} className="animate-spin" />
                 : <Download size={14} className="transition-transform duration-200" />}
-              {selected.size > 0 ? `Export ${selected.size}` : 'Export Visible'}
+              {`Export selected (${selected.size})`}
             </button>
+            <button className="px-4 py-3 border rounded-lg" onClick={() => downloadBulk(true)} disabled={!!downloading || loading || !!listing.error || !listing.total}>Export all matching ({listing.total}) · ZIP</button>
           </div>
         </div>
-
+        <PageControls {...listing} />
+        {exportProgress && <p role="status">{exportProgress}</p>}
+        {downloadError && <p role="alert" className="text-danger">{downloadError} <button onClick={retryDownload} disabled={!!downloading}>Retry download</button></p>}
         <div className="relative mb-6 max-w-md animate-fade-in-up delay-100">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={15} />
           <input aria-label="Search title, author, or copy QR..."
@@ -171,7 +165,7 @@ export default function LibQRBulk() {
                   </p>
                   <button
                     onClick={(e) => { e.stopPropagation(); downloadQR(copy); }}
-                    disabled={downloading === copy.id}
+                    disabled={!!downloading}
                     className="mt-3 w-full py-1.5 border border-line rounded-lg text-sm font-semibold tracking-normal text-link hover:bg-action hover:text-white hover:border-line transition-all duration-200 disabled:opacity-50"
                   >
                     {downloading === copy.id ? '...' : 'Download'}
@@ -179,7 +173,7 @@ export default function LibQRBulk() {
                 </div>
               );
             })}
-            {filtered.length === 0 && (
+            {!listing.error && filtered.length === 0 && (
               <div className="col-span-full text-center py-16 text-muted text-sm font-semibold tracking-normal">
                 No copy QR labels found
               </div>

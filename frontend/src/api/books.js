@@ -17,3 +17,5 @@ export const getBookByQR = (qrCode) =>
 
 export const getBookByScan = (code) =>
   client.get(`/api/books/scan/${encodeURIComponent(code)}`);
+
+export const getLoanPolicy = () => client.get('/api/books/policy');

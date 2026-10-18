@@ -112,17 +112,21 @@ const LandingPage = () => {
   const [selected, setSelected] = useState(null);
   const [books, setBooks] = useState([]);
   const [loadingBooks, setLoadingBooks] = useState(true);
+  const [booksError, setBooksError] = useState('');
+  const [booksAttempt, setBooksAttempt] = useState(0);
   const [slideDir, setSlideDir] = useState('right');
   const [animKey, setAnimKey] = useState(0);
   const touchStartX = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
     getBooks({ limit: 100 })
-      .then((res) => setBooks(res.data.items ?? res.data))
-      .catch(() => {})
-      .finally(() => setLoadingBooks(false));
-  }, []);
+      .then((res) => { if (!cancelled) { setBooks(res.data.items ?? res.data); setBooksError(''); } })
+      .catch(() => { if (!cancelled) setBooksError('Books could not be loaded.'); })
+      .finally(() => { if (!cancelled) setLoadingBooks(false); });
+    return () => { cancelled = true; };
+  }, [booksAttempt]);
 
   const booksByGenre = books.reduce((acc, book) => {
     const cat = book.category || 'Uncategorized';
@@ -209,6 +213,7 @@ const LandingPage = () => {
             </div>
           </div>
 
+          {booksError && <p role="alert" className="text-danger">{booksError} <button onClick={() => { setLoadingBooks(true); setBooksAttempt(value => value + 1); }}>Retry books</button></p>}
           {loadingBooks ? (
             <div className="flex items-center justify-center py-24">
               <RefreshCw size={28} className="animate-spin text-link" />

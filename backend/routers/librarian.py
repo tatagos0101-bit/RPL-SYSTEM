@@ -21,12 +21,12 @@ import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
 from services.passwords import hash_password
-from services.list_queries import member_query
+from services.list_queries import member_query, reservation_query
 from services.reservation_confirmation import cancel_locked_reservation
 from services.email_identity import email_matches
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import func, desc, and_, or_
+from sqlalchemy import func, desc, and_, or_, case
 
 from database import get_db
 from dependencies import require_librarian
@@ -302,19 +302,18 @@ def list_members(
     q = member_query(db, search, status)
 
     members = q.order_by(User.created_at.desc(), User.id.desc()).offset(skip).limit(limit).all()
+    member_ids = [m.id for m in members]
+    counts = {row.user_id: row for row in db.query(Transaction.user_id,
+        func.sum(case((Transaction.status.in_(['active', 'overdue']), 1), else_=0)).label('active'),
+        func.count(Transaction.borrow_date).label('total'))
+        .filter(Transaction.user_id.in_(member_ids)).group_by(Transaction.user_id).all()}
+    enrolled_ids = {
+        row[0] for row in db.query(FaceEmbedding.user_id).filter(
+            FaceEmbedding.user_id.in_(member_ids), FaceEmbedding.is_active.is_(True)).distinct().all()}
 
     result = []
     for m in members:
-        active_loans = (
-            db.query(func.count(Transaction.id))
-            .filter(Transaction.user_id == m.id, Transaction.status.in_(["active", "overdue"]))
-            .scalar()
-        )
-        total_loans = (
-            db.query(func.count(Transaction.id))
-            .filter(Transaction.user_id == m.id, Transaction.borrow_date.isnot(None))
-            .scalar()
-        )
+        count = counts.get(m.id)
         result.append(LibMemberOut(
             id           = m.id,
             member_id    = m.member_id or f"RPL-{m.id:05d}",
@@ -325,9 +324,9 @@ def list_members(
             phone_verified = bool(m.phone_verified),
             location     = m.location,
             status       = m.status,
-            face_enrolled = _face_enrolled(db, m),
-            active_loans = active_loans,
-            total_loans  = total_loans,
+            face_enrolled = bool(m.face_encoding) or m.id in enrolled_ids,
+            active_loans = count.active if count else 0,
+            total_loans  = count.total if count else 0,
             joined_at    = m.created_at,
         ))
     return result
@@ -345,12 +344,16 @@ def member_stats(
     db: Session = Depends(get_db),
     _:  User    = Depends(require_librarian),
 ):
-    members = db.query(User).filter(User.role == "member").all()
+    enrolled = or_(and_(User.face_encoding.isnot(None), User.face_encoding != ''),
+        db.query(FaceEmbedding.id).filter(FaceEmbedding.user_id == User.id,
+                                         FaceEmbedding.is_active.is_(True)).exists())
+    counts = db.query(func.count(User.id),
+        func.sum(case((User.status == 'active', 1), else_=0)),
+        func.sum(case((User.status == 'suspended', 1), else_=0)),
+        func.sum(case((enrolled, 1), else_=0))).filter(User.role == 'member').one()
     return LibMemberStats(
-        total     = len(members),
-        active    = sum(1 for m in members if m.status == "active"),
-        suspended = sum(1 for m in members if m.status == "suspended"),
-        enrolled  = sum(1 for m in members if _face_enrolled(db, m)),
+        total=counts[0], active=counts[1] or 0,
+        suspended=counts[2] or 0, enrolled=counts[3] or 0,
     )
 
 
@@ -646,22 +649,13 @@ def all_reservations(
     search: str = Query("", max_length=200, description="Search by member name or book title"),
     db:     Session = Depends(get_db),
     _:      User    = Depends(require_librarian),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
 ):
     sync_expired_reservations(db)
-    if status and status not in ("pending", "ready", "all"):
-        raise HTTPException(status_code=400, detail="Status filter must be 'pending', 'ready', or 'all'")
-
-    q = db.query(Reservation).filter(Reservation.status.in_(["pending", "ready"]))
-
-    if status in ("pending", "ready"):
-        q = q.filter(Reservation.status == status)
-    if search:
-        like = f"%{search}%"
-        q = q.join(Reservation.user).join(Reservation.book).filter(
-            User.name.ilike(like) | Book.title.ilike(like)
-        )
-
-    reservations = q.order_by(Reservation.reserved_at).all()
+    q = reservation_query(db, search, status)
+    reservations = q.options(joinedload(Reservation.book), joinedload(Reservation.user)).order_by(
+        Reservation.reserved_at, Reservation.id).offset(skip).limit(limit).all()
 
     return [
         LibReservationOut(
@@ -678,6 +672,15 @@ def all_reservations(
         )
         for r in reservations
     ]
+
+
+@router.get("/reservations/count")
+def count_reservations(search: str = Query('', max_length=200), status: str = Query(''),
+                       db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    sync_expired_reservations(db)
+    counts = dict(reservation_query(db, search, status).with_entities(
+        Reservation.status, func.count(Reservation.id)).group_by(Reservation.status).all())
+    return {'total': sum(counts.values()), 'ready': counts.get('ready', 0), 'pending': counts.get('pending', 0)}
 
 
 @router.get("/member/{user_id}/reservations", response_model=list[MemberReservationOut])

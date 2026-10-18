@@ -147,3 +147,68 @@ PAD camera acceptance, biometric policy, real notification delivery, Redis/runti
 cutovers and damage-management workflows remain separate projects. Circulation carts
 remain per-item; only reservation confirmation is an atomic batch. Expiry is
 request-driven, and durable offline transactions are not implemented.
+
+
+## Follow-up: 12 confirmed defects (October 18, 2026)
+
+Source: the **Reclone RPL-SYSTEM repository** thread's re-audit of `d4c1f90`.
+The earlier validation summary applies to that earlier batch; it did not close
+these twelve findings. This follow-up closes them in the local repair branch.
+
+| # | Severity | Confirmed defect and correction | Evidence |
+| --- | --- | --- | --- |
+| 1 | High | Bulk ISBN categories contained `{matched,isNew}` objects. Rows now store the matched string. | Inventory helper tests; rendered lookup/import |
+| 2 | High | Array/object validation errors crashed bulk error handling. Normalize errors to safe text. | Array/object helper tests; synthetic 422 in browser |
+| 3 | High | Lost book/import responses could duplicate non-ISBN titles. Persist request IDs, atomically commit server receipts, bind workbook bytes by SHA-256, and reconcile before retry. | Non-ISBN replay, owner/role/suspension, rollback, consumed-upload replay; PostgreSQL simultaneous retries; reload recovery |
+| 4 | Medium | ISBN successes were not retained per row. Persist confirmed outcomes and frozen retry payloads; exclude successful/skipped rows from retries. | Browser partial success → reload → unresolved-only retry |
+| 5 | Medium | Reservation read/cancel failures were silent. Show errors/retry, preserve rows until confirmation, and reload counts after success. | Failed read/cancel, refresh and confirmed cancel in browser |
+| 6 | Medium | QR reads/downloads silently failed. Distinguish loading/error/empty and retain selection with retry. | Failed load/download → retry in browser |
+| 7 | Medium | QR loading stopped at 10,000 copies. Add search/count pagination and explicit complete identity snapshot; fetch 200-label PDFs and assemble a complete ZIP. | 10,001-copy backend and frontend batch tests; ZIP CRC/binary/Unicode cross-check with Python; paged browser export |
+| 8 | Medium | Empty selection implicitly exported all. Reject empty selected requests and provide a separate all-matching operation. | Backend empty/missing-ID tests; disabled empty-selection export in browser |
+| 9 | Medium | Checkout displayed fixed loan/fine settings. Read backend policy and a Philippine-time due-date preview; offer retry and disable borrow confirmation while unavailable. Existing fine-visibility preference is preserved. | Nondefault 21-day/7.5 policy API test; rendered 21-day preview and retry |
+| 10 | Medium | Landing books and remaining category loads hid failures. Show explicit retry controls; retain existing usable state. | Add-book/public categories and landing failure/retry in browser; shared category hook for member catalogue |
+| 11 | Low | Member lists/stats performed per-member queries. Aggregate page loan counts and active embedding flags; aggregate overall statistics. | Constant SELECT count for 1 versus 25 members; returned history and inactive/duplicate synthetic embeddings |
+| 12 | Low | Librarian reservations were unpaginated. Add stable server paging/search/counts and page controls; clamp the page after deletions. | 205-row backend dataset; next page and last cancellation → page one in browser |
+
+Verification actually run:
+
+- Full backend regression: **199 passed, 2 skipped**. The repair PostgreSQL test
+  then passed separately against disposable localhost PostgreSQL 17, including
+  repeat migration, existing rows, preflight refusal, runtime grants/RLS, quota,
+  circulation, station locks and competing non-ISBN writes. The remaining skip is
+  the optional recommendation PostgreSQL benchmark; its separate database was not
+  available in this follow-up. Docker became unavailable when preparing that
+  additional database; this does not invalidate the already completed checks.
+- After bounded QR export replaced the one-request ZIP implementation, all **8**
+  focused follow-up backend tests passed again. The 10,001-label routing test mocks
+  PDF rendering to assert complete identity coverage; it is not a 10,001-label
+  rendering benchmark. No claim is made about live export latency or hosting limits.
+- **68** frontend/helper/build-secret tests passed. ESLint, production build and
+  built-artifact credential scanning passed (68 output files).
+- `python scripts/run_security_integration.py` passed against disposable local
+  PostgreSQL/Redis: additive upgrade/history preservation, browser denial, runtime
+  CRUD/admin denial, session binding/revocation, overlapping circulation and shared
+  rate-limit/outage rejection. Its allowlist now includes repair dependencies and
+  the receipt model. The runner removed only its own containers/volumes.
+- Browser plugin unavailable; installed Edge/Playwright tested the built preview
+  at `http://127.0.0.1:4179`, widths **1440, 390, 320** and height 900. API responses,
+  books and users were synthetic; camera hardware was not used. Page identity,
+  meaningful rendering, absence of framework overlays, interactions and screenshots
+  passed. No unexpected runtime/console errors or API calls were observed; the
+  injected 404/422/503 and aborted responses produced expected network errors.
+  Screenshots outside Git were inspected after finishing animations. These are UI
+  checks, not live production/database or physical-camera acceptance.
+
+The next recommended step from the thread—affected regression checks followed by
+migration/release preparation—has been performed locally. The updated rollout
+requires `inventory_writes` and runtime access to all **16** application tables.
+Production-shaped restored-database rehearsal, maintenance-window approval and
+live smoke checks remain outstanding. No main merge, push or live deployment was
+performed. PAD source/assets and the user's other worktrees remain unchanged.
+
+Operational limits: request recovery needs the same account and retained browser
+request state; clearing it or creating a new intent is not the same retry. Receipts
+must survive migrations. Complete QR exports hold assembled PDFs in browser memory
+and fail visibly on standard ZIP size limits or any missing/failed batch. Quotas,
+loan history, private storage and existing fine visibility remain in force. This
+batch changes no dependency pins and does not alter the approved setuptools exception.

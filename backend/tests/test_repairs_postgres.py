@@ -163,6 +163,35 @@ def test_postgres_migration_and_competing_confirmations(monkeypatch):
                 result = asyncio.run(inventory.bulk_upload(file=None, upload_ticket=None, db=db, _=db.get(User, 1)))
                 assert result.added == 2 and result.errors[0].startswith('Row 3:')
                 assert [b.title for b in db.query(Book).filter(Book.title.like('Import%')).order_by(Book.id)] == ['Import first', 'Import last']
+        # Retry requests serialize under PostgreSQL, including non-ISBN titles.
+        from schemas.book import BookCreate
+        from models.inventory_write import InventoryWrite
+        with Session(engine) as db:
+            db.add(User(id=100, name='Synthetic inventory staff', role='librarian', password_hash='unused'))
+            db.commit()
+        request_id = uuid4()
+        write_barrier = Barrier(2)
+        def create_once(_):
+            with Session(engine) as db:
+                actor = db.get(User, 100)
+                write_barrier.wait(timeout=10)
+                result = inventory.add_book(BookCreate(title='Concurrent non-ISBN', author='Author', category='General'),
+                                            db=db, _=actor, request_id=request_id)
+                return result['id'] if isinstance(result, dict) else result.id
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            ids = list(pool.map(create_once, range(2)))
+        assert ids[0] == ids[1]
+        with Session(engine) as db:
+            assert db.query(Book).filter_by(title='Concurrent non-ISBN').count() == 1
+            assert db.query(InventoryWrite).count() == 1
+            db.execute(text('SET LOCAL ROLE rpl_app_runtime'))
+            assert db.execute(text('SELECT count(*) FROM inventory_writes')).scalar() == 1
+            db.execute(text('UPDATE inventory_writes SET fingerprint=fingerprint'))
+            db.commit()
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT relrowsecurity FROM pg_class WHERE oid='inventory_writes'::regclass")).scalar()
+            for role in ('anon', 'authenticated'):
+                assert not conn.execute(text("SELECT has_table_privilege(:role, 'inventory_writes', 'SELECT')"), {'role': role}).scalar()
         barrier = Barrier(2)
         seen_at = now_ph()
         def scan():

@@ -20,7 +20,7 @@ SELECT c.relname AS table_name, c.relrowsecurity AS rls_enabled,
 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public' AND c.relname IN (
     'users', 'auth_sessions', 'books', 'book_copies', 'book_interactions', 'transactions',
-    'reservations', 'reservation_confirmations', 'notifications', 'entry_logs', 'reading_goals',
+    'reservations', 'reservation_confirmations', 'inventory_writes', 'notifications', 'entry_logs', 'reading_goals',
     'face_embeddings', 'password_reset_codes', 'security_alerts', 'library_settings'
 )
 ORDER BY c.relname;

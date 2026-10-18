@@ -1,3 +1,4 @@
+import useReadResource from '../../api/useReadResource';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import FineContent from '../../components/FineContent';
@@ -12,7 +13,7 @@ import {
 import BookCover from '../../components/BookCover';
 import { borrowBook, returnBook, getMemberReservations, getMemberActiveLoans, getMembers } from '../../api/librarian';
 import { faceLookup } from '../../api/auth';
-import { getBookByScan } from '../../api/books';
+import { getBookByScan, getLoanPolicy } from '../../api/books';
 import { addScannedBookCartItem, cartItemKey, scanResultToCartItem } from '../../api/bookCopyScan';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 import { findManualMemberMatch, memberToSessionIdentity } from '../../api/manualMemberLookup';
@@ -365,8 +366,8 @@ const QuickScanModal = ({ onClose, onCommit }) => {
     setAction('borrow');
   };
 
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 14);
+  const loanPolicy = useReadResource(getLoanPolicy);
+  const dueDate = loanPolicy.data ? toUtcDate(loanPolicy.data.preview_due_date) : null;
 
   const successCount = results.filter((r) => r.success).length;
   const failCount    = results.filter((r) => !r.success).length;
@@ -1115,11 +1116,12 @@ const QuickScanModal = ({ onClose, onCommit }) => {
                         <div className="p-4 bg-info-soft border border-line rounded-xl mb-4">
                           <p className="text-sm font-semibold tracking-normal text-link mb-1">Loan Period</p>
                           <p className="text-sm font-bold text-ink">
-                            14 days — due <span className="text-link">{dueDate.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            {loanPolicy.data ? <>{loanPolicy.data.loan_days} days — due <span className="text-link">{dueDate.toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' })}</span></> : 'Loan policy unavailable'}
                           </p>
                           <FineContent>
-                          <p className="text-sm text-muted font-medium mt-0.5">₱5/day fine after due date · applies to all {bookCart.length} book{bookCart.length !== 1 ? 's' : ''}</p>
+                          {loanPolicy.data && <p className="text-sm text-muted font-medium mt-0.5">₱{loanPolicy.data.fine_per_day}/day fine after due date · applies to all {bookCart.length} book{bookCart.length !== 1 ? 's' : ''}</p>}
                           </FineContent>
+                          {loanPolicy.error && <p role="alert">Could not load loan policy. <button onClick={loanPolicy.retry}>Retry loan policy</button></p>}
                         </div>
                       )}
                       {action === 'return' && (
@@ -1149,7 +1151,7 @@ const QuickScanModal = ({ onClose, onCommit }) => {
                       </button>
                       <button
                         onClick={handleConfirmAll}
-                        disabled={processing}
+                        disabled={processing || (action === 'borrow' && !loanPolicy.data)}
                         className={`group flex-1 flex items-center justify-center gap-3 py-3.5 rounded-lg font-semibold text-sm tracking-normal transition-all text-white shadow-sm disabled:opacity-60 ${
                           action === 'borrow'
                             ? 'bg-action hover:bg-blue-500 '

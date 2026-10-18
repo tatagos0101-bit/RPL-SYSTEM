@@ -5,10 +5,14 @@ CRUD for books + Excel bulk upload + QR generation.
 import os
 import uuid
 import logging
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, status
+import hashlib
+import re
+from typing import Annotated
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Header, status
 from fastapi.responses import Response, StreamingResponse
 from io import BytesIO
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 
@@ -25,6 +29,7 @@ from services.qr_service import make_qr_code, generate_qr_png, generate_bulk_pdf
 from services.book_copy_service import copy_label_payload, ensure_book_copies, get_copy_or_404, resize_book_copies
 from services.storage_service import save_upload, delete_upload
 from services.cloud_uploads import read_upload
+from services.inventory_writes import find_write, remember_write, fingerprint
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
@@ -79,7 +84,12 @@ def add_book(
     body: BookCreate,
     db:   Session = Depends(get_db),
     _:    User    = Depends(require_librarian),
+    request_id: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
+    digest = fingerprint(body.model_dump(mode="json"))
+    saved = find_write(db, _.id, request_id, "create-book", digest)
+    if saved:
+        return saved.result
     if body.isbn:
         if db.query(Book).filter(Book.isbn == body.isbn).first():
             raise HTTPException(status_code=400, detail=f"ISBN '{body.isbn}' already exists")
@@ -93,9 +103,21 @@ def add_book(
 
     book.qr_code = make_qr_code(book.id)
     ensure_book_copies(db, book.id, commit=False)
+    db.flush()
+    remember_write(db, _.id, request_id, "create-book", digest,
+                   BookOut.model_validate(book).model_dump(mode="json"))
     db.commit()
     db.refresh(book)
     return book
+
+
+@router.get("/write-requests/{request_id}")
+def inventory_write_status(request_id: UUID, db: Session = Depends(get_db),
+                           _: User = Depends(require_librarian)):
+    saved = find_write(db, _.id, request_id)
+    if saved is None:
+        raise HTTPException(404, "No committed outcome for this request. Retry only with the same request ID.")
+    return {"operation": saved.operation, "result": saved.result}
 
 
 # ── Update book ───────────────────────────────────────────────────────────────
@@ -214,8 +236,17 @@ async def bulk_upload(
     upload_ticket: str | None = Form(None),
     db:   Session    = Depends(get_db),
     _:    User       = Depends(require_librarian),
+    request_id: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
+    content_sha256: Annotated[str | None, Header(alias="X-Content-SHA256")] = None,
 ):
+    if request_id is not None and not re.fullmatch(r"[0-9a-f]{64}", content_sha256 or ""):
+        raise HTTPException(422, "A SHA-256 workbook fingerprint is required for retryable imports.")
+    saved = find_write(db, _.id, request_id, "import-workbook", content_sha256)
+    if saved:
+        return saved.result
     raw, original_filename, reference = await read_upload(folder="imports", user_id=_.id, file=file, ticket=upload_ticket)
+    if request_id is not None and hashlib.sha256(raw).hexdigest() != content_sha256:
+        raise HTTPException(409, "The workbook differs from this import request. Reselect the original file.")
     ext = os.path.splitext(original_filename)[1].lower()
     if ext != ".xlsx":
         raise HTTPException(status_code=400, detail="Full inventory import requires .xlsx. Convert legacy .xls workbooks to .xlsx first.")
@@ -258,6 +289,9 @@ async def bulk_upload(
             errors.append(f"Row {i}: Unable to import. Check the values and required fields.")
             continue
 
+    result = BulkUploadResponse(added=added, skipped=skipped, errors=errors,
+        message=f"{added} books imported, {skipped} skipped (duplicate ISBN), {len(errors)} errors")
+    remember_write(db, _.id, request_id, "import-workbook", content_sha256, result.model_dump())
     db.commit()
 
     if reference:
@@ -266,12 +300,7 @@ async def bulk_upload(
         except HTTPException:
             pass  # The successful database import must not depend on cleanup.
 
-    return BulkUploadResponse(
-        added=added,
-        skipped=skipped,
-        errors=errors,
-        message=f"{added} books imported, {skipped} skipped (duplicate ISBN), {len(errors)} errors",
-    )
+    return result
 
 
 # ── Generate single QR PNG ────────────────────────────────────────────────────
@@ -299,30 +328,43 @@ def get_qr_image(
     return Response(content=png_bytes, media_type="image/png")
 
 
-@router.get("/book-copies", response_model=list[BookCopyLabelOut])
-def list_book_copies(
-    search: str = Query("", max_length=200),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(5000, ge=1, le=10000),
-    db: Session = Depends(get_db),
-    _: User = Depends(require_librarian),
-):
-    ensure_book_copies(db)
+def _copy_query(db, search):
     q = db.query(BookCopy).join(Book)
     if search:
         like = f"%{search}%"
-        q = q.filter(
-            Book.title.ilike(like) |
-            Book.author.ilike(like) |
-            BookCopy.qr_code.ilike(like)
-        )
-    copies = (
-        q.order_by(Book.title, BookCopy.copy_number)
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+        q = q.filter(Book.title.ilike(like) | Book.author.ilike(like) | BookCopy.qr_code.ilike(like))
+    return q
+
+
+@router.get("/book-copies", response_model=list[BookCopyLabelOut])
+def list_book_copies(search: str = Query("", max_length=200),
+                     skip: int = Query(0, ge=0), limit: int = Query(50, ge=1, le=10000),
+                     db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    ensure_book_copies(db)
+    copies = (_copy_query(db, search).options(joinedload(BookCopy.book))
+              .order_by(Book.title, Book.id, BookCopy.copy_number, BookCopy.id)
+              .offset(skip).limit(limit).all())
     return [copy_label_payload(copy) for copy in copies]
+
+
+@router.get("/book-copies/count")
+def count_book_copies(search: str = Query("", max_length=200),
+                      db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    ensure_book_copies(db)
+    return {"total": _copy_query(db, search).count()}
+
+
+@router.get("/book-copies/export")
+def export_copy_qrs(search: str = Query("", max_length=200),
+                    db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    ensure_book_copies(db)
+    # Capture the complete matching identity set once. Never cap an all export.
+    ids = [row[0] for row in _copy_query(db, search).with_entities(BookCopy.id).order_by(BookCopy.id).all()]
+    if not ids:
+        raise HTTPException(404, "No matching physical copies to export.")
+    # The browser fetches bounded PDFs for this identity snapshot. Generating
+    # all labels in one serverless invocation can exceed its execution limit.
+    return {"copy_ids": ids, "total": len(ids)}
 
 
 @router.get("/book-copies/{copy_id}/qr")
@@ -341,11 +383,15 @@ def bulk_copy_qr_pdf(
     db: Session = Depends(get_db),
     _: User = Depends(require_librarian),
 ):
+    if not copy_ids:
+        raise HTTPException(400, "Select at least one physical copy. Use the explicit all-matching export for all copies.")
+    if len(set(copy_ids)) > 1000:
+        raise HTTPException(422, "Select at most 1,000 copies per PDF, or use the all-matching ZIP export.")
     ensure_book_copies(db)
-    q = db.query(BookCopy)
-    if copy_ids:
-        q = q.filter(BookCopy.id.in_(copy_ids))
-    copies = q.order_by(BookCopy.book_id, BookCopy.copy_number).all()
+    copies = (db.query(BookCopy).options(joinedload(BookCopy.book))
+              .filter(BookCopy.id.in_(copy_ids)).order_by(BookCopy.book_id, BookCopy.copy_number).all())
+    if len(copies) != len(set(copy_ids)):
+        raise HTTPException(409, "Some selected copies no longer exist. Refresh the selection.")
     if not copies:
         raise HTTPException(status_code=404, detail="No physical copies found for given IDs")
 

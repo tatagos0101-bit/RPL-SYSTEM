@@ -1,3 +1,4 @@
+import useReadResource from '../../api/useReadResource';
 import ModalFrame from '../../components/ModalFrame';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
@@ -23,7 +24,8 @@ import { loadPendingConfirmation } from '../../api/reservationCart';
 
 export default function UserBrowseBooks() {
   const allowance = useBorrowingCapacity();
-  const [categories, setCategories] = useState([]);
+  const categoryResource = useReadResource(getCategories);
+  const categories = ['All', ...(categoryResource.data || []).map(item => item.category)];
   const [reservations, setReservations] = useState([]);
 
   const [cart, setCart] = useState(() => loadReservationCart());
@@ -43,7 +45,6 @@ export default function UserBrowseBooks() {
   const listing = useServerPage('/api/books', { search, category: activeCategory === 'All' ? '' : activeCategory });
   const { items: books, loading } = listing;
   useEffect(() => {
-    getCategories().then(({ data }) => setCategories(['All', ...data.map(c => c.category)])).catch(() => setCategories(['All']));
     getReservations().then(({ data }) => setReservations(data)).catch(() => toast.error('Could not load reservations. Please reload to retry.'));
   }, []);
 
@@ -220,6 +221,7 @@ export default function UserBrowseBooks() {
             <div className="h-px flex-1 bg-subtle" />
           </div>
 
+          {categoryResource.error && <p role="alert" className="text-danger">Categories could not be loaded. <button onClick={categoryResource.retry}>Retry categories</button></p>}
           <PageControls {...listing} />
           {/* ── FILTER & SEARCH ── */}
           <div className="animate-fade-in-up delay-200 flex flex-col lg:flex-row gap-4">
