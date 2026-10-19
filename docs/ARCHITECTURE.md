@@ -68,6 +68,9 @@ remain alternate deployment artifacts; the latter invokes migrations before depl
 Some comments still mention earlier hosting choices. Files in the repository do
 not establish which revision, environment variables, policies, or models are live.
 Production persistence must not depend on the host filesystem.
+The October 19 [runtime-role audit](RUNTIME_ROLE_REHEARSAL.md) confirmed that the
+API connection owns the deployed tables and bypasses RLS. Browser-role table access
+remains revoked; a separate restricted backend runtime login is still pending.
 
 Environment names and defaults live in [config.py](../backend/config.py) and the
 [backend](../backend/.env.example) / [frontend](../frontend/.env.example) examples.

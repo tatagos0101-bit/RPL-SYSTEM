@@ -29,9 +29,11 @@ FILES = (
     "supabase/migrations/20261010000100_library_schema.sql",
     "supabase/migrations/20261016000100_auth_sessions.sql",
     "supabase/operations/prepare_runtime_role.sql", "supabase/operations/check_runtime_access.sql",
+    "supabase/operations/audit_runtime_identity.sql",
     "tests/security/Dockerfile", "tests/security/requirements.txt", "tests/security/run_checks.py",
     "tests/security/compose.yaml",
     "tests/security/check_circulation.py",
+    "tests/security/check_runtime_roles.py",
 )
 
 

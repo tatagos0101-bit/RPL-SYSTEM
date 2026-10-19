@@ -80,6 +80,11 @@ def main():
         while True:
             if cursor.description:
                 for row in cursor.fetchall():
+                    start = 1 if isinstance(row[0], str) else 0
+                    failed = [column.name for column, value in zip(cursor.description[start:], row[start:])
+                              if value is not True]
+                    if failed:
+                        print("FAIL: runtime metadata boolean checks: " + ", ".join(failed))
                     if isinstance(row[0], str):
                         assert row[0] in TABLES and all(value is True for value in row[1:])
                         tables_checked += 1
@@ -89,6 +94,8 @@ def main():
                 break
         assert tables_checked == len(TABLES)
         print("PASS: runtime attributes and all application-table grant checks")
+        from check_runtime_roles import verify_runtime_role_checks
+        verify_runtime_role_checks(admin, runtime, psycopg, sql)
         return verify_permissions_and_services(admin, runtime, psycopg, sql)
     except Exception as error:
         # Connection/SQL exception strings can contain credentials or parameters.

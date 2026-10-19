@@ -234,10 +234,17 @@ validation or fall back to memory to resolve an outage.
 
 ## 3. PostgreSQL runtime role
 
+The [October 19 audit/rehearsal](RUNTIME_ROLE_REHEARSAL.md) confirmed that the live
+API still uses an owner/admin-capable role, while browser roles remain denied.
+The strengthened verifier and isolated 16-table rehearsal passed; live has only
+the 14-table baseline, so a runtime cutover must use a separately rehearsed baseline
+candidate or coordinate with the pending repair schema release.
+
 `supabase/operations/prepare_runtime_role.sql` is a reviewable operation script,
 not an automatically applied migration. It creates the non-login group
 `rpl_app_runtime` with no administrative or RLS-bypass attributes. It grants CRUD
-only on the 14 named application tables and usage/select on their ID sequences.
+only on the 16 named repair-branch application tables (14 at the original release)
+and usage/select on their ID sequences.
 It retains RLS and denies PUBLIC/anon/authenticated table access. Its explicit
 runtime-only policies allow the trusted backend to perform application operations;
 FastAPI still enforces member/librarian roles and ownership.
