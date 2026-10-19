@@ -1,8 +1,9 @@
-# Shared Redis staging — October 18, 2026
+# Shared Redis staging — October 18–19, 2026
 
 Shared Redis is **not enabled in production**. The code already supports it; this
-pass verified the Vercel address boundary and provisioned/tested staging. No
-application routes, rate thresholds, dependencies, database schema or PAD changed.
+pass verified the Vercel address boundary and provisioned/tested staging. The repair
+branch now paces requests for the user's two entrance stations and backs off on
+failures. Server rate thresholds, dependencies, database schema and PAD are unchanged.
 
 ## Checks completed
 
@@ -48,10 +49,73 @@ application routes, rate thresholds, dependencies, database schema or PAD change
   two attempts stopped on Windows diagnostic-output parsing; that runner issue was
   corrected before the successful run, and their temporary previews were removed.
 
-These minimal previews used the real limiter and matching error-response behavior,
-not the full library application. The rewrite test used two deployments of the API
-project; acceptance on the actual separate frontend project and library kiosk
-traffic remains a release requirement.
+These initial minimal previews used the real limiter and matching error-response
+behavior, not the full library application. The first rewrite test used two
+deployments of the API project. The subsequent cross-project and application tests
+below extend that evidence without claiming physical-library acceptance.
+
+## Cross-project and application acceptance
+
+- A temporary API preview and a separate preview on the actual `rpl-system`
+  frontend project used the repository's external rewrite rules, pointed at the
+  temporary API. Preview protection stayed enabled; its bypass cookie was held
+  only in the diagnostic process. The frontend preview contained a static probe
+  page, not the complete library UI or any production credentials.
+- Direct and frontend-proxied requests from this computer produced the same HMAC
+  bucket. Eight concurrent requests split between those paths accepted seven and
+  rejected one. Spoofed forwarding headers still returned 429, a different route
+  worked, and an invalid Redis credential returned 503 before a subsequent healthy
+  route returned 200. Both previews were removed. Initial cookie bootstrap attempts
+  stopped on Vercel's 307 redirect; the corrected runner handled that redirect's
+  cookie without weakening project protection.
+- Two opt-in tests exercised the real application login and kiosk routes against
+  staging Redis over authenticated TLS, with isolated SQLite records and a synthetic
+  kiosk processing stub. A local TCP relay closed only this test client's connections
+  and then restored them; it did not stop or reconfigure the managed service.
+  TLS still verified the provider hostname and certificate through the byte relay.
+- During connection loss, login returned generic 503 with no new session/cookie;
+  kiosk face/log requests returned 503 before face processing. After reconnection,
+  those routes recovered and previous counters remained in force. The real 120/minute
+  face and 60/minute log caps were exercised to 429 using one peer address. Kiosk
+  requests issued no login tokens. Random counter prefixes expired naturally; no
+  flush/reset, production database access or real biometric data was used.
+- The user confirmed **two entrance stations** behind the library connection. Scans
+  now run at most about 40/minute per station (1.5-second interval), leaving headroom
+  below the shared 120/minute cap. Event-driven log refreshes are spaced at least
+  2.5 seconds apart and coalesced while pending, for at most about 48/minute combined
+  versus the 60/minute cap. The normal 10-second log refresh remains.
+- Scan and automatic log failures honor valid `Retry-After` seconds/HTTP dates.
+  Without a usable header, 429 waits 60 seconds and other failures wait five seconds.
+  Scanner restart cannot clear an active cooldown or permit overlapping requests.
+  Structured error details render as text; a rejected station PIN still locks the UI.
+
+These are synthetic transport, routing and browser acceptance checks. They do not
+measure real camera recognition, PAD, the library's actual network, provider-wide
+outages, regional failover, or sustained production cost/availability.
+
+Final local verification on October 19:
+
+- Two Edge contexts with synthetic camera feeds and intercepted API responses
+  produced **78 scans and 38 log requests combined in 60 seconds**, below the
+  unchanged shared caps. Only one face request and one log request per station
+  were pending at a time, including during slow log responses and scanner restart.
+- Browser interaction checks covered PIN unlock, structured 503 rendering,
+  automatic recovery, retry cooldown, 429 `Retry-After`, and rejected-PIN re-locking.
+  Page identity, meaningful content, absence of framework overlays, and desktop
+  1440×900/mobile 390×844 layouts passed. Screenshots were inspected; there were
+  no application runtime errors, only expected HTTP errors from injected failures.
+  The Browser plugin was unavailable, so the existing Playwright/Edge setup was used.
+- Backend suite: 199 passed, four skipped (two explicit PostgreSQL tests and the
+  two opt-in managed Redis acceptance tests). Both managed Redis tests passed
+  separately through the isolated acceptance wrapper on October 18. Existing
+  backend deprecation warnings remain. Staging-tool guards: three passed with
+  six subtests, including credential isolation and refusal to count skipped tests
+  as acceptance success.
+- All 64 frontend API-helper tests, lint, production build and build credential
+  scan passed. One native build-tool attempt crashed; a separate clean rerun passed.
+- Production metadata rechecked October 19: both projects remain READY on
+  `897502349ae16f52209bc2d533566d2e08d3f2d1`. Redis variables remain API Preview
+  only, with none on the frontend or in production. No live cutover occurred.
 
 The platform [request-header contract](https://vercel.com/docs/headers/request-headers)
 documents forwarding-header replacement. The probe above checks the Python adapter
@@ -63,8 +127,9 @@ to trusting arbitrary request headers is warranted by these results.
 [check_redis_staging.py](../scripts/check_redis_staging.py) is opt-in and requires an
 explicit staging hostname. It takes the URI through a hidden interactive prompt or
 the dedicated `RPL_REDIS_STAGING_URI` environment variable. It does not use
-`RATE_LIMIT_STORAGE_URI`, read `.env`, import the application/database, migrate, or
-flush a Redis database. A fresh child environment excludes inherited application
+`RATE_LIMIT_STORAGE_URI`, read `.env`, migrate, or flush a Redis database. The default
+preflight does not import the application/database; opt-in acceptance imports the
+application with isolated test database fixtures. A fresh child environment excludes inherited application
 credentials. The exact hostname guard prevents accidental target mismatch, but
 cannot itself prove that an operator-selected service is staging.
 
@@ -73,6 +138,17 @@ From the repository root, using the backend Python environment:
 ```powershell
 uv run --project backend python scripts/check_redis_staging.py --staging-host HOST_FROM_STAGING_PROVIDER
 ```
+
+For real application routes with synthetic SQLite records and a controlled
+client-transport interruption (requires pytest):
+
+```powershell
+uv run --project backend --with pytest python scripts/check_redis_staging.py --acceptance --staging-host HOST_FROM_STAGING_PROVIDER
+```
+
+Acceptance is skipped during ordinary backend tests. Use this wrapper for live
+staging checks: it captures diagnostics, withholds connection details, and requires
+both acceptance tests to pass rather than accepting a skipped run as success.
 
 Do not put a connection URI in shell arguments, chat or committed files. The checker
 uses the existing limiter's production TLS/authentication validation and two clients
@@ -128,10 +204,10 @@ trial is not an availability decision for production. See
 2. Use synthetic database/storage targets for a full application preview; do not
    copy production credentials. Keep `AUTO_MIGRATE=false` and apply any candidate
    schema only to isolated test data.
-3. Complete actual frontend/API cross-project and legitimate kiosk/NAT acceptance,
-   plus controlled provider outage/recovery checks on staging. The direct API,
-   two-deployment counter, synthetic external-rewrite and credential-failure checks
-   above have passed; they do not establish library traffic/availability behavior.
+3. Cross-project routing, application transport loss/recovery, and synthetic shared-IP
+   kiosk quota checks above passed. Confirm real-library latency/workload with two
+   stations and assess provider quota/outage recovery before cutover; synthetic tests
+   do not establish real-library or provider-wide availability. PAD stays separate.
 4. Only after those checks, prepare the production service/region/plan, environment
    changes and exact deployment candidate for release. Coordinate separately with
    [the 12-repair migration rollout](REPAIR_ROLLOUT.md); do not accidentally deploy

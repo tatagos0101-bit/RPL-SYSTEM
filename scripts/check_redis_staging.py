@@ -7,6 +7,7 @@ prompt or RPL_REDIS_STAGING_URI, never command-line arguments.
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import getpass
+import importlib.util
 import logging
 import os
 from pathlib import Path
@@ -76,10 +77,14 @@ def verify():
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--staging-host", help="Required exact hostname of a dedicated staging service")
+    parser.add_argument("--acceptance", action="store_true",
+                        help="Run synthetic login/kiosk transport-outage tests (requires pytest)")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if not args.staging_host:
         parser.error("--staging-host is required; never select a production service")
+    if args.worker and args.acceptance:
+        parser.error("--worker and --acceptance cannot be combined")
     if args.worker:
         try:
             uri = os.environ.get("RPL_REDIS_STAGING_URI", "")
@@ -100,16 +105,35 @@ def main():
         uri = getpass.getpass("Dedicated staging rediss URI (hidden): ")
     try:
         validate_target(uri, args.staging_host)
-        result = subprocess.run([sys.executable, str(Path(__file__).resolve()), "--worker",
-                                 "--staging-host", args.staging_host],
-                                env=worker_environment(uri), capture_output=True, text=True, timeout=60)
+        environment = worker_environment(uri)
+        command = [sys.executable, str(Path(__file__).resolve()), "--worker",
+                   "--staging-host", args.staging_host]
+        if args.acceptance:
+            pytest_spec = importlib.util.find_spec("pytest")
+            if pytest_spec is None:
+                print("FAIL: acceptance mode requires pytest; use uv run --project backend --with pytest")
+                return 1
+            # uv --with pytest can supply an overlay outside the backend venv.
+            # Forward only that resolved package directory, not inherited PYTHONPATH.
+            environment["PYTHONPATH"] = str(Path(pytest_spec.origin).resolve().parent.parent)
+            environment["RPL_RUN_REDIS_ACCEPTANCE"] = "1"
+            environment["RPL_REDIS_STAGING_HOST"] = args.staging_host.lower()
+            test_file = Path(__file__).resolve().parents[1] / "backend/tests/test_redis_acceptance.py"
+            command = [sys.executable, "-m", "pytest", str(test_file), "-q", "-p", "no:cacheprovider",
+                       "--tb=no", "--show-capture=no", "--disable-warnings"]
+        result = subprocess.run(command, env=environment, capture_output=True, text=True,
+                                timeout=180 if args.acceptance else 60)
     except (ValueError, subprocess.SubprocessError):
         print("FAIL: staging target validation or worker execution; details withheld")
         return 1
-    if result.returncode or not result.stdout.startswith("PASS:"):
+    verified = "2 passed" in result.stdout if args.acceptance else result.stdout.startswith("PASS:")
+    if result.returncode or not verified:
         print("FAIL: staging Redis check; connection and exception details withheld")
         return 1
-    print("PASS: authenticated TLS, shared atomic counters, client/route separation, expiring synthetic keys")
+    if args.acceptance:
+        print("PASS: login/kiosk transport outage, no forbidden operation, counter preservation and recovery (2 tests)")
+    else:
+        print("PASS: authenticated TLS, shared atomic counters, client/route separation, expiring synthetic keys")
     return 0
 
 

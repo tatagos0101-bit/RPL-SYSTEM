@@ -163,6 +163,12 @@ face processing with token issuance disabled. The browser keeps that PIN in sess
 storage. A station unlock is not librarian authentication. Preserve request limits,
 safe validation errors, and [security middleware](../backend/middleware/security.py)
 that avoids reflecting credentials and raw input into errors/logs.
+The repair branch spaces station scans by 1.5 seconds and coalesces log reads with
+a 2.5-second minimum interval, leaving headroom for two stations sharing the current
+120-scan/60-log-read per-minute public-IP limits. Automatic requests honor
+`Retry-After`, with a 60-second fallback for 429 and five seconds for other failures.
+Restart preserves pending requests and cooldowns. See [staging evidence](REDIS_STAGING.md)
+for synthetic verification and the remaining production requirements.
 Rate limits can share Redis storage across instances. Until a shared endpoint is
 configured, the default remains process-local memory. Redis failures reject
 limited requests when configured; live multi-instance and trusted-client-address
