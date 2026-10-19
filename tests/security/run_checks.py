@@ -3,6 +3,7 @@ import importlib
 import os
 from pathlib import Path
 import sys
+import traceback
 from concurrent.futures import ThreadPoolExecutor
 import uuid
 
@@ -12,6 +13,11 @@ TABLES = (
     "reservation_confirmations", "inventory_writes", "notifications", "entry_logs", "reading_goals", "face_embeddings",
     "password_reset_codes", "security_alerts", "library_settings",
 )
+BASELINE = (ROOT / "baseline-revision.txt").exists()
+if BASELINE:
+    assert (ROOT / "baseline-revision.txt").read_text() == "897502349ae16f52209bc2d533566d2e08d3f2d1"
+    TABLES = tuple(table for table in TABLES if table not in ("reservation_confirmations", "inventory_writes"))
+OPERATION_SUFFIX = "_baseline14" if BASELINE else ""
 
 
 def main():
@@ -38,8 +44,8 @@ def main():
             VALUES ('Synthetic book', 'Synthetic author', 'Test', 1, 1);
             INSERT INTO book_copies (book_id, copy_number, qr_code, status)
             VALUES (1, 1, 'SYNTHETIC-COPY-001', 'available');
-            INSERT INTO transactions (user_id, book_id, copy_id, type, status)
-            VALUES (1, 1, 1, 'borrow', 'returned');
+            INSERT INTO transactions (user_id, book_id, copy_id, type, status, fine_amount)
+            VALUES (1, 1, 1, 'borrow', 'returned', 0);
             INSERT INTO reservations (user_id, book_id, status, queue_position)
             VALUES (1, 1, 'pending', 1);
         """)
@@ -62,7 +68,7 @@ def main():
             owner_engine.dispose()
         for _ in range(2):
             admin.execute((ROOT / "supabase/migrations/20261016000100_auth_sessions.sql").read_text())
-            admin.execute((ROOT / "supabase/operations/prepare_runtime_role.sql").read_text())
+            admin.execute((ROOT / f"supabase/operations/prepare_runtime_role{OPERATION_SUFFIX}.sql").read_text())
         preserved = admin.execute("""SELECT u.email_verified, u.phone_verified,
             t.type, t.status, t.borrow_date, t.copy_id, r.status, r.queue_position
             FROM users u JOIN transactions t ON t.user_id=u.id
@@ -75,7 +81,7 @@ def main():
         runtime = psycopg.connect(host="postgres", dbname="rpl_security_test", user="rpl_security_login",
                                  connect_timeout=5, autocommit=True)
         stage = "runtime metadata and browser-role denial"
-        cursor = runtime.execute((ROOT / "supabase/operations/check_runtime_access.sql").read_text())
+        cursor = runtime.execute((ROOT / f"supabase/operations/check_runtime_access{OPERATION_SUFFIX}.sql").read_text())
         tables_checked = 0
         while True:
             if cursor.description:
@@ -95,11 +101,14 @@ def main():
         assert tables_checked == len(TABLES)
         print("PASS: runtime attributes and all application-table grant checks")
         from check_runtime_roles import verify_runtime_role_checks
-        verify_runtime_role_checks(admin, runtime, psycopg, sql)
+        verify_runtime_role_checks(admin, runtime, psycopg, sql, baseline=BASELINE)
         return verify_permissions_and_services(admin, runtime, psycopg, sql)
     except Exception as error:
         # Connection/SQL exception strings can contain credentials or parameters.
         print(f"FAIL: {stage} ({type(error).__name__}); details withheld")
+        for frame in traceback.extract_tb(error.__traceback__):
+            if frame.filename.startswith("/workspace/"):
+                print(f"  at {frame.filename.removeprefix('/workspace/')}:{frame.lineno} ({frame.name})")
         return 1
     finally:
         if runtime is not None:
@@ -184,6 +193,11 @@ def verify_permissions_and_services(admin, runtime, psycopg, sql):
         stage = "concurrent circulation and inventory consistency"
         from check_circulation import verify_circulation
         verify_circulation(admin)
+        if BASELINE:
+            stage = "deployed-baseline API operations and cutover recovery"
+            from check_baseline_api import verify_baseline_api, verify_preparation_rollback
+            verify_baseline_api()
+            verify_preparation_rollback(admin, runtime)
         stage = "shared Redis counters and outage behavior"
         from limits import parse
         from redis.exceptions import RedisError
@@ -212,6 +226,9 @@ def verify_permissions_and_services(admin, runtime, psycopg, sql):
         return 0
     except Exception as error:
         print(f"FAIL: {stage} ({type(error).__name__}); details withheld")
+        for frame in traceback.extract_tb(error.__traceback__):
+            if frame.filename.startswith("/workspace/"):
+                print(f"  at {frame.filename.removeprefix('/workspace/')}:{frame.lineno} ({frame.name})")
         return 1
 
 

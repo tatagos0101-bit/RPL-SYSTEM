@@ -119,12 +119,113 @@ the [repair rollout](REPAIR_ROLLOUT.md):
    recoverable for an explicitly approved incident decision; do not drop roles or
    rotate unrelated JWT/Storage secrets as part of the switch.
 
-If restricting the current 14-table API before the repair release is preferred,
-prepare and rehearse an explicit baseline-only candidate separately. The 14-table
-preparation at `8975023` is a reference, not evidence that a new live login/pooler
-combination has passed. Do not advance the whole repair branch merely to obtain
-the runtime-role change. Live cutover remains pending; this pass verifies the
-finding and strengthens/rehearses the necessary checks.
+The alternative 14-table preparation below is now locally rehearsed. It allows a
+separate runtime-role rollout before the repair release, subject to the actual
+Supabase login/pooler and candidate checks. Do not advance the whole repair branch
+merely to obtain this permission change. Live cutover remains pending.
+
+## Deployed-baseline candidate — October 19 follow-up
+
+The explicit [14-table preparation](../supabase/operations/prepare_runtime_role_baseline14.sql)
+and [14-table verifier](../supabase/operations/check_runtime_access_baseline14.sql)
+match API source `897502349ae16f52209bc2d533566d2e08d3f2d1`. They retain the
+owner/membership/delegation/sequence/RLS checks described above. Preparation uses
+a transaction, bounded lock/statement timeouts and the migration advisory lock;
+it refuses missing required tables, conflicting existing policies or either
+pending repair table. It creates the NOLOGIN permission group, grants CRUD and
+sequence USAGE/SELECT on the explicit baseline list, enables RLS and revokes
+browser-role access. It creates no login/password and changes no application rows,
+table definitions, owner credentials or runtime connection settings.
+
+Run the isolated rehearsal from the repository root:
+
+```powershell
+python scripts/run_baseline_role_integration.py
+python -m unittest discover -s scripts -p test_run*integration.py
+```
+
+The [runner](../scripts/run_baseline_role_integration.py) reads only allowlisted
+source files from that exact Git revision, plus the current test harness and
+reviewed SQL. It fails if the baseline objects are unavailable; it never substitutes
+repair/PAD source. No environment files, uploads or database copies enter the build
+context. Docker must be local; the disposable PostgreSQL 17/Redis 8 network is
+internal with no published ports. The fixture uses local trust authentication,
+not Supabase TLS or password authentication. Additional HTTP-test dependency pins
+match the baseline lockfile; application dependency manifests are unchanged.
+
+Completed evidence:
+
+- Baseline run `rpl-security-0441b6f2aa34` passed with exactly 14 tables, repeatable
+  preparation/migration and preserved synthetic existing history/contact flags.
+- Real restricted-login PostgreSQL grants, CRUD, sequence access, enforced RLS,
+  browser denial, session revocation and competing circulation locks passed.
+  Missing/excess grants, role delegation, inherited ownership and elevated
+  attributes were detected. The final verifier passed again after all fault cases.
+- The baseline's actual password-login, transaction, reservation and report routers
+  ran via FastAPI TestClient against PostgreSQL. Cookie authentication, borrowing,
+  original-loan returns, queue promotion/cancellation, PDF generation, logout and
+  anonymous/wrong-role/suspended/cross-owner denial passed. A synthetic attendance
+  row was written through the ORM; no face/camera or PAD endpoint was exercised.
+- Switching the test dependency from restricted connection to owner and back
+  preserved session access and transaction results. This rehearses connection
+  recovery only, not a Vercel deployment/environment rollback.
+- Missing-table and policy-conflict preparation failures rolled back. Both baseline
+  on repair-shaped schema and repair preparation on baseline schema were rejected.
+- Existing 16-table integration run `rpl-security-d567c4a4b85a` passed after the shared
+  harness changes. Both runs removed their containers and networks successfully.
+- Eleven runner tests passed, including byte-for-byte baseline source provenance,
+  explicit staging boundaries, missing-object refusal and dependency-pin checks.
+  Initial baseline HTTP attempts exposed a synthetic fixture that omitted the fine
+  amount; the fixture now supplies zero. No application fix was needed. The
+  existing Starlette/httpx deprecation warning remains.
+
+These checks use reconstructed baseline schema and synthetic records, not a
+production backup. They establish selected route compatibility with restricted
+PostgreSQL permissions, not complete application, report accuracy, Storage,
+real-camera or Supabase pooler acceptance. No production resources or configuration
+were changed during this follow-up. Frontend/full-backend suites were not rerun
+because only operational SQL, harnesses and documentation changed.
+
+### Concrete production switch and recovery plan
+
+1. Recheck the live API revision, 14-table catalog, deployment IDs and environment
+   **names/metadata**. Stop if they differ from this candidate. Confirm the
+   provider's backup/recovery path before permission changes; never export patron
+   data into this repository or test harness.
+2. As the maintenance owner, apply only `prepare_runtime_role_baseline14.sql`.
+   Create a separate non-owner API LOGIN with `INHERIT NOSUPERUSER NOCREATEDB
+   NOCREATEROLE NOBYPASSRLS NOREPLICATION`, only `rpl_app_runtime` membership and
+   no ADMIN OPTION. Generate/store its password through a protected credential
+   workflow; never paste it into this document, chat, logs or committed SQL.
+   If a matching login already exists, inspect it instead of silently altering it.
+3. Connect as that login through the actual Supabase TLS transaction pooler, with
+   the existing connection helper (`NullPool`, prepared statements disabled).
+   Require all 15 verifier rows to pass (one role row and 14 table rows). Any
+   unexpected inherited/PUBLIC privileges require explicit review, not broad
+   revocations of provider roles. Keep the owner's existing privileges intact.
+4. Stage an API candidate using **only deployed `8975023` application code** and
+   a deployment-scoped restricted `DATABASE_URL`; keep `AUTO_MIGRATE=false`.
+   Preserve the separate Storage/JWT/PIN configuration. Before promotion, verify
+   protected health/access behavior and agreed synthetic login, circulation,
+   reservation, reporting and private-Storage operations through the cloud path.
+   Local TestClient results do not replace this acceptance.
+5. After candidate acceptance, set the API Production `DATABASE_URL` as Sensitive,
+   deploy/verify the same candidate and switch the API public alias. Record only
+   deployment IDs and non-secret outcomes. The frontend needs no code deployment.
+   Remove superseded owner connection variables from the active API environment
+   only after inventorying their integration ownership/consumers; otherwise the
+   owner secret remains available even though normal queries use the new login.
+6. If acceptance fails, leave the public alias and production configuration in
+   place. If failure occurs after promotion, restore the recorded previous healthy
+   API deployment and previous environment state using the protected recovery
+   workflow. Do not drop roles, revoke the provider owner's privileges or rotate
+   JWT/Storage keys as rollback. Recheck health and authenticated flows before
+   retrying. Existing deployment secrets require a separate retirement decision.
+
+Steps 1–6 above describe the pending cloud rollout; the new LOGIN, pooler test,
+production candidate, credential handoff and alias change have **not** occurred.
+The future repair upgrade must apply the standard 16-table permission operation
+and verifier; do not keep using the baseline variant after that schema change.
 
 References: [PostgreSQL privilege and role-information functions](https://www.postgresql.org/docs/17/functions-info.html),
 [read-only transactions](https://www.postgresql.org/docs/17/sql-set-transaction.html),

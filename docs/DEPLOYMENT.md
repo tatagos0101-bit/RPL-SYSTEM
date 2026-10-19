@@ -15,8 +15,10 @@ For the session migration, Redis preparation, restricted database role, and the
 approval sequence for cloud changes, see [security rollout](SECURITY_ROLLOUT.md).
 The [Redis staging checklist](REDIS_STAGING.md) records the managed API Preview
 service and Vercel checks; shared Redis is not yet enabled in production.
-The [runtime-role audit/rehearsal](RUNTIME_ROLE_REHEARSAL.md) records the confirmed
-live owner/admin-capable database login and the strengthened isolated checks.
+The [runtime-role audit/rehearsal](RUNTIME_ROLE_REHEARSAL.md) includes the tested
+14-table baseline permission candidate and its pending cloud switch/recovery plan.
+It also records the confirmed live owner/admin-capable database login and the
+strengthened isolated checks.
 Production still uses that login; the 16-table repair role preparation cannot be
 applied to the current 14-table live schema without the corresponding repair upgrade.
 The October 17 integration uses PyJWT with the existing HMAC token format and

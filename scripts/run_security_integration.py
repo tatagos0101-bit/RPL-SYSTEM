@@ -75,7 +75,7 @@ def check_local_docker(docker, env):
     subprocess.run([docker, "compose", "version"], env=env, capture_output=True, check=True, timeout=20)
 
 
-def main():
+def main(stage=stage_context):
     docker = shutil.which("docker")
     if not docker:
         print("Docker is unavailable. Install/start Docker Desktop with Linux containers, then rerun this command.")
@@ -92,7 +92,7 @@ def main():
     if not workspace.is_relative_to((ROOT / ".tools").resolve()):
         raise RuntimeError("Unsafe integration workspace")
     workspace.mkdir(parents=True, exist_ok=False)
-    stage_context(workspace)
+    stage(workspace)
     # Explicit empty interpolation environment; never load the repository .env.
     empty_env = workspace / "empty.env"
     empty_env.write_text("", encoding="utf-8")

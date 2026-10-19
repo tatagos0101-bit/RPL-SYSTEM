@@ -71,6 +71,8 @@ Production persistence must not depend on the host filesystem.
 The October 19 [runtime-role audit](RUNTIME_ROLE_REHEARSAL.md) confirmed that the
 API connection owns the deployed tables and bypasses RLS. Browser-role table access
 remains revoked; a separate restricted backend runtime login is still pending.
+The same report includes a separately tested 14-table permission candidate using
+the deployed API source; it has not changed the live connection or privileges.
 
 Environment names and defaults live in [config.py](../backend/config.py) and the
 [backend](../backend/.env.example) / [frontend](../frontend/.env.example) examples.

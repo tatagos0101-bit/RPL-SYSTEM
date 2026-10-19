@@ -2,9 +2,11 @@
 from pathlib import Path
 
 
-def verify_runtime_role_checks(admin, runtime, psycopg, sql):
+def verify_runtime_role_checks(admin, runtime, psycopg, sql, baseline=False):
     root = Path(__file__).resolve().parents[2]
-    verifier = (root / "supabase/operations/check_runtime_access.sql").read_text()
+    suffix = "_baseline14" if baseline else ""
+    table_count = 14 if baseline else 16
+    verifier = (root / f"supabase/operations/check_runtime_access{suffix}.sql").read_text()
     audit = (root / "supabase/operations/audit_runtime_identity.sql").read_text()
 
     def results(statement):
@@ -23,7 +25,7 @@ def verify_runtime_role_checks(admin, runtime, psycopg, sql):
 
     def healthy():
         rows = results(verifier)
-        assert len(rows) == 17
+        assert len(rows) == table_count + 1
         assert all(value is True for row in rows for key, value in row.items() if key != "table_name")
 
     healthy()
@@ -31,11 +33,11 @@ def verify_runtime_role_checks(admin, runtime, psycopg, sql):
     assert identity["read_only_transaction"] and identity["runtime_group_inherited"]
     assert not identity["superuser"] and not identity["bypasses_rls"]
     assert identity["extra_role_membership_count"] == 0
-    assert tables["present_application_table_count"] == 16
-    assert tables["missing_application_table_count"] == 0
+    assert tables["present_application_table_count"] == table_count
+    assert tables["missing_application_table_count"] == 16 - table_count
     assert tables["missing_live_baseline_table_count"] == 0
     assert tables["owned_application_table_count"] == 0
-    assert tables["tables_enforcing_runtime_rls_count"] == 16
+    assert tables["tables_enforcing_runtime_rls_count"] == table_count
     assert tables["anonymous_accessible_table_count"] == 0
     admin.execute("REVOKE USAGE ON SEQUENCE public.books_id_seq FROM rpl_app_runtime")
     try:
@@ -85,10 +87,10 @@ def verify_runtime_role_checks(admin, runtime, psycopg, sql):
         failure("restricted_role_attributes")
     finally:
         admin.execute("ALTER ROLE rpl_security_login NOCREATEDB")
-    admin.execute("ALTER TABLE public.inventory_writes RENAME TO synthetic_hidden_inventory_writes")
+    admin.execute("ALTER TABLE public.library_settings RENAME TO synthetic_hidden_library_settings")
     try:
         failure("required_tables_present")
     finally:
-        admin.execute("ALTER TABLE public.synthetic_hidden_inventory_writes RENAME TO inventory_writes")
+        admin.execute("ALTER TABLE public.synthetic_hidden_library_settings RENAME TO library_settings")
     healthy()
     print("PASS: metadata audit and verifier reject missing/excess sequence grants, non-inherited memberships, delegation, extra table grants, inherited ownership and elevated attributes")
