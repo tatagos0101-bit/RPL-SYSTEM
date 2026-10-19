@@ -1,5 +1,11 @@
 # Authentication and infrastructure security rollout
 
+Subsequent [frontend credential cleanup](FRONTEND_CREDENTIAL_CLEANUP.md) was
+completed October 19: the frontend Supabase connection was removed and its build
+guard released. The API connection/deployment was preserved. The dated release
+records below describe the earlier baseline; shared Redis production activation
+and runtime-role/credential-rotation cutovers remain separate.
+
 Source preparation is not a live deployment. The October 17 release below records
 the applied session migration and deployed source. Credentials, Vercel integration
 settings, database runtime roles, and Redis provisioning remain unchanged.

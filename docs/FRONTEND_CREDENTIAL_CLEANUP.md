@@ -69,4 +69,55 @@ the independent API and Supabase resource remain available. Reconnection is only
 needed if a real frontend consumer is discovered, and must be reviewed against the
 build guard rather than silently weakening it.
 
-Release evidence will be appended after the cloud checks complete.
+## Completed release evidence
+
+On October 19, 2026, the project-specific disconnect succeeded. The frontend has
+zero project environment variables, and Supabase resource metadata lists only the
+API Production connection. API environment IDs/names/types/targets/update metadata
+and the production deployment ID remained unchanged. Credentials were not decrypted,
+copied, rotated or individually deleted. Redis remains API Preview only.
+
+The reviewed frontend candidate was built from local commit
+`c18c05b08f5f94fc11f121241e4edb47e71a04a3`, based on production `8975023`.
+It reached READY as `dpl_Ewjj59uW2f1xc8zJw9pkgbj5va93`, with zero frontend
+server functions. Its immutable URL is
+`https://rpl-system-mckd5mvrh-tatagos0101-5211.vercel.app`. Vercel's CLI deployment
+records the source in `meta.gitCommitSha`, rather than `meta.githubCommitSha`.
+After protected-preview/candidate checks, only this frontend deployment was promoted
+to `https://rpl-system.vercel.app`. The API remains
+`dpl_FpN6P2p7Aq8f1NMnc1ym8xQciM7E` on `8975023`. No repair migrations, API
+redeployment, Redis production activation, Git push, or PAD changes occurred.
+
+Checks actually run:
+
+- 60 frontend helper/build-guard/scanner tests passed on the deployed-baseline
+  checkout, including an actual custom-mode Vite build refused before asset output
+  with a synthetic server credential. Error output did not contain its value.
+- Lint, a credential-free local production build, and its 64-file artifact scan
+  passed. The cloud production build and artifact scan also passed.
+- Protected Preview, production candidate, and live browser checks passed using
+  existing Playwright/Edge because the Browser plugin was unavailable. Synthetic
+  intercepted data verified catalogue search, member/librarian login forms, and
+  a rejected station PIN retaining the lock without opening a camera. Same-origin
+  API requests, page identity/content, no framework overlay, desktop 1440×900 and
+  mobile 390×844 rendering passed. Screenshots outside the repository were inspected.
+  There were no runtime errors; the injected PIN rejection produced the expected 403.
+- Real read-only checks returned 200 for homepage/login/station routes and healthy
+  `/health` responses through the frontend rewrite and directly from the API.
+  Anonymous profile and librarian-stat requests returned 401 on both origins.
+- The published app's complete referenced HTML/JS/CSS dependency graph was downloaded
+  to temporary storage and scanned: **61 files, zero signature findings**. JavaScript
+  and CSS content types were checked to reject SPA-fallback HTML. Frame protection,
+  `nosniff`, and CSP passed on `/`, `/user/login`, and `/entry-station`.
+- The temporary Preview was removed. The new live deployment and prior static
+  production deployment remain available. Backend suites were not rerun because
+  this candidate changes no backend source, dependencies or schema.
+
+The first artifact comparison incorrectly assumed Windows/local filenames matched
+cloud output; the corrected verifier traversed the actual published dependency graph.
+Diagnostic CLI scope placement and Windows log decoding were also corrected before
+the successful checks. These were verification-runner failures, not application fixes.
+
+This release does not establish full authenticated production mutation coverage or
+prove that arbitrary/unknown secrets are absent. Historical deployment environments
+still require the separate provider rotation/Sensitive-conversion plan described above.
