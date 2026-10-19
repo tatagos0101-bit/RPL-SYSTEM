@@ -227,6 +227,41 @@ production candidate, credential handoff and alias change have **not** occurred.
 The future repair upgrade must apply the standard 16-table permission operation
 and verifier; do not keep using the baseline variant after that schema change.
 
+### Read-only pooler acceptance checker
+
+[check_runtime_candidate.py](../scripts/check_runtime_candidate.py) now implements
+the connection/metadata portion of step 3. Run it with the backend Python environment:
+
+```powershell
+uv run --project backend python scripts/check_runtime_candidate.py --pooler-host HOST --project-ref REF --role ROLE --schema baseline14
+```
+
+Use the new candidate URI through a protected `RPL_RUNTIME_CANDIDATE_URI`
+environment setting or the hidden interactive prompt. Never place it in command
+arguments, chat or committed files. The tool does not read `.env`, application
+configuration or owner credential artifacts, and never falls back to `DATABASE_URL`
+or `POSTGRES_URL`. Its child process excludes inherited credentials and libpq
+connection overrides. Only the existing connection-settings helper is imported.
+
+Target checks require the exact selected Supabase shared-pooler hostname, project
+reference and new `rpl_` login, database `postgres`, port 6543, a password and an
+allowed SSL mode. Connection query overrides are rejected except SSL mode/root CA.
+The tool retains `NullPool` and disabled automatic prepared statements, checks
+encrypted transport and the actual current/session role, then runs fixed read-only
+catalog SQL. All 15 baseline verifier rows must pass; `repair16` requires all 17
+rows. Partial, duplicate, unexpected or false results fail closed. The output
+contains only success/counts or a generic failure, never URIs or database errors.
+It accepts the application's existing `sslmode=require`; encryption success alone
+does not establish certificate/hostname validation unless a verifying SSL mode is used.
+
+Twenty-nine focused tests passed for target/driver-override rejection, secret
+isolation, missing credentials, incomplete/failed metadata, both schema variants,
+transport/identity refusal and connection cleanup. These are mocked transport and
+validator checks, not evidence that a real Supabase candidate login was tested.
+The new checker does not replace the subsequent cloud application/Storage checks.
+Supabase administration access remained unavailable to this session after the user
+reported connection; see the [current status/counts](IMPLEMENTATION_STATUS.md).
+
 References: [PostgreSQL privilege and role-information functions](https://www.postgresql.org/docs/17/functions-info.html),
 [read-only transactions](https://www.postgresql.org/docs/17/sql-set-transaction.html),
 and [Supabase connection pooling](https://supabase.com/docs/guides/database/connecting-to-postgres).

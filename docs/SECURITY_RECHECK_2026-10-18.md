@@ -1,5 +1,9 @@
 # Production security recheck — October 18, 2026
 
+For reconciled completion counts and the latest next step, see
+[implementation status](IMPLEMENTATION_STATUS.md). The tables below retain this
+audit's original date rather than silently presenting old observations as current.
+
 Subsequent [frontend credential cleanup](FRONTEND_CREDENTIAL_CLEANUP.md) completed
 October 19: all 16 frontend Supabase/PostgreSQL variables and that resource
 connection were removed, and a guarded frontend build was released. API deployment
