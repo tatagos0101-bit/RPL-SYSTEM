@@ -1,5 +1,11 @@
 # Production security recheck — October 18, 2026
 
+Subsequent [frontend credential cleanup](FRONTEND_CREDENTIAL_CLEANUP.md) completed
+October 19: all 16 frontend Supabase/PostgreSQL variables and that resource
+connection were removed, and a guarded frontend build was released. API deployment
+and configuration metadata were preserved. Items 6/7 below record the earlier
+audit; backend Sensitive conversion/provider rotation remains pending.
+
 Subsequent authorized preview testing is recorded in [REDIS_STAGING.md](REDIS_STAGING.md).
 It verifies the direct preview client-address boundary and managed Redis staging;
 production activation and actual frontend/kiosk acceptance remain pending. The table below records the

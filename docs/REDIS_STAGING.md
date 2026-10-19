@@ -1,5 +1,10 @@
 # Shared Redis staging — October 18–19, 2026
 
+Subsequent October 19 [frontend credential cleanup](FRONTEND_CREDENTIAL_CLEANUP.md)
+released frontend-only guard commit `c18c05b`. The API remains on `8975023` and
+Redis remains API Preview only. Earlier production revision checks below predate
+that frontend-only release.
+
 Shared Redis is **not enabled in production**. The code already supports it; this
 pass verified the Vercel address boundary and provisioned/tested staging. The repair
 branch now paces requests for the user's two entrance stations and backs off on

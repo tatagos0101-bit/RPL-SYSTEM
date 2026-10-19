@@ -212,3 +212,13 @@ must survive migrations. Complete QR exports hold assembled PDFs in browser memo
 and fail visibly on standard ZIP size limits or any missing/failed batch. Quotas,
 loan history, private storage and existing fine visibility remain in force. This
 batch changes no dependency pins and does not alter the approved setuptools exception.
+
+## Subsequent frontend security release — October 19, 2026
+
+The [frontend credential cleanup](FRONTEND_CREDENTIAL_CLEANUP.md) released only the
+build guard from deployed baseline `8975023`, as frontend commit `c18c05b`. The
+frontend Supabase connection and its 16 variables were removed; API configuration
+metadata and deployment were preserved. It did not release the repairs above.
+The guard/evidence are retained in this branch by merge `f585fcc`. Combined frontend
+verification: 74 tests, lint, production build and artifact scanning passed.
+GitHub main was not pushed; repair migrations and the repair rollout remain pending.

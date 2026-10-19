@@ -121,3 +121,9 @@ the successful checks. These were verification-runner failures, not application 
 This release does not establish full authenticated production mutation coverage or
 prove that arbitrary/unknown secrets are absent. Historical deployment environments
 still require the separate provider rotation/Sensitive-conversion plan described above.
+
+The release branch and evidence were merged into `fixing-the-issue` as `f585fcc`
+so its future repair deployment retains the guard. On the combined repair branch,
+all **74** frontend helper/guard/scanner tests, lint, production build and 69-file
+local artifact scan passed. This merge was local; GitHub `main` was not pushed.
+The other repair changes and shared Redis remain undeployed.
