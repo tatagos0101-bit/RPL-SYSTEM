@@ -78,6 +78,13 @@ remediation remain separate work.
 
 ### Frontend artifact and header verification
 
+The [frontend credential cleanup](FRONTEND_CREDENTIAL_CLEANUP.md) records the
+consumer inventory and scoped release procedure. Vite builds now reject known
+server configuration in the frontend environment before generating assets. Keep
+database, Supabase, authentication and Redis settings on the API project; the
+frontend requires only public API configuration. This also applies to custom
+build modes and `VITE_*` dotenv settings. Existing artifact scanning remains active.
+
 `npm --prefix frontend run build` now builds with Vite and runs
 `frontend/scripts/check-build-secrets.mjs`. The check fails on recognizable secret
 keys, service-role JWTs, credentialed database URLs, private keys, and exact known

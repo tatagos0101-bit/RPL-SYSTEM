@@ -76,6 +76,10 @@ face engine/thresholds, and migration mode. Do not infer that environment templa
 exhaust every supported setting. Keep values private; never place server secrets
 in browser-visible `VITE_*` variables. The backend loader reads `backend/.env`;
 an arbitrary `.env.local` file is not automatically loaded by that code.
+Frontend Vite builds reject known server-only environment settings before emitting
+assets; the frontend Supabase connection was removed and the guard released on
+October 19. See [cleanup evidence](FRONTEND_CREDENTIAL_CLEANUP.md). The API retains
+its independent database/Storage configuration and owns authorization.
 
 ## Persistence and migrations
 
