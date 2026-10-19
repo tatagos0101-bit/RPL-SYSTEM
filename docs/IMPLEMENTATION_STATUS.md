@@ -28,7 +28,7 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
 | 2 | Face capture/replay limits | Open; agree threat model and acceptance scope. |
 | 3 | Shared rate limiting | Code/staging/two-station pacing tested; production service/workload acceptance and activation pending. |
 | 4 | Trusted client address | Completed scoped validation: two network sources, spoof resistance and actual-project rewrite routing; no change to trusting arbitrary headers. |
-| 5 | Restricted database account | Both 14/16-table local rehearsals passed; real login/pooler acceptance, credential handoff and live switch pending. |
+| 5 | Restricted database account | Both 14/16-table local rehearsals passed; live baseline grants and disabled candidate prepared. Credential handoff, real login/pooler acceptance and live switch pending. |
 | 6 | Frontend database/storage credentials | Completed frontend disconnect, variable removal and guarded build release. Historical credential retirement belongs to item 7. |
 | 7 | Credential handling | API Sensitive conversion, consumer-aware rotation and old credential retirement pending. |
 | 8 | Biometric consent | Product policy and implementation pending. |
@@ -58,12 +58,16 @@ it requires an explicit candidate URI, matching project/login/transaction-pooler
 target, encrypted transport and every metadata verifier check to pass. It does not
 create roles, read patron rows, migrate or change the runtime connection.
 
-The user reported connecting Supabase during this step. At the subsequent tool
-recheck, the connection registry still reported it uninstalled and exposed no
-Supabase project/database actions; no browser session was available either.
-This is an access-availability blocker, not a repeated request for permission.
-Do not request database passwords or connection strings in chat. Recheck access on
-continuation and proceed when available; no new live login or cutover is claimed.
+Supabase access is now available. The live baseline permission operation and new
+`rpl_api_runtime` candidate were applied atomically; the candidate remains NOLOGIN
+and was created without a password. Catalog checks passed for the restricted
+attributes, membership, 14 table policies/grants and browser-role denial. This is
+metadata verification, not a successful connection as the candidate. The existing
+production API connection remains unchanged. The SQL connector has no hidden
+password-input channel: the credential handoff requires a protected provider flow,
+with `RPL_RUNTIME_CANDIDATE_URI` stored as a Preview-only Vercel Secret. Do not
+request passwords or connection strings in chat. See the linked rehearsal report
+for live evidence, recovery limitations and remaining acceptance gates.
 
 A fresh Vercel metadata-only check confirmed both public targets remain READY:
 API `dpl_FpN6P2p7Aq8f1NMnc1ym8xQciM7E` at `8975023`, frontend

@@ -25,6 +25,7 @@ CURRENT_FILES = tuple(path for path in runner.FILES
     "tests/security/check_baseline_api.py", "tests/security/baseline-requirements.txt",
     "supabase/operations/prepare_runtime_role_baseline14.sql",
     "supabase/operations/check_runtime_access_baseline14.sql",
+    "supabase/operations/create_runtime_candidate.sql",
 )
 
 

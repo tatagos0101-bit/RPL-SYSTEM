@@ -151,4 +151,16 @@ def verify_preparation_rollback(admin, runtime):
         if not cursor.nextset():
             break
     assert checked == 15
+    candidate = (root / "supabase/operations/create_runtime_candidate.sql").read_text()
+    admin.execute(candidate)
+    attrs = admin.execute("SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolbypassrls, rolreplication FROM pg_roles WHERE rolname='rpl_api_runtime'").fetchone()
+    assert attrs == (False,) * 6
+    assert admin.execute("SELECT rolpassword IS NULL FROM pg_authid WHERE rolname='rpl_api_runtime'").fetchone()[0]
+    rejected(candidate)
+    admin.execute("BEGIN READ ONLY; SET LOCAL ROLE rpl_api_runtime")
+    try:
+        assert admin.execute("SELECT row_security_active('public.books'), has_table_privilege(current_user,'public.books','SELECT,INSERT,UPDATE,DELETE'), NOT has_table_privilege(current_user,'public.books','TRUNCATE,TRIGGER,REFERENCES')").fetchone() == (True, True, True)
+    finally:
+        admin.execute("ROLLBACK")
+    print("PASS: separate candidate is disabled/passwordless, inherits restricted access, and refuses overwrite")
     print("PASS: missing-table/policy-conflict preparations roll back; baseline/repair schema mismatches are rejected")

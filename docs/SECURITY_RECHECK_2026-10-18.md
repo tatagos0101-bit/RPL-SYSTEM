@@ -11,8 +11,10 @@ and configuration metadata were preserved. Items 6/7 below record the earlier
 audit; backend Sensitive conversion/provider rotation remains pending.
 The later [runtime-role audit/rehearsal](RUNTIME_ROLE_REHEARSAL.md) also confirmed
 item 5's live privilege state: the backend is an owner/admin-capable login, with
-RLS bypass and no restricted runtime group. Browser table denial remains intact.
-Restricted-role checks/rehearsal passed locally; live cutover is pending.
+RLS bypass. The group was absent at that audit; a later October 19 operation created
+the restricted group, baseline grants/policies and disabled candidate account.
+Browser table denial remains intact. Local rehearsal and live catalog checks passed;
+credential handoff, actual candidate pooler login and live cutover remain pending.
 
 Subsequent authorized preview testing is recorded in [REDIS_STAGING.md](REDIS_STAGING.md).
 It verifies the direct preview client-address boundary and managed Redis staging;

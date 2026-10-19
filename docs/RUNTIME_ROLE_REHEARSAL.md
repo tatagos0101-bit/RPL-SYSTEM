@@ -1,5 +1,10 @@
 # Runtime database-role audit and rehearsal — October 19, 2026
 
+Latest follow-up: Supabase access is connected and the restricted group, baseline
+permissions and disabled candidate account are now prepared live. The API still
+uses its existing owner connection. The original audit below predates that
+preparation; see the final section for current evidence and pending acceptance.
+
 ## Production finding
 
 A fixed read-only catalog query through the API's configured database connection
@@ -222,8 +227,10 @@ because only operational SQL, harnesses and documentation changed.
    JWT/Storage keys as rollback. Recheck health and authenticated flows before
    retrying. Existing deployment secrets require a separate retirement decision.
 
-Steps 1–6 above describe the pending cloud rollout; the new LOGIN, pooler test,
-production candidate, credential handoff and alias change have **not** occurred.
+The later permissions-only preparation completed the group/account portion of
+step 2, with NOLOGIN retained. A usable LOGIN, pooler test, production candidate,
+credential handoff and alias change have **not** occurred. Backup/recovery inventory
+has not been verified; it remains a gate for the future repair schema rollout.
 The future repair upgrade must apply the standard 16-table permission operation
 and verifier; do not keep using the baseline variant after that schema change.
 
@@ -259,9 +266,57 @@ isolation, missing credentials, incomplete/failed metadata, both schema variants
 transport/identity refusal and connection cleanup. These are mocked transport and
 validator checks, not evidence that a real Supabase candidate login was tested.
 The new checker does not replace the subsequent cloud application/Storage checks.
-Supabase administration access remained unavailable to this session after the user
-reported connection; see the [current status/counts](IMPLEMENTATION_STATUS.md).
+Supabase administration access was initially unavailable, then became available
+for the permissions-only follow-up below; see [current status/counts](IMPLEMENTATION_STATUS.md).
 
 References: [PostgreSQL privilege and role-information functions](https://www.postgresql.org/docs/17/functions-info.html),
 [read-only transactions](https://www.postgresql.org/docs/17/sql-set-transaction.html),
 and [Supabase connection pooling](https://supabase.com/docs/guides/database/connecting-to-postgres).
+
+## Live disabled-candidate preparation
+
+On October 19, the connected project `quzhxkgkdrctiosyjxcr`
+(`supabase-rizal-library`) was ACTIVE_HEALTHY on PostgreSQL 17.11 and the Free plan.
+The catalog contained the expected 14 baseline tables, all with RLS enabled and
+browser roles denied. No existing table policies or runtime group/candidate existed.
+Backup inventory and a restorable recovery point were not established by the
+available tools. Free-plan status alone does not establish whether a usable backup
+exists. No backup export or paid resource change was performed.
+
+The provider migration `20261019141808_stage_disabled_runtime_account_baseline14`
+applied `prepare_runtime_role_baseline14.sql` and
+[create_runtime_candidate.sql](../supabase/operations/create_runtime_candidate.sql)
+in one transaction with timeouts, an advisory lock and a fresh-role guard. It added
+the restricted NOLOGIN group, backend CRUD/sequence permissions and policies, and
+the NOLOGIN/passwordless candidate with only group membership and no ADMIN OPTION.
+No patron rows, table definitions, existing owner permissions, credentials or API
+configuration were changed. This reversible permission preparation did not perform
+the separately gated schema migration or connection cutover.
+
+Post-change catalog checks passed for candidate/group attributes and membership,
+all 14 expected policies, table CRUD and sequence access, no ownership/delegable or
+extra table privileges, and continued browser denial. Connector impersonation via
+SET ROLE was refused; no broader connector privilege was granted. The fallback
+checks targeted the candidate by name and inferred RLS applicability from role
+attributes/ownership. They do **not** establish actual candidate login, transport
+identity or cloud application acceptance. Security advisors returned no lints
+after the prior 14 informational RLS-without-policy notices; this is not a claim
+that all project security work is complete.
+
+Local PostgreSQL baseline run `rpl-security-d1896739430c` passed, including the new
+candidate's disabled/passwordless state, inherited restrictions and refusal to
+overwrite an existing account. Its containers/network were removed. Eleven runner
+unit tests passed; the existing Starlette/httpx deprecation warning remains.
+Public API and frontend health returned 200; anonymous profile and librarian stats
+returned 401 on both paths. Authenticated live flows and full frontend/backend
+suites were not rerun for this operational change.
+
+The remaining handoff is a password supplied through a protected provider channel
+and a transaction-pooler URI stored as `RPL_RUNTIME_CANDIDATE_URI` in the API project's
+Preview environment, type Secret (formerly Sensitive). Never store this credential
+in chat, committed SQL, command arguments or diagnostic output. Keep NOLOGIN until
+ready for controlled acceptance; verify the exact pooler host from the project's
+Connect panel. Only after real pooler and cloud API acceptance should the reviewed
+production connection switch proceed. If blocked or acceptance fails, leave the
+candidate disabled and the existing API configuration/alias in place; do not drop
+roles, modify patron data or revoke provider-owner access as recovery.
