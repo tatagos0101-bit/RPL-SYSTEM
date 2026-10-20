@@ -10,6 +10,30 @@ from sqlalchemy.pool import NullPool
 
 import check_runtime_candidate as checker
 
+
+@pytest.mark.parametrize("state,expected", [("28P01", "authentication"), ("42501", "database_permissions"), ("secret", "internal")])
+def test_failure_categories_never_include_messages(state, expected):
+    error = RuntimeError("synthetic-private-password")
+    error.sqlstate = state
+    assert checker.failure_category(error) == expected
+
+
+@pytest.mark.parametrize("error,expected", [
+    (FileNotFoundError("synthetic-private-path"), "missing_artifact"),
+    (ImportError("synthetic-private-path"), "missing_dependency"),
+    (AttributeError("synthetic-private-value"), "unsupported_attribute"),
+    (TypeError("synthetic-private-value"), "unexpected_type"),
+])
+def test_worker_diagnostic_categories_never_include_exception_content(error, expected):
+    assert checker.failure_category(error) == expected
+
+
+def test_unwrapped_driver_connection_error_is_classified_without_message():
+    import psycopg
+    assert checker.failure_category(psycopg.OperationalError("synthetic-private-url")) == "connection"
+    assert checker.safe_diagnostic(psycopg.OperationalError("synthetic-private-url")) == {
+        "kind": "OperationalError", "sqlstate": "none"}
+
 HOST = "aws-0-ap-southeast-1.pooler.supabase.com"
 PROJECT = "a" * 20
 ROLE = "rpl_candidate"
@@ -137,8 +161,9 @@ def test_failed_transport_or_identity_closes_connection_before_permission_sql(mo
     engine = Mock()
     engine.raw_connection.return_value = raw
     monkeypatch.setattr("sqlalchemy.create_engine", Mock(return_value=engine))
-    with pytest.raises(ValueError):
+    with pytest.raises(checker.VerificationFailure) as captured:
         checker.verify(URI, HOST, PROJECT, ROLE, "baseline14")
+    assert captured.value.stage in ("tls", "identity")
     assert all("has_table_privilege" not in str(call) for call in cursor.execute.call_args_list)
     raw.close.assert_called_once()
     engine.dispose.assert_called_once()

@@ -69,6 +69,16 @@ with `RPL_RUNTIME_CANDIDATE_URI` stored as a Preview-only Vercel Secret. Do not
 request passwords or connection strings in chat. See the linked rehearsal report
 for live evidence, recovery limitations and remaining acceptance gates.
 
+October 20: the candidate variable's Secret type, Preview-only target and absence
+of a branch restriction were verified without fetching its value. Temporary
+protected Preview diagnostics identified a username mismatch, which the user
+corrected; all connection-format checks now pass. Password authentication and
+runtime permission acceptance have not passed: the actual connection attempt failed
+with an OperationalError before receiving a SQLSTATE. The exact provider-assigned
+pooler hostname is being checked; a password failure has not been established.
+The candidate was returned to NOLOGIN after each attempted check,
+temporary Previews removed, and production connection/configuration preserved.
+
 A fresh Vercel metadata-only check confirmed both public targets remain READY:
 API `dpl_FpN6P2p7Aq8f1NMnc1ym8xQciM7E` at `8975023`, frontend
 `dpl_Ewjj59uW2f1xc8zJw9pkgbj5va93` at `c18c05b`. API project Production still

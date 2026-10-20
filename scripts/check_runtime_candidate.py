@@ -23,6 +23,48 @@ TABLES = frozenset((
 ))
 
 
+class VerificationFailure(Exception):
+    def __init__(self, stage, category, diagnostic=None):
+        self.stage = stage
+        self.category = category
+        self.diagnostic = diagnostic or {}
+
+
+def safe_diagnostic(error):
+    kinds = {"AssertionError", "RuntimeError", "InterfaceError", "InternalError", "OperationalError",
+             "ProgrammingError", "DatabaseError", "InvalidRequestError", "NotImplementedError",
+             "ValueError", "TypeError", "AttributeError", "ImportError", "FileNotFoundError"}
+    state = getattr(getattr(error, "orig", error), "sqlstate", None)
+    return {"kind": type(error).__name__ if type(error).__name__ in kinds else "other",
+            "sqlstate": state if isinstance(state, str) and re.fullmatch(r"[A-Z0-9]{5}", state) else "none"}
+
+
+def failure_category(error):
+    """Return only fixed categories, never database messages or configuration."""
+    from sqlalchemy.exc import OperationalError, DatabaseError
+    import psycopg
+    state = getattr(getattr(error, "orig", error), "sqlstate", None)
+    if state in ("28P01", "28000"):
+        return "authentication"
+    if state == "42501":
+        return "database_permissions"
+    if isinstance(error, (OperationalError, psycopg.OperationalError)):
+        return "connection"
+    if isinstance(error, (DatabaseError, psycopg.DatabaseError)):
+        return "query_rejected"
+    if isinstance(error, ValueError):
+        return "validation"
+    if isinstance(error, FileNotFoundError):
+        return "missing_artifact"
+    if isinstance(error, ImportError):
+        return "missing_dependency"
+    if isinstance(error, AttributeError):
+        return "unsupported_attribute"
+    if isinstance(error, TypeError):
+        return "unexpected_type"
+    return "internal"
+
+
 def worker_environment(uri):
     allowed = {"PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "TMPDIR"}
     environment = {key: value for key, value in os.environ.items() if key.upper() in allowed}
@@ -87,14 +129,18 @@ def verify(uri, host, project_ref, role, schema):
     statement = (ROOT / f"supabase/operations/check_runtime_access{suffix}.sql").read_text()
     engine = create_engine(url, **options)
     raw = None
+    stage = "connect"
     try:
         raw = engine.raw_connection()
         connection = raw.driver_connection
+        stage = "tls"
         if not connection.pgconn.ssl_in_use:
             raise ValueError("TLS is required")
+        stage = "transaction_setup"
         connection.autocommit = True
         with connection.cursor() as cursor:
             # Compare identity in the database; never return the actual role name.
+            stage = "identity"
             cursor.execute("BEGIN READ ONLY")
             cursor.execute("SET LOCAL statement_timeout='5s'")
             cursor.execute("SELECT current_user = %s AND session_user = %s, "
@@ -102,6 +148,7 @@ def verify(uri, host, project_ref, role, schema):
             if cursor.fetchone() != (True, True):
                 raise ValueError("Runtime identity mismatch")
             cursor.execute("ROLLBACK")
+            stage = "metadata_query"
             cursor.execute(statement)
             rows = []
             while True:
@@ -110,8 +157,11 @@ def verify(uri, host, project_ref, role, schema):
                     rows.extend(dict(zip(names, row)) for row in cursor.fetchall())
                 if not cursor.nextset():
                     break
+        stage = "metadata_validation"
         result = validate_rows(rows, schema)
         return {**result, "tls_encrypted": True, "expected_login": True}
+    except Exception as error:
+        raise VerificationFailure(stage, failure_category(error), safe_diagnostic(error)) from None
     finally:
         try:
             if raw is not None:
@@ -141,8 +191,11 @@ def main():
                             args.project_ref, args.role, args.schema)
             print(json.dumps(result))
             return 0
-        except Exception:
-            print("FAIL: candidate verification; connection and exception details withheld")
+        except VerificationFailure as error:
+            print(json.dumps({"error": error.category, "stage": error.stage}))
+            return 1
+        except Exception as error:
+            print(json.dumps({"error": failure_category(error)}))
             return 1
     uri = os.environ.get("RPL_RUNTIME_CANDIDATE_URI")
     if not uri:

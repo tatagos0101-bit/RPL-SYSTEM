@@ -320,3 +320,63 @@ Connect panel. Only after real pooler and cloud API acceptance should the review
 production connection switch proceed. If blocked or acceptance fails, leave the
 candidate disabled and the existing API configuration/alias in place; do not drop
 roles, modify patron data or revoke provider-owner access as recovery.
+
+## October 20 Preview credential validation
+
+Vercel metadata confirmed `RPL_RUNTIME_CANDIDATE_URI` is Sensitive/Secret, scoped
+only to Preview with no branch restriction. Its value was not downloaded. The
+temporary [Preview probe](../scripts/runtime_candidate_probe.py) exposes only
+fixed checks, requires Preview mode, `AUTO_MIGRATE=false`, an expiring random bearer
+token, and no-store responses. The final cloud probe removes inherited libpq
+overrides and database/Storage connection variables, then invokes the fixed verifier
+with only the explicit candidate URI. The standalone CLI retains its child-process
+isolation. Neither path imports the application configuration or startup.
+Only the fixed project/login/baseline schema can be tested; there is no caller SQL
+or URI input. A separate protected configuration-only route returns fixed boolean
+fields without opening a database connection. Worker failure diagnostics are
+limited to allowlisted categories, never raw exception strings.
+
+Fifty-one focused checker/probe tests passed, including unauthorized refusal,
+expiry, production-mode refusal, configuration-only secret redaction and inherited
+connection-override removal. Existing Starlette/httpx and AnyIO warnings remain.
+No application or PAD code changed; full application suites were not rerun.
+
+Connection attempts in `dpl_Dq32TpD32JM8ERkrQ9kEk5Udzfp9`,
+`dpl_J5RovdNEmgX8KcKFJGgsWSDsa6D6` and
+`dpl_39nm4HKmEM9Eh4MrKnYqySUVqfHn` failed before database authentication. Each
+temporary LOGIN enablement was followed by NOLOGIN restoration. The configuration
+diagnostic `dpl_FtdtsHs91wY6cTFTWp4ZmkYdMqyp` ran with the role disabled and showed
+only the expected-username check false; presence, parsing, driver, shared-pooler
+hostname shape, port, database, password presence, query options and SSL mode passed.
+These format checks do not verify the password or independently establish that
+the supplied host belongs to the project. The user was asked to correct only the
+username to `rpl_api_runtime.quzhxkgkdrctiosyjxcr` through Vercel.
+
+All four temporary Previews rejected unauthorized requests and were removed. The
+production deployment ID and project environment metadata were unchanged by each
+test (the user's intervening credential edits are separate). Public API/frontend
+health returned 200 and anonymous profile access returned 401 after the first
+attempts. Candidate authentication, live permission checks, cloud application
+acceptance and production cutover remain pending; no patron rows were queried.
+
+After the user corrected the username, `dpl_3JX3kDMuuTkPVFUYowHXkCGyJB2U`
+passed all ten configuration-format checks. Its connection worker did not return
+a usable verification result; this did not establish a password failure. The
+Preview was removed and NOLOGIN restored. A dependency-path attempt in
+`dpl_BXJXfwhmjcNdPGQKqJUsGHdHMcUJ` still failed; missing bundled dependencies were
+not established as the cause. `dpl_7UDXLg7EFfHHngQBftS1ihGEKbfj` confirmed the
+checker, connection helper, metadata SQL, Python executable and TLS attribute all
+exist, but connection verification still failed. The direct verifier in
+`dpl_8yT47p2ovxqhU9YAx4C8FGx94Fxi` localized the failure to opening the connection,
+before identity or permission queries. All these Previews were removed and the
+candidate returned to NOLOGIN. No password-authentication outcome is claimed from
+these generic failures; fixed error-type/SQLSTATE diagnostics were prepared next.
+
+`dpl_E8ZTxku3XXVVSbsyne5QML1KXzCf` returned an OperationalError at the connect
+stage with no SQLSTATE, before any identity/permission query. The diagnostic
+exposed only an allowlisted exception type and code, not its message or URI.
+The driver can raise an unwrapped OperationalError, so classification now handles
+both driver and SQLAlchemy errors. The exact assigned pooler host was requested
+from the project's Connect panel (hostname only); the password was not requested.
+This Preview was removed, project environment/production deployment metadata
+remained unchanged, and NOLOGIN was restored. Pooler acceptance remains incomplete.
