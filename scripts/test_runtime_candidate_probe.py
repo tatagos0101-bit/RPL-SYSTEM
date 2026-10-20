@@ -89,7 +89,7 @@ def test_verifier_failure_only_exposes_allowlisted_category_and_stage(protected_
     collector.side_effect = probe.VerificationFailure("synthetic-secret", "synthetic-secret")
     response = client.get("/api/runtime-candidate-check", headers=headers)
     assert response.status_code == 503
-    assert response.json()["detail"] == {"category": "internal", "stage": "unknown", "diagnostic": {"kind": "other", "sqlstate": "none"}}
+    assert response.json()["detail"] == {"category": "internal", "stage": "unknown", "diagnostic": {"kind": "other", "sqlstate": "none", "reason": "unclassified"}}
 
 
 def test_config_diagnostic_is_protected_and_only_returns_booleans(protected_probe, monkeypatch):

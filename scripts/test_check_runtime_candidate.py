@@ -32,7 +32,15 @@ def test_unwrapped_driver_connection_error_is_classified_without_message():
     import psycopg
     assert checker.failure_category(psycopg.OperationalError("synthetic-private-url")) == "connection"
     assert checker.safe_diagnostic(psycopg.OperationalError("synthetic-private-url")) == {
-        "kind": "OperationalError", "sqlstate": "none"}
+        "kind": "OperationalError", "sqlstate": "none", "reason": "unclassified"}
+
+
+def test_known_error_reason_never_returns_message():
+    import psycopg
+    error = psycopg.OperationalError('could not translate host name "synthetic-private-value"')
+    diagnostic = checker.safe_diagnostic(error)
+    assert diagnostic["reason"] == "dns"
+    assert "synthetic-private" not in str(diagnostic)
 
 HOST = "aws-0-ap-southeast-1.pooler.supabase.com"
 PROJECT = "a" * 20

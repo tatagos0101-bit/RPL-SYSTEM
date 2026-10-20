@@ -22,6 +22,7 @@ EXPECTED = {"schema": "baseline14", "tables_checked": 14,
 FAILURES = {"configuration", "authentication", "database_permissions", "connection", "validation", "internal",
             "missing_artifact", "missing_dependency", "unsupported_attribute", "unexpected_type", "query_rejected"}
 STAGES = {"connect", "tls", "transaction_setup", "identity", "metadata_query", "metadata_validation"}
+POOLER_HOST = "aws-0-ap-southeast-1.pooler.supabase.com"
 
 
 def clear_database_overrides():
@@ -50,6 +51,7 @@ def configuration_checks():
             parseable=True,
             driver=url.drivername in ("postgres", "postgresql", "postgresql+psycopg"),
             shared_pooler_host=bool(re.fullmatch(r"[a-z0-9-]+\.pooler\.supabase\.com", url.host or "")),
+            expected_pooler_host=url.host == POOLER_HOST,
             port=url.port == 6543,
             database=url.database == "postgres",
             username=url.username == "rpl_api_runtime.quzhxkgkdrctiosyjxcr",
@@ -70,8 +72,7 @@ def collect_metadata():
         raise CandidateFailure("configuration", checks)
     # The operator-provided host must be a Supabase shared pooler; the project
     # reference, role, port and database are fixed independently of that URI.
-    host = make_url(uri).host or ""
-    data = verify(uri, host, "quzhxkgkdrctiosyjxcr", "rpl_api_runtime", "baseline14")
+    data = verify(uri, POOLER_HOST, "quzhxkgkdrctiosyjxcr", "rpl_api_runtime", "baseline14")
     if data != EXPECTED:
         raise ValueError("Candidate verification failed")
     return dict(EXPECTED)
@@ -114,8 +115,9 @@ def runtime_candidate_check(request: Request, response: Response):
         kinds = {"AssertionError", "RuntimeError", "InterfaceError", "InternalError", "OperationalError",
                  "ProgrammingError", "DatabaseError", "InvalidRequestError", "NotImplementedError",
                  "ValueError", "TypeError", "AttributeError", "ImportError", "FileNotFoundError", "other"}
-        if set(diagnostic) != {"kind", "sqlstate"} or diagnostic.get("kind") not in kinds or not re.fullmatch(r"[A-Z0-9]{5}|none", diagnostic.get("sqlstate", "")):
-            diagnostic = {"kind": "other", "sqlstate": "none"}
+        reasons = {"authentication", "pooler_target", "dns", "refused", "timeout", "tls", "missing_password", "authentication_protocol", "unclassified"}
+        if set(diagnostic) != {"kind", "sqlstate", "reason"} or diagnostic.get("kind") not in kinds or diagnostic.get("reason") not in reasons or not re.fullmatch(r"[A-Z0-9]{5}|none", diagnostic.get("sqlstate", "")):
+            diagnostic = {"kind": "other", "sqlstate": "none", "reason": "unclassified"}
         raise HTTPException(503, {"category": category, "stage": stage, "diagnostic": diagnostic}, headers=NO_STORE) from None
     except Exception as error:
         raise HTTPException(503, {"category": failure_category(error)}, headers=NO_STORE) from None

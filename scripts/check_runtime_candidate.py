@@ -35,8 +35,25 @@ def safe_diagnostic(error):
              "ProgrammingError", "DatabaseError", "InvalidRequestError", "NotImplementedError",
              "ValueError", "TypeError", "AttributeError", "ImportError", "FileNotFoundError"}
     state = getattr(getattr(error, "orig", error), "sqlstate", None)
+    message = str(getattr(error, "orig", error)).lower()
+    reasons = (
+        ("password authentication failed", "authentication"),
+        ("tenant or user not found", "pooler_target"),
+        ("could not translate host name", "dns"),
+        ("failed to resolve host", "dns"),
+        ("name or service not known", "dns"),
+        ("connection refused", "refused"),
+        ("timeout expired", "timeout"),
+        ("timed out", "timeout"),
+        ("certificate verify failed", "tls"),
+        ("ssl error", "tls"),
+        ("no password supplied", "missing_password"),
+        ("scram authentication", "authentication_protocol"),
+    )
+    reason = next((label for pattern, label in reasons if pattern in message), "unclassified")
     return {"kind": type(error).__name__ if type(error).__name__ in kinds else "other",
-            "sqlstate": state if isinstance(state, str) and re.fullmatch(r"[A-Z0-9]{5}", state) else "none"}
+            "sqlstate": state if isinstance(state, str) and re.fullmatch(r"[A-Z0-9]{5}", state) else "none",
+            "reason": reason}
 
 
 def failure_category(error):

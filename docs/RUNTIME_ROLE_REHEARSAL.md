@@ -336,7 +336,7 @@ or URI input. A separate protected configuration-only route returns fixed boolea
 fields without opening a database connection. Worker failure diagnostics are
 limited to allowlisted categories, never raw exception strings.
 
-Fifty-one focused checker/probe tests passed, including unauthorized refusal,
+Fifty-two focused checker/probe tests passed, including unauthorized refusal,
 expiry, production-mode refusal, configuration-only secret redaction and inherited
 connection-override removal. Existing Starlette/httpx and AnyIO warnings remain.
 No application or PAD code changed; full application suites were not rerun.
@@ -380,3 +380,13 @@ both driver and SQLAlchemy errors. The exact assigned pooler host was requested
 from the project's Connect panel (hostname only); the password was not requested.
 This Preview was removed, project environment/production deployment metadata
 remained unchanged, and NOLOGIN was restored. Pooler acceptance remains incomplete.
+
+The user subsequently confirmed `aws-0-ap-southeast-1.pooler.supabase.com` from
+Supabase Connect. Local DNS/TCP checks reached it, and the next protected Preview
+confirmed the saved URI uses that exact host. A boolean-only metadata query
+(`rolpassword IS NOT NULL` for the candidate only) returned false. No password or
+hash was retrieved. This establishes that Supabase password setup is missing;
+Vercel password presence alone does not establish a usable credential. The user
+was asked to set the same candidate password privately in Supabase with NOLOGIN
+retained. Future enablement must first confirm password presence as well as role
+restrictions; no further login attempt is needed until that handoff is complete.

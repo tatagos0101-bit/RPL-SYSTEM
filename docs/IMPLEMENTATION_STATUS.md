@@ -73,9 +73,11 @@ October 20: the candidate variable's Secret type, Preview-only target and absenc
 of a branch restriction were verified without fetching its value. Temporary
 protected Preview diagnostics identified a username mismatch, which the user
 corrected; all connection-format checks now pass. Password authentication and
-runtime permission acceptance have not passed: the actual connection attempt failed
-with an OperationalError before receiving a SQLSTATE. The exact provider-assigned
-pooler hostname is being checked; a password failure has not been established.
+runtime permission acceptance have not passed. The user confirmed the exact pooler
+host, and the saved URI matches it. A later boolean-only credential metadata check
+confirmed the Supabase candidate has **no password set**, despite a password being
+present in the Vercel URL. The user must set the matching password through Supabase;
+no password or hash was returned by the check. Keep NOLOGIN until that is verified.
 The candidate was returned to NOLOGIN after each attempted check,
 temporary Previews removed, and production connection/configuration preserved.
 
