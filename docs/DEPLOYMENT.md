@@ -19,6 +19,9 @@ The [runtime-role audit/rehearsal](RUNTIME_ROLE_REHEARSAL.md) includes the teste
 14-table baseline permission candidate and its pending cloud switch/recovery plan.
 It also records the confirmed live owner/admin-capable database login and the
 strengthened isolated checks.
+October 20's protected Preview also passed the actual candidate's encrypted pooler
+login and all 14-table permission checks. It was removed and the candidate disabled
+again. Cloud API/Storage workflow acceptance is still required before cutover.
 Production still uses that login; the 16-table repair role preparation cannot be
 applied to the current 14-table live schema without the corresponding repair upgrade.
 The October 17 integration uses PyJWT with the existing HMAC token format and

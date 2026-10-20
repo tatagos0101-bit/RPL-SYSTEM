@@ -14,7 +14,9 @@ item 5's live privilege state: the backend is an owner/admin-capable login, with
 RLS bypass. The group was absent at that audit; a later October 19 operation created
 the restricted group, baseline grants/policies and disabled candidate account.
 Browser table denial remains intact. Local rehearsal and live catalog checks passed;
-credential handoff, actual candidate pooler login and live cutover remain pending.
+the October 20 follow-up also passed actual TLS pooler login and all baseline
+permission checks. Cloud API acceptance and live cutover remain pending; the
+candidate was disabled again after testing.
 
 Subsequent authorized preview testing is recorded in [REDIS_STAGING.md](REDIS_STAGING.md).
 It verifies the direct preview client-address boundary and managed Redis staging;

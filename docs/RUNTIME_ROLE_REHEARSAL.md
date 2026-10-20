@@ -1,9 +1,10 @@
 # Runtime database-role audit and rehearsal — October 19, 2026
 
-Latest follow-up: Supabase access is connected and the restricted group, baseline
-permissions and disabled candidate account are now prepared live. The API still
-uses its existing owner connection. The original audit below predates that
-preparation; see the final section for current evidence and pending acceptance.
+Latest follow-up, October 20: actual candidate TLS pooler login and all role/14-table
+permission checks passed in a protected Preview. The Preview was removed and the
+candidate returned to NOLOGIN. The API still uses its existing owner connection;
+cloud API workflow acceptance and production cutover remain pending. Earlier
+sections record historical preparation/diagnostics; the final section is current.
 
 ## Production finding
 
@@ -228,9 +229,10 @@ because only operational SQL, harnesses and documentation changed.
    retrying. Existing deployment secrets require a separate retirement decision.
 
 The later permissions-only preparation completed the group/account portion of
-step 2, with NOLOGIN retained. A usable LOGIN, pooler test, production candidate,
-credential handoff and alias change have **not** occurred. Backup/recovery inventory
-has not been verified; it remains a gate for the future repair schema rollout.
+step 2. October 20 completed the credential handoff and step 3's actual pooler
+verification, then restored NOLOGIN. Steps 4–6's application acceptance, production
+switch and recovery verification remain pending. Backup/recovery inventory has
+not been verified; it remains a gate for the future repair schema rollout.
 The future repair upgrade must apply the standard 16-table permission operation
 and verifier; do not keep using the baseline variant after that schema change.
 
@@ -311,7 +313,7 @@ Public API and frontend health returned 200; anonymous profile and librarian sta
 returned 401 on both paths. Authenticated live flows and full frontend/backend
 suites were not rerun for this operational change.
 
-The remaining handoff is a password supplied through a protected provider channel
+At this stage, the remaining handoff was a password supplied through a protected provider channel
 and a transaction-pooler URI stored as `RPL_RUNTIME_CANDIDATE_URI` in the API project's
 Preview environment, type Secret (formerly Sensitive). Never store this credential
 in chat, committed SQL, command arguments or diagnostic output. Keep NOLOGIN until
@@ -390,3 +392,37 @@ Vercel password presence alone does not establish a usable credential. The user
 was asked to set the same candidate password privately in Supabase with NOLOGIN
 retained. Future enablement must first confirm password presence as well as role
 restrictions; no further login attempt is needed until that handoff is complete.
+
+## Successful real pooler acceptance — October 20
+
+The user set the candidate password privately in Supabase. A boolean-only recheck
+confirmed password presence and NOLOGIN, then guarded enablement required both
+password presence and the expected restricted attributes/membership. The already
+prepared protected Preview `dpl_42vqYH9r2MZK6rf2VetzJGNG7fo5` passed:
+
+- Exact operator-confirmed transaction-pooler host, project/login, port/database,
+  allowed SSL mode/query options and required packaged files.
+- Actual TLS-encrypted connection through the shared pooler, with the expected
+  current/session login and a read-only identity transaction.
+- Every role check and all 14 table results from the fixed baseline verifier,
+  including RLS applicability, CRUD/sequence permissions, no ownership/admin or
+  extra/delegable privileges, and continued denial to browser roles.
+
+The connection uses the existing SQLAlchemy helper, NullPool and disabled automatic
+prepared statements. `sslmode=require` establishes transport encryption here, not
+certificate/hostname validation. No application records or biometric contents were
+read, and no application startup, migration, API circulation workflow or Storage
+operation was exercised. This is credential/permission acceptance, not complete
+production application acceptance.
+
+The Preview was removed, the candidate restored to NOLOGIN, and the existing
+production API deployment and project environment metadata preserved. A final
+boolean-only check confirmed password presence, disabled login and restricted
+attributes. Supabase security advisors returned no lints. Public API and frontend
+health returned 200; anonymous profile access returned 401 on both paths. The user
+need not supply another credential for this milestone.
+
+Next is step 4's protected baseline API workflow acceptance, followed by the
+reviewed production switch/recovery procedure. The live API still uses its owner
+connection; the original security follow-up remains open until those gates pass.
+PAD and unrelated working-tree changes remain untouched.

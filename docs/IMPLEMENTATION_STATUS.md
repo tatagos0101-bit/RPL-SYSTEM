@@ -1,4 +1,4 @@
-# Implementation status — October 19, 2026
+# Implementation status — October 20, 2026
 
 This reconciles the numbered lists without treating code completion, staging
 acceptance and production release as the same milestone. It is not a new
@@ -28,7 +28,7 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
 | 2 | Face capture/replay limits | Open; agree threat model and acceptance scope. |
 | 3 | Shared rate limiting | Code/staging/two-station pacing tested; production service/workload acceptance and activation pending. |
 | 4 | Trusted client address | Completed scoped validation: two network sources, spoof resistance and actual-project rewrite routing; no change to trusting arbitrary headers. |
-| 5 | Restricted database account | Both 14/16-table local rehearsals passed; live baseline grants and disabled candidate prepared. Credential handoff, real login/pooler acceptance and live switch pending. |
+| 5 | Restricted database account | Both 14/16-table local rehearsals and actual encrypted Supabase pooler/14-table permission checks passed. Cloud API workflow acceptance and live switch pending; candidate disabled between tests. |
 | 6 | Frontend database/storage credentials | Completed frontend disconnect, variable removal and guarded build release. Historical credential retirement belongs to item 7. |
 | 7 | Credential handling | API Sensitive conversion, consumer-aware rotation and old credential retirement pending. |
 | 8 | Biometric consent | Product policy and implementation pending. |
@@ -52,34 +52,21 @@ and repair rollout documents for behavior and limitations.
 
 ## Current next step
 
-Finish security item 5's real Supabase account/pooler acceptance before promotion.
-The [read-only candidate checker](../scripts/check_runtime_candidate.py) is prepared;
-it requires an explicit candidate URI, matching project/login/transaction-pooler
-target, encrypted transport and every metadata verifier check to pass. It does not
-create roles, read patron rows, migrate or change the runtime connection.
+Proceed with security item 5's cloud API workflow acceptance using deployed
+baseline application code before changing the production connection. Real pooler
+acceptance is complete: after the user corrected the URI username and supplied the
+matching password privately in Supabase, the protected Preview connected as the
+expected restricted login over TLS and passed every role/14-table verifier check.
+The password and connection URI were never returned in tool output or chat.
 
-Supabase access is now available. The live baseline permission operation and new
-`rpl_api_runtime` candidate were applied atomically; the candidate remains NOLOGIN
-and was created without a password. Catalog checks passed for the restricted
-attributes, membership, 14 table policies/grants and browser-role denial. This is
-metadata verification, not a successful connection as the candidate. The existing
-production API connection remains unchanged. The SQL connector has no hidden
-password-input channel: the credential handoff requires a protected provider flow,
-with `RPL_RUNTIME_CANDIDATE_URI` stored as a Preview-only Vercel Secret. Do not
-request passwords or connection strings in chat. See the linked rehearsal report
-for live evidence, recovery limitations and remaining acceptance gates.
-
-October 20: the candidate variable's Secret type, Preview-only target and absence
-of a branch restriction were verified without fetching its value. Temporary
-protected Preview diagnostics identified a username mismatch, which the user
-corrected; all connection-format checks now pass. Password authentication and
-runtime permission acceptance have not passed. The user confirmed the exact pooler
-host, and the saved URI matches it. A later boolean-only credential metadata check
-confirmed the Supabase candidate has **no password set**, despite a password being
-present in the Vercel URL. The user must set the matching password through Supabase;
-no password or hash was returned by the check. Keep NOLOGIN until that is verified.
-The candidate was returned to NOLOGIN after each attempted check,
-temporary Previews removed, and production connection/configuration preserved.
+The candidate URI remains a Preview-only Vercel Secret with no branch restriction.
+The temporary Preview was removed and the candidate returned to NOLOGIN; enable it
+only for the next controlled acceptance. The live API still uses its prior owner
+connection. No patron rows, application startup/migration, or Storage operations
+were exercised by the read-only checker. The cloud application/Storage acceptance,
+reviewed production switch, owner-credential retirement and recovery gates remain.
+This progress does not close item 5 or reduce the open-item count yet. See the
+[rehearsal report](RUNTIME_ROLE_REHEARSAL.md) for exact evidence and limitations.
 
 A fresh Vercel metadata-only check confirmed both public targets remain READY:
 API `dpl_FpN6P2p7Aq8f1NMnc1ym8xQciM7E` at `8975023`, frontend
