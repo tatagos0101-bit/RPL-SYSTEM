@@ -16,7 +16,7 @@ from sqlalchemy import or_, and_
 
 from config import LIBRARIAN_AUTH_CODE, ENVIRONMENT
 from database import get_db
-from dependencies import get_current_user, require_librarian, oauth2_scheme
+from dependencies import get_current_user, get_locked_current_user, require_librarian, oauth2_scheme
 from limiter import limiter
 from logger import security_logger
 from middleware.security import _client_ip
@@ -88,12 +88,14 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
     )
     if user:
         user = db.query(User).filter(User.id == user.id).with_for_update().populate_existing().one()
-    if not user or not _verify(body.password, user.password_hash):
+    if not user or user.deleted_at is not None or not _verify(body.password, user.password_hash):
         security_logger.warning("LOGIN_FAILED ip=%s", ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email/Member ID or password")
     if user.status == "suspended":
         security_logger.warning("LOGIN_SUSPENDED ip=%s user_id=%d", ip, user.id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended. Contact librarian.")
+    if body.expected_role is not None and body.expected_role != user.role:
+        raise HTTPException(403, "This account belongs to the other portal. Use its matching sign-in page.")
     if needs_legacy_replacement(body.password, user.password_hash):
         user.must_change_password = True
         revoke_user_sessions(db, user.id)
@@ -265,7 +267,7 @@ def _close_idle_session(ip: str, db: Session) -> None:
 @router.post("/face", response_model=FaceAuthResponse)
 @limiter.limit("120/minute")
 def face_auth(request: Request, response: Response, body: FaceAuthRequest, db: Session = Depends(get_db)):
-    return process_entry_face(request, response, body.image, db, issue_token=True)
+    return process_entry_face(request, response, body.image, db, issue_token=True, expected_role=body.expected_role)
 
 
 def _legacy_process_entry_face(
@@ -416,6 +418,7 @@ def process_entry_face(
     image: str,
     db: Session,
     issue_token: bool = True,
+    expected_role: Optional[str] = None,
 ) -> FaceAuthResponse:
     """
     Entrance-station face processing.
@@ -511,11 +514,13 @@ def process_entry_face(
                 time_out=now,
             ))
 
-    matches = [face_engine_service.find_match_for_face(db, face, purpose="login" if issue_token else "gate") for face in detected_faces]
+    matches = [face_engine_service.find_match_for_face(db, face, purpose="login" if issue_token else "gate", lock_match=False) for face in detected_faces]
     user_ids = sorted({match.user.id for match in matches if match is not None})
     # Stable order prevents overlapping multi-face frames from reversing member locks.
     db.query(User).filter(User.id.in_(user_ids)).order_by(User.id).with_for_update().populate_existing().all()
     for face, match in zip(detected_faces, matches):
+        match = face_engine_service.revalidate_match_for_face(
+            db, face, match, purpose="login" if issue_token else "gate")
 
         if match is None or match.user.status == "suspended":
             log_unknown_face_once()
@@ -528,6 +533,8 @@ def process_entry_face(
             })
             continue
         matched_user = match.user
+        if issue_token and expected_role is not None and matched_user.role != expected_role:
+            raise HTTPException(403, "This account belongs to the other portal. Use its matching sign-in page.")
 
         if issue_token:
             session_action = 'authenticated'
@@ -671,9 +678,11 @@ def face_lookup(
 def enroll_face(
     request: Request,
     body: EnrollFaceRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_locked_current_user),
     db: Session = Depends(get_db),
 ):
+    from services.member_deletion import lock_active_account
+    current_user = lock_active_account(db, current_user.id)
     import services.face_engine_service as face_engine_service
     from services.liveness_service import check_liveness
     from models.security_alert import SecurityAlert

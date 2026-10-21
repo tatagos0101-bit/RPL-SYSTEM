@@ -2,7 +2,7 @@
 
 Branch: `fixing-the-issue`. Local verification is recorded in the
 [ledger](REPAIR_LEDGER.md). Production migration, role changes, merge/push and
-deployments require separate authorization. Preserve the independent PAD branch.
+deployments were authorized by the user on October 21, conditional on completion and safety. The user confirmed no production backup exists, so recovery/rehearsal remains a release gate. Preserve the independent PAD branch.
 
 1. Record the current backend/frontend revisions and an authorized database backup.
    Schedule a maintenance window that stops old API writers: old code does not
@@ -20,7 +20,8 @@ deployments require separate authorization. Preserve the independent PAD branch.
    new commitments. No historical attendance timestamps are shifted.
 4. Apply the validated migration during the authorized maintenance window. Changes:
    `reservation_confirmations`, `inventory_writes`, active member/title uniqueness, FIFO index,
-   normalized-email uniqueness, and notification message/name/title `TEXT` fields.
+   normalized-email uniqueness, notification message/name/title `TEXT` fields, and
+   nullable `users.deleted_at` for irreversible member identity removal.
    Existing confirmation IDs and historical reservations must survive future upgrades.
 5. If using the restricted backend runtime role, apply the reviewed
    `supabase/operations/prepare_runtime_role.sql` update for all 16 tables; verify

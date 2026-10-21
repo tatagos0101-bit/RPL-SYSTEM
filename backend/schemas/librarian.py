@@ -1,7 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
+
+
+class MemberDeletionRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=1024)
 
 
 class DashboardStats(BaseModel):

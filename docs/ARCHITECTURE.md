@@ -68,6 +68,12 @@ remain alternate deployment artifacts; the latter invokes migrations before depl
 Some comments still mention earlier hosting choices. Files in the repository do
 not establish which revision, environment variables, policies, or models are live.
 Production persistence must not depend on the host filesystem.
+
+October 20 local member-management changes add explicit face/account deletion
+and camera capture feedback. Account deletion retains deidentified historical
+foreign keys and requires the additive `users.deleted_at` column; it is not a
+hard cascade delete. See [policy, storage failure behavior and release
+requirements](MEMBER_MANAGEMENT.md). These changes are not live.
 The October 19 [runtime-role audit](RUNTIME_ROLE_REHEARSAL.md) confirmed that the
 API connection owns the deployed tables and bypasses RLS. Browser-role table access
 remains revoked. A later permissions-only operation prepared the restricted group,

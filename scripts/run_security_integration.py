@@ -26,6 +26,8 @@ FILES = (
     "backend/services/reservation_policy.py",
     "backend/models/inventory_write.py", "backend/services/borrowing_capacity.py",
     "backend/services/list_queries.py",
+    "backend/services/member_deletion.py", "backend/services/storage_service.py",
+    "tests/security/check_member_deletion.py",
     "supabase/migrations/20261010000100_library_schema.sql",
     "supabase/migrations/20261016000100_auth_sessions.sql",
     "supabase/operations/prepare_runtime_role.sql", "supabase/operations/check_runtime_access.sql",

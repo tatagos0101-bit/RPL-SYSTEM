@@ -175,3 +175,32 @@ def test_session_table_upgrade_is_additive_and_repeatable(monkeypatch):
         assert member.email_verified is True
         assert db.query(AuthSession).count() == 0
     engine.dispose()
+
+
+def test_wrong_portal_password_login_preserves_current_cookie(client, db_session):
+    member = account(db_session)
+    staff = account(db_session, role="librarian")
+    login(client, member)
+    response = client.post("/api/auth/login", json={
+        "email": staff.email, "password": "Password1", "expected_role": "member",
+    })
+    assert response.status_code == 403
+    assert not response.headers.get("set-cookie")
+    assert client.get("/api/user/profile").json()["id"] == member.id
+    assert db_session.query(AuthSession).filter_by(user_id=staff.id).count() == 0
+
+
+def test_wrong_portal_face_login_preserves_current_cookie(client, db_session, monkeypatch):
+    from services import face_engine_service, liveness_service
+    member = account(db_session)
+    staff = account(db_session, role="librarian")
+    staff.face_encoding = "[0.1]"
+    db_session.commit()
+    login(client, member)
+    monkeypatch.setattr(liveness_service, "check_liveness", lambda _: ("ok", 1))
+    monkeypatch.setattr(face_engine_service, "detect_faces", lambda *a, **kw: [{"engine": "dlib", "encoding": [0.1]}])
+    response = client.post("/api/auth/face", json={"image": "synthetic", "expected_role": "member"})
+    assert response.status_code == 403
+    assert not response.headers.get("set-cookie")
+    assert client.get("/api/user/profile").json()["id"] == member.id
+    assert db_session.query(AuthSession).filter_by(user_id=staff.id).count() == 0

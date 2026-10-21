@@ -31,8 +31,9 @@ export default function RequireRole({ allowedRoles }) {
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
 
-    getProfile()
+    getProfile({ signal: controller.signal })
       .then(({ data }) => {
         if (cancelled) return;
         updateStoredProfile(data);
@@ -41,6 +42,7 @@ export default function RequireRole({ allowedRoles }) {
           path: location.pathname,
           attempt,
           role: data.role,
+          userId: data.id,
           mustChangePassword: Boolean(data.must_change_password),
         });
       })
@@ -56,8 +58,28 @@ export default function RequireRole({ allowedRoles }) {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [location.pathname, attempt]);
+
+  useEffect(() => {
+    const recheck = () => setAttempt(value => value + 1);
+    const onStorage = event => {
+      if (event.storageArea === localStorage &&
+          (event.key === null || ['userId', 'userRole', 'isLoggedIn', 'mustChangePassword', 'token'].includes(event.key))) {
+        recheck();
+      }
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') recheck(); };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', recheck);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', recheck);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
 
   // A new path must not use the previous page's password-change requirement.
   // Rendering a loading gate immediately prevents the redirect back to the form
@@ -110,5 +132,5 @@ export default function RequireRole({ allowedRoles }) {
     return <Navigate to={homeForRole(state.role)} replace state={location.state} />;
   }
 
-  return <Outlet />;
+  return <Outlet key={`${state.userId}:${state.role}`} />;
 }

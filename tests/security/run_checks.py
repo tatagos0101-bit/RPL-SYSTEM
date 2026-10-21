@@ -193,6 +193,10 @@ def verify_permissions_and_services(admin, runtime, psycopg, sql):
         stage = "concurrent circulation and inventory consistency"
         from check_circulation import verify_circulation
         verify_circulation(admin)
+        if not BASELINE:
+            stage = "member deletion and concurrent circulation"
+            from check_member_deletion import verify_member_deletion
+            verify_member_deletion(admin)
         if BASELINE:
             stage = "deployed-baseline API operations and cutover recovery"
             from check_baseline_api import verify_baseline_api, verify_preparation_rollback

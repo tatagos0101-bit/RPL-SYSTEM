@@ -40,6 +40,12 @@ export const resetMemberPassword = (userId) =>
 export const enrollMemberFace = (userId, imageBase64) =>
   client.post(`/api/librarian/users/${userId}/enroll-face`, { image: imageBase64 });
 
+export const deleteMemberFace = (userId, currentPassword) =>
+  client.delete(`/api/librarian/users/${userId}/face`, { data: { current_password: currentPassword } });
+
+export const deleteMemberAccount = (userId, currentPassword) =>
+  client.delete(`/api/librarian/users/${userId}`, { data: { current_password: currentPassword } });
+
 export const notifyMember = (transactionId) =>
   client.post(`/api/librarian/notify/${transactionId}`);
 

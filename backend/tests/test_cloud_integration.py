@@ -57,6 +57,8 @@ def test_additive_migration_keeps_existing_rows_and_runs_twice(monkeypatch):
     database.init_db()
     with legacy.connect() as conn:
         assert conn.execute(text("SELECT name, must_change_password FROM users WHERE id=1")).one() == ("Existing member", 0)
+        assert conn.execute(text("SELECT deleted_at FROM users WHERE id=1")).scalar() is None
+        assert "deleted_at" in {column["name"] for column in inspect(conn).get_columns("users")}
         assert "security_alerts" in inspect(conn).get_table_names()
     legacy.dispose()
 

@@ -64,7 +64,7 @@ const LoginPage = ({ expectedRole = 'member' }) => {
       const image = screenshot;
       isPendingRef.current = true;
       try {
-        const { data } = await faceAuth(image);
+        const { data } = await faceAuth(image, expectedRole);
 
         if (data.matched) {
           spoofConfidence = 0;
@@ -146,7 +146,7 @@ const LoginPage = ({ expectedRole = 'member' }) => {
     setError('');
     setIsLoading(true);
     try {
-      const { data } = await login(email, password);
+      const { data } = await login(email, password, expectedRole);
       if (data.role !== expectedRole) {
         await clearAuth();
         setError(wrongPortalMessage(data.role, expectedRole));

@@ -26,6 +26,7 @@ ADDITIONS = {
     "entry_logs": [("time_out", DateTime(timezone=True), None)],
     "notifications": [("user_id", Integer, None)],
     "users": [
+        ("deleted_at", DateTime(timezone=True), None),
         ("member_id", String(20), None),
         ("id_image_url", String(300), None),
         ("avatar_url", String(300), None),

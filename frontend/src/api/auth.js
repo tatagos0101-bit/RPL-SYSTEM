@@ -8,8 +8,8 @@ import {
   PASSWORD_RESET_REQUEST_PATH,
 } from './passwordRecovery';
 
-export const login = (email, password) =>
-  client.post('/api/auth/login', { email, password });
+export const login = (email, password, expectedRole) =>
+  client.post('/api/auth/login', { email, password, expected_role: expectedRole });
 
 export const signup = (data) =>
   client.post('/api/auth/signup', data);
@@ -23,8 +23,8 @@ export const confirmPasswordReset = (identifier, code, newPassword) =>
 export const enrollFace = (imageBase64) =>
   client.post('/api/auth/enroll-face', { image: imageBase64 });
 
-export const faceAuth = (imageBase64) =>
-  client.post('/api/auth/face', { image: imageBase64 }, { timeout: 30000 });
+export const faceAuth = (imageBase64, expectedRole) =>
+  client.post('/api/auth/face', { image: imageBase64, expected_role: expectedRole }, { timeout: 30000 });
 
 export const faceLookup = (imageBase64) =>
   client.post('/api/auth/face-lookup', { image: imageBase64 });

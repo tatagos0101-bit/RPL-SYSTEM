@@ -32,7 +32,7 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
 | 6 | Frontend database/storage credentials | Completed frontend disconnect, variable removal and guarded build release. Historical credential retirement belongs to item 7. |
 | 7 | Credential handling | API Sensitive conversion, consumer-aware rotation and old credential retirement pending. |
 | 8 | Biometric consent | Product policy and implementation pending. |
-| 9 | Biometric retention/deletion | Product policy and implementation pending. |
+| 9 | Biometric retention/deletion | Librarian-triggered member/face deletion policy approved and implemented locally; retention schedules, broader evidence policy and production rollout remain pending. |
 | 10 | Biometric encryption | Key-management/recovery design and implementation pending. |
 | 11 | Staff security-alert workflow | Evidence/access/audit policy and workflow pending. |
 | 12 | Administrator MFA | Enrollment/recovery/emergency-access design and implementation pending. |
@@ -74,3 +74,15 @@ API `dpl_FpN6P2p7Aq8f1NMnc1ym8xQciM7E` at `8975023`, frontend
 has no `DATABASE_URL` override or shared-rate-limit URI; the frontend has zero
 Production variables. Values were not fetched. This is deployment/configuration
 metadata evidence, not a new database privilege or authenticated workflow check.
+
+## October 21 release request
+
+The user authorized committing completed implementations and merging/deploying
+only after release safety checks. Member capture/deletion and cross-tab portal
+synchronization are documented in [MEMBER_MANAGEMENT](MEMBER_MANAGEMENT.md).
+A read-only production preflight returned zero normalized-email collisions,
+duplicate active reservations and overcommitted ready-hold titles. Local tests
+and disposable PostgreSQL checks pass. The user confirmed no production backup
+exists. Live migration, main merge/push and deployment remain gated by a secure
+restorable backup and production-shaped rehearsal. PAD, Redis activation,
+restricted-runtime cutover and other pending implementations remain unchanged.

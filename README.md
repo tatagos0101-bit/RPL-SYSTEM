@@ -38,7 +38,8 @@ see the [repair ledger](docs/REPAIR_LEDGER.md) and [rollout checklist](docs/REPA
   reuse a member-scoped request ID to prevent duplicates.
   Confirmation uses the authenticated session, without an additional face scan.
 - **Librarian tools:** register members with a government ID upload, enroll faces,
-  suspend/reactivate accounts, issue temporary password resets, manage inventory,
+  replace/delete enrolled face data, delete member accounts after all books are
+  returned, suspend/reactivate accounts, issue temporary password resets, manage inventory,
   import `.xlsx` workbooks with per-row validation/savepoints, and process
   borrowing/returns for individual copies. Failed cover uploads can be retried
   after a successful book save without creating another title. Book creation and
@@ -46,6 +47,9 @@ see the [repair ledger](docs/REPAIR_LEDGER.md) and [rollout checklist](docs/REPA
   recovery; bulk ISBN retries skip confirmed rows. QR lists and reservations use
   server pagination. Complete QR export downloads every matching identity in bounded
   PDF batches and assembles a ZIP with a label-count manifest.
+  Account deletion removes personal details and referenced private files while
+  retaining deidentified loan/attendance history; see the
+  [member deletion policy and release checks](docs/MEMBER_MANAGEMENT.md).
 - **Entrance station:** a station PIN unlocks camera scanning and recent entry
   logs. Recognized enrolled faces create time-in/out sessions; frames can contain
   multiple people. Kiosk scans do not issue login tokens; website face login does

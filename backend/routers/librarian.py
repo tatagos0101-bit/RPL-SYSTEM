@@ -21,6 +21,9 @@ import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
 from services.passwords import hash_password
+from services.passwords import verify_password
+from services.member_deletion import lock_existing_member, delete_face_data, delete_account
+from limiter import limiter
 from services.list_queries import member_query, reservation_query
 from services.reservation_confirmation import cancel_locked_reservation
 from services.email_identity import email_matches
@@ -55,7 +58,7 @@ from schemas.librarian import (
     DueBookOut, EntryLogOut,
     LibMemberOut, LibMemberStats, MemberStatusUpdate,
     NotificationOut, LibReservationOut, MemberReservationOut,
-    MemberActiveLoanOut,
+    MemberActiveLoanOut, MemberDeletionRequest,
 )
 
 router = APIRouter(prefix="/api/librarian", tags=["Librarian"])
@@ -147,7 +150,7 @@ def dashboard_stats(
         .scalar()
     )
 
-    total_members = db.query(func.count(User.id)).filter(User.role == "member").scalar()
+    total_members = db.query(func.count(User.id)).filter(User.role == "member", User.deleted_at.is_(None)).scalar()
 
     pending_registrations = (
         db.query(func.count(User.id))
@@ -155,7 +158,7 @@ def dashboard_stats(
             FaceEmbedding,
             and_(FaceEmbedding.user_id == User.id, FaceEmbedding.is_active == True),
         )
-        .filter(User.role == "member", User.face_encoding.is_(None), FaceEmbedding.id.is_(None))
+        .filter(User.role == "member", User.deleted_at.is_(None), User.face_encoding.is_(None), FaceEmbedding.id.is_(None))
         .scalar()
     )
 
@@ -350,7 +353,7 @@ def member_stats(
     counts = db.query(func.count(User.id),
         func.sum(case((User.status == 'active', 1), else_=0)),
         func.sum(case((User.status == 'suspended', 1), else_=0)),
-        func.sum(case((enrolled, 1), else_=0))).filter(User.role == 'member').one()
+        func.sum(case((enrolled, 1), else_=0))).filter(User.role == 'member', User.deleted_at.is_(None)).one()
     return LibMemberStats(
         total=counts[0], active=counts[1] or 0,
         suspended=counts[2] or 0, enrolled=counts[3] or 0,
@@ -458,7 +461,7 @@ def reset_member_password(
     db:      Session = Depends(get_db),
     _:       User    = Depends(require_librarian),
 ):
-    member = db.query(User).filter(User.id == user_id, User.role == "member").with_for_update().populate_existing().first()
+    member = lock_existing_member(db, user_id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
@@ -491,7 +494,7 @@ def update_member_status(
     if body.status not in ("active", "suspended"):
         raise HTTPException(status_code=400, detail="Status must be 'active' or 'suspended'")
 
-    member = db.query(User).filter(User.id == user_id, User.role == "member").with_for_update().populate_existing().first()
+    member = lock_existing_member(db, user_id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
@@ -510,6 +513,27 @@ def update_member_status(
 
 # ── Enroll face for a member (librarian-assisted) ────────────────────────────
 
+@router.delete("/users/{user_id}/face", status_code=204)
+@limiter.limit("5/minute")
+def delete_member_face(user_id: int, body: MemberDeletionRequest, request: Request,
+                       db: Session = Depends(get_db), librarian: User = Depends(require_librarian)):
+    if not verify_password(body.current_password, librarian.password_hash):
+        raise HTTPException(403, "Your librarian password is incorrect.")
+    member = lock_existing_member(db, user_id)
+    delete_face_data(db, member)
+    db.commit()
+
+
+@router.delete("/users/{user_id}", status_code=204)
+@limiter.limit("5/minute")
+def delete_member_account(user_id: int, body: MemberDeletionRequest, request: Request,
+                          db: Session = Depends(get_db), librarian: User = Depends(require_librarian)):
+    if not verify_password(body.current_password, librarian.password_hash):
+        raise HTTPException(403, "Your librarian password is incorrect.")
+    member = lock_existing_member(db, user_id, allow_deleted=True)
+    delete_account(db, member)
+    db.commit()
+
 @router.post("/users/{user_id}/enroll-face")
 def librarian_enroll_face(
     user_id: int,
@@ -524,7 +548,7 @@ def librarian_enroll_face(
     import services.face_engine_service as face_engine_service
     from logger import security_logger
 
-    member = db.query(User).filter(User.id == user_id, User.role == "member").first()
+    member = lock_existing_member(db, user_id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 

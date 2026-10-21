@@ -9,6 +9,7 @@ _PHONE_RE = re.compile(r"^[\d\s\-\+\(\)]{7,20}$")
 class LoginRequest(BaseModel):
     email:    str  # accepts email address or Member ID (e.g. RPL-K7X2M)
     password: str
+    expected_role: Optional[Literal["member", "librarian"]] = None
 
     @field_validator("password")
     @classmethod
@@ -140,6 +141,7 @@ class PasswordResetConfirmResponse(BaseModel):
 class FaceAuthRequest(BaseModel):
     """Base64-encoded JPEG frame from the webcam."""
     image: str   # "data:image/jpeg;base64,/9j/4AAQ..."
+    expected_role: Optional[Literal["member", "librarian"]] = None
 
     @field_validator("image")
     @classmethod

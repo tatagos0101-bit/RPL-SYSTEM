@@ -9,7 +9,7 @@ from models.reservation import Reservation
 def member_query(db, search='', status=''):
     if status and status not in ('active', 'suspended'):
         raise HTTPException(400, "Status filter must be 'active' or 'suspended'")
-    query = db.query(User).filter(User.role == 'member')
+    query = db.query(User).filter(User.role == 'member', User.deleted_at.is_(None))
     if status:
         query = query.filter(User.status == status)
     if search:

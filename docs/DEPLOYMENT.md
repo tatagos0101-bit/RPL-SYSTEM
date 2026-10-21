@@ -1,5 +1,9 @@
 # Vercel and Supabase deployment
 
+The local member-management update requires migrating `users.deleted_at` before
+API rollout. Its deletion endpoints and camera UI have not been deployed; see
+[member-management policy and acceptance gates](MEMBER_MANAGEMENT.md).
+
 The website runs in the Vercel `rpl-system` project. The FastAPI application runs
 in a separate Vercel `rpl-system-api` project with `backend` as its root directory.
 Supabase stores all library records and face embeddings in PostgreSQL, plus book
