@@ -85,7 +85,6 @@ const LibInventory = () => {
       />
 
       <div className="max-w-7xl mx-auto">
-        <PageControls {...listing} />
         {operationError && <p role="alert">{operationError} <button className="underline" onClick={fetchData}>Retry loading</button></p>}
 
         {/* Header */}
@@ -144,6 +143,7 @@ const LibInventory = () => {
           </div>
         </div>
 
+        <PageControls {...listing} />
         {/* Table */}
         <div className="bg-panel rounded-xl border border-line shadow-sm overflow-hidden">
           {loading ? (

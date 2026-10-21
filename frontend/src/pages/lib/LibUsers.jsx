@@ -379,6 +379,7 @@ export default function LibUsers() {
   const { items: users, loading, reload } = listing;
   const [operationError, setOperationError] = useState('');
   const fetchMembers = useCallback(() => {
+    setOperationError('');
     reload();
     getMemberStats().then(({ data }) => setStats(data)).catch(() => setOperationError('Member totals unavailable. Retry loading.'));
   }, [reload]);
@@ -394,7 +395,6 @@ export default function LibUsers() {
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8">
-        <PageControls {...listing} />
         {operationError && <p role="alert">{operationError} <button className="underline" onClick={fetchMembers}>Retry loading</button></p>}
 
         {/* Header */}
@@ -497,7 +497,7 @@ export default function LibUsers() {
                             {(
                               <button onClick={() => { setActionMenu(null); setEnrollTarget(u); }}
                                 className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold tracking-normal text-link hover:bg-info-soft flex items-center gap-2 transition-all">
-                                <ScanFace size={13}/> {u.face_enrolled ? 'Replace Face' : 'Register Face'}
+                                <ScanFace size={13}/> {u.face_enrolled ? 'Reset Face Data' : 'Register Face'}
                               </button>
                             )}
                             {u.face_enrolled && <button onClick={() => { setActionMenu(null); setDeleteTarget({ user: u, kind: 'face' }); }}
@@ -528,6 +528,9 @@ export default function LibUsers() {
               </table>
             </div>
           )}
+          <div className="border-t border-line px-4 sm:px-6">
+            <PageControls {...listing} />
+          </div>
         </div>
       </div>
 

@@ -1218,7 +1218,6 @@ export default function LibBorrowReturn() {
       )}
 
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8">
-        <PageControls {...listing} />
 
         {/* ── HEADER ── */}
         <div className="animate-fade-in-up flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
@@ -1281,6 +1280,7 @@ export default function LibBorrowReturn() {
           ))}
         </div>
 
+        <PageControls {...listing} />
         {/* ── TRANSACTION TABLE ── */}
         <div className="animate-fade-in-up delay-200 bg-panel border border-line rounded-xl overflow-hidden shadow-sm">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 px-6 py-5 border-b border-line">

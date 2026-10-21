@@ -341,7 +341,7 @@ const LibDashboard = () => {
           </aside>
         </div>
 
-        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.85fr)]">
+        <section className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.85fr)]">
           <BorrowTrendPanel trendSummary={overview.trendSummary} />
           <EntryActivityPanel entryLogs={entryLogs} entrySummary={overview.entrySummary} />
         </section>
@@ -634,7 +634,7 @@ const BorrowTrendPanel = ({ trendSummary }) => {
         </span>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <ActivityMetric icon={BookOpen} label="Total Borrows" value={trendSummary.totalBorrows} />
         <ActivityMetric icon={BarChart3} label="Latest Month" value={trendSummary.latestBorrows} />
         <ActivityMetric
@@ -644,20 +644,20 @@ const BorrowTrendPanel = ({ trendSummary }) => {
         />
       </div>
 
-      <div className="flex h-52 items-end gap-1 rounded-xl bg-subtle p-3 sm:gap-3 sm:p-4">
+      <div role="group" aria-label="Monthly borrowing totals" className="flex items-end gap-2 rounded-xl bg-subtle p-3 sm:gap-4 sm:p-4">
         {trendSummary.bars.map((bar) => {
-          const heightPct = bar.borrows > 0 ? Math.max(12, Math.round((bar.borrows / maxBorrows) * 100)) : 6;
+          const heightPct = (bar.borrows / maxBorrows) * 100;
           return (
-            <div key={`${bar.month}-${bar.index}`} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
-              <div className="flex h-36 w-full items-end">
+            <div key={`${bar.month}-${bar.index}`} className="flex min-w-0 flex-1 flex-col items-center gap-2" aria-label={`${bar.month}: ${bar.borrows} borrows`}>
+              <p className="w-full truncate text-center text-sm font-semibold tabular-nums text-ink" title={`${bar.borrows} borrows`}>{bar.borrows}</p>
+              <div className="flex h-36 w-full shrink-0 items-end justify-center border-b border-line">
                 <div
-                  className={`w-full rounded-t-2xl transition-all ${bar.borrows > 0 ? 'bg-action' : 'bg-subtle '}`}
+                  className="w-full max-w-12 rounded-t-md bg-action"
                   style={{ height: `${heightPct}%` }}
                   title={`${bar.month}: ${bar.borrows} borrows`}
                 />
               </div>
-              <p className="text-sm font-semibold text-muted">{bar.borrows}</p>
-              <p className="text-sm font-semibold tracking-normal text-muted">
+              <p className="text-sm font-semibold tracking-normal text-muted" title={bar.month}>
                 {bar.month?.split(' ')[0] || 'N/A'}
               </p>
             </div>

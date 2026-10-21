@@ -17,6 +17,8 @@ export default function FaceEnrollModal({ user, onClose, onSuccess }) {
   const [image, setImage] = useState(null);
   const [error, setError] = useState('');
   const busy = step === 'loading';
+  const resetting = Boolean(user.face_enrolled);
+  const title = resetting ? 'Reset Face Data' : 'Face Registration';
   const close = () => { if (!submitting.current) onClose(); };
 
   const restart = () => {
@@ -62,11 +64,12 @@ export default function FaceEnrollModal({ user, onClose, onSuccess }) {
   };
 
   return (
-    <ModalFrame onClose={close} aria-label="Face registration" className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
+    <ModalFrame onClose={close} aria-label={title} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
       <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-line bg-panel p-6">
         <button aria-label="Close" disabled={busy} onClick={close} className="absolute right-4 top-4 p-2 text-muted disabled:opacity-50"><X size={18}/></button>
-        <h2 className="rpl-section-title font-semibold text-ink">Face Registration</h2>
+        <h2 className="rpl-section-title pr-8 font-semibold text-ink">{title}</h2>
         <p className="mb-4 text-sm text-muted">{user.name}</p>
+        {resetting && step !== 'success' && <p className="mb-4 text-sm text-muted">Capture a new live photo to replace the saved face data. Existing face data stays unchanged until enrollment succeeds.</p>}
         {step === 'preview' && (
           <>
             <div className="aspect-[4/3] overflow-hidden rounded-xl bg-subtle">
@@ -89,7 +92,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess }) {
         {image && <img src={image} alt="Captured face preview" className="w-full rounded-xl"/>}
         {error && <p role="alert" className="my-3 text-sm text-danger">{error}</p>}
         {busy && <p role="status" className="my-4 flex items-center gap-2"><RefreshCw className="animate-spin" size={18}/> Enrolling face…</p>}
-        {step === 'success' && <p role="status" className="my-6 font-semibold text-success">Face enrolled successfully.</p>}
+        {step === 'success' && <p role="status" className="my-6 font-semibold text-success">{resetting ? 'Face data reset successfully.' : 'Face enrolled successfully.'}</p>}
         <div className="mt-4 flex flex-wrap gap-3">
           {step === 'preview' && <>
             <button onClick={restart} className="rounded-lg border border-line px-4 py-3 text-sm">Retry camera</button>
@@ -97,7 +100,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess }) {
           </>}
           {step === 'captured' && <>
             <button onClick={restart} className="rounded-lg border border-line px-4 py-3">Retake</button>
-            <button onClick={enroll} className="flex items-center gap-2 rounded-lg bg-action px-4 py-3 text-white"><ScanFace size={16}/> Enroll</button>
+            <button onClick={enroll} className="flex items-center gap-2 rounded-lg bg-action px-4 py-3 text-white"><ScanFace size={16}/> {resetting ? 'Reset Face Data' : 'Enroll'}</button>
           </>}
           {step === 'success' && <button onClick={close} className="rounded-lg bg-action px-4 py-3 text-white">Done</button>}
         </div>
