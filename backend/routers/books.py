@@ -15,8 +15,16 @@ from models.book import Book
 from models.transaction import Transaction
 from schemas.book import BookOut, BookListResponse, BookScanOut
 from services.book_copy_service import normalize_scan_code, resolve_scan
+from config import LOAN_DAYS, FINE_PER_DAY, PICKUP_WINDOW_HOURS
+from services.borrowing_capacity import COMMITMENT_LIMIT
 
 router = APIRouter(prefix="/api/books", tags=["Books"])
+
+
+@router.get("/policy")
+def loan_policy():
+    return {"loan_days": LOAN_DAYS, "preview_due_date": (now_ph() + timedelta(days=LOAN_DAYS)).isoformat(), "fine_per_day": FINE_PER_DAY,
+            "pickup_window_hours": PICKUP_WINDOW_HOURS, "commitment_limit": COMMITMENT_LIMIT}
 
 
 # ── All books — search + filter + paginate ────────────────────────────────────
@@ -45,7 +53,7 @@ def list_books(
         q = q.filter(Book.copies_available > 0)
 
     total = q.count()
-    items = q.order_by(Book.title).offset(skip).limit(limit).all()
+    items = q.order_by(Book.title, Book.id).offset(skip).limit(limit).all()
 
     return BookListResponse(total=total, skip=skip, limit=limit, items=items)
 

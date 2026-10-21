@@ -18,7 +18,7 @@ import os
 # Allow running from any working directory
 sys.path.insert(0, os.path.dirname(__file__))
 
-from passlib.context import CryptContext
+from services.passwords import hash_password
 from database import SessionLocal, init_db
 from config import DATABASE_URL, ENVIRONMENT
 from sqlalchemy.engine import make_url
@@ -28,7 +28,7 @@ from models.reading_goal import ReadingGoal
 from models.security_alert import SecurityAlert
 from services.qr_service import make_qr_code
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 
 # ── Default accounts ──────────────────────────────────────────────────────────
@@ -374,7 +374,7 @@ def seed():
             lib = User(
                 name          = LIBRARIAN["name"],
                 email         = LIBRARIAN["email"],
-                password_hash = pwd_ctx.hash(LIBRARIAN["password"]),
+                password_hash = hash_password(LIBRARIAN["password"]),
                 role          = "librarian",
                 status        = "active",
             )
@@ -390,7 +390,7 @@ def seed():
             member = User(
                 name          = TEST_MEMBER["name"],
                 email         = TEST_MEMBER["email"],
-                password_hash = pwd_ctx.hash(TEST_MEMBER["password"]),
+                password_hash = hash_password(TEST_MEMBER["password"]),
                 role          = "member",
                 phone         = TEST_MEMBER["phone"],
                 location      = TEST_MEMBER["location"],

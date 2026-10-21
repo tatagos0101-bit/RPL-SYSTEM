@@ -1,10 +1,14 @@
+import ModalFrame from '../../components/ModalFrame';
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Trash2, Camera, AlertCircle, BookOpen, ChevronRight, Bell, Clock, CheckCircle2, Users, RefreshCw, X } from 'lucide-react';
-import { getReservations, createReservation, cancelReservation } from '../../api/reservations';
+import { getReservations, confirmReservations, cancelReservation } from '../../api/reservations';
+import useBorrowingCapacity from '../../api/useBorrowingCapacity';
+import BorrowingCapacity from '../../components/BorrowingCapacity';
 import { getBook } from '../../api/books';
 import {
-  RESERVATION_CART_KEY,
+  clearReservationCart,
+  pendingConfirmationKey, loadPendingConfirmation,
   addReservationCartItem,
   loadReservationCart,
   saveReservationCart,
@@ -20,6 +24,9 @@ export default function UserReservations() {
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState('');
   const [loadingReservations, setLoadingReservations] = useState(true);
+  const allowance = useBorrowingCapacity();
+  const [queueAccepted, setQueueAccepted] = useState({});
+  const [pendingConfirmation, setPendingConfirmation] = useState(loadPendingConfirmation);
 
   // Cancellation confirmation
   const [cancellingId, setCancellingId] = useState(null);
@@ -29,7 +36,7 @@ export default function UserReservations() {
     setLoadingReservations(true);
     getReservations()
       .then((res) => setWaitlist(res.data))
-      .catch(() => {})
+      .catch(() => setError('Could not load reservations. Please retry.'))
       .finally(() => setLoadingReservations(false));
   }, []);
 
@@ -41,6 +48,7 @@ export default function UserReservations() {
   useEffect(() => {
     const reserveBook = searchParams.get('reserveBook');
     if (!reserveBook) return undefined;
+    if (!allowance.capacity || pendingConfirmation) return undefined;
 
     const bookId = Number(reserveBook);
     const clearReserveParam = () => {
@@ -59,6 +67,7 @@ export default function UserReservations() {
       .then((res) => {
         if (cancelled) return;
         setCart((prev) => {
+          if (prev.length >= allowance.capacity.remaining_slots) return prev;
           const { items } = addReservationCartItem(prev, res.data);
           saveReservationCart(items);
           return items;
@@ -76,12 +85,13 @@ export default function UserReservations() {
     return () => {
       cancelled = true;
     };
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, allowance.capacity, pendingConfirmation]);
 
   const readyForPickup = waitlist.filter((w) => w.status === 'ready');
   const inQueue = waitlist.filter((w) => w.status === 'pending');
 
   const removeFromCart = (id) => {
+    if (isConfirming || pendingConfirmation) return;
     const next = cart.filter((c) => c.id !== id);
     setCart(next);
     saveReservationCart(next);
@@ -94,6 +104,7 @@ export default function UserReservations() {
       await cancelReservation(cancellingId);
       setWaitlist(prev => prev.filter(r => r.id !== cancellingId));
       setCancellingId(null);
+      allowance.refreshCapacity();
     } catch {
       setError('Failed to cancel reservation.');
     } finally {
@@ -102,17 +113,31 @@ export default function UserReservations() {
   };
 
   const handleConfirm = async () => {
-    if (cart.length === 0) return;
+    if (isConfirming || (cart.length === 0 && !pendingConfirmation)) return;
     setIsConfirming(true);
     setError('');
     try {
-      await Promise.all(cart.map((item) => createReservation(item.id)));
+      const payload = pendingConfirmation || { request_id: crypto.randomUUID(), selections: cart.map(item => ({ book_id: item.id, accept_queue: Boolean(queueAccepted[item.id]) })) };
+      localStorage.setItem(pendingConfirmationKey(), JSON.stringify(payload));
+      setPendingConfirmation(payload);
+      await confirmReservations(payload);
+      setPendingConfirmation(null);
       setConfirmed(true);
       setCart([]);
-      localStorage.removeItem(RESERVATION_CART_KEY);
+      clearReservationCart();
       fetchReservations();
+      allowance.refreshCapacity();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to confirm reservations. Some books may already be reserved.');
+      const detail = err.response?.data?.detail;
+      if (err.response?.status >= 400 && err.response?.status < 500) {
+        localStorage.removeItem(pendingConfirmationKey()); setPendingConfirmation(null);
+        if (detail?.code === 'availability_changed') {
+          const changed = new Set(detail.books.map(book => book.book_id));
+          setCart(previous => { const next = previous.map(book => changed.has(book.id) ? { ...book, copies_available: 0 } : book); saveReservationCart(next); return next; });
+        }
+        allowance.refreshCapacity();
+      }
+      setError(typeof detail === 'string' ? detail : detail?.message || 'Confirmation outcome is unknown. Retry confirmation to retrieve the same batch safely.');
     } finally {
       setIsConfirming(false);
     }
@@ -130,6 +155,10 @@ export default function UserReservations() {
           My <span className="text-link">Reservations</span>
         </h1>
       </div>
+
+      <BorrowingCapacity {...allowance} />
+      <p className="mb-4 text-sm text-muted">Books are not held until you confirm. Availability may change.</p>
+      {error && <div role="alert" className="mb-4 text-danger text-sm">{error} <button type="button" className="underline" onClick={fetchReservations}>Reload reservations</button></div>}
 
       {/* ── PICKUP READY ALERT ── */}
       {readyForPickup.length > 0 && (
@@ -157,6 +186,7 @@ export default function UserReservations() {
                         <p className="text-success text-sm font-bold mt-0.5">
                           Prepare face scan at the counter..
                         </p>
+                        {item.expires_at && <p className="text-sm text-muted">Collect by {parseApiDateTime(item.expires_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} (Philippine time)</p>}
                       </div>
                       <button
                         aria-label={`Cancel reservation for ${item.book_title}`}
@@ -285,7 +315,6 @@ export default function UserReservations() {
               </div>
             ) : (
               <div className="space-y-3">
-                {error && <p className="text-danger text-sm font-bold text-center">{error}</p>}
                 {cart.map((book, i) => (
                   <div key={book.id}
                     className="animate-fade-in-up group bg-panel border border-line rounded-xl p-4 flex items-center gap-4 shadow-sm hover:shadow-md transition-all duration-200"
@@ -309,8 +338,12 @@ export default function UserReservations() {
                           </span>
                         )}
                       </div>
+                      {(book.copies_available ?? 0) < 1 && <label className="flex items-start gap-2 mt-2 text-sm">
+                        <input type="checkbox" disabled={isConfirming || Boolean(pendingConfirmation)} checked={Boolean(queueAccepted[book.id])} onChange={event => setQueueAccepted(previous => ({ ...previous, [book.id]: event.target.checked }))} />
+                        I agree to queue this title if unavailable.
+                      </label>}
                     </div>
-                    <button aria-label={`Remove ${book.title} from selection`} onClick={() => removeFromCart(book.id)}
+                    <button disabled={isConfirming || Boolean(pendingConfirmation)} aria-label={`Remove ${book.title} from selection`} onClick={() => removeFromCart(book.id)}
                       className="p-2.5 text-muted hover:text-danger hover:bg-danger-soft rounded-lg transition-all duration-200 flex-shrink-0">
                       <Trash2 size={16} />
                     </button>
@@ -359,12 +392,12 @@ export default function UserReservations() {
 
             <button
               onClick={handleConfirm}
-              disabled={cart.length === 0 || isConfirming || confirmed}
+              disabled={isConfirming || (!pendingConfirmation && (cart.length === 0 || confirmed || !allowance.capacity || cart.length > allowance.capacity.remaining_slots || cart.some(book => (book.copies_available ?? 0) < 1 && !queueAccepted[book.id])))}
               className="w-full px-3 py-4 bg-action hover:bg-action-hover disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm tracking-normal shadow-sm transition-all flex justify-center items-center gap-2"
             >
               {isConfirming
                 ? <div className="w-5 h-5 border-2 border-line border-t-transparent rounded-full animate-spin" />
-                : <><Camera size={16} /> Confirm Reservation</>
+                : <><Camera size={16} /> {pendingConfirmation ? 'Retry confirmation safely' : 'Confirm Reservation'}</>
               }
             </button>
           </div>
@@ -386,7 +419,7 @@ export default function UserReservations() {
 
       {/* ── CANCEL CONFIRMATION MODAL ── */}
       {cancellingId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
+        <ModalFrame onClose={() => { if (!isCancelling) setCancellingId(null); }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50">
           <div className="bg-panel rounded-xl border border-line shadow-sm w-full max-w-xs max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 sm:p-8 animate-fade-in-up">
             <div className="w-16 h-16 bg-danger-soft rounded-full flex items-center justify-center mx-auto mb-5 text-danger">
               <AlertCircle size={32} />
@@ -413,7 +446,7 @@ export default function UserReservations() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalFrame>
       )}
     </div>
   );

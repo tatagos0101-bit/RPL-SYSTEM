@@ -24,12 +24,18 @@ FILES = (
     "backend/schemas/__init__.py", "backend/schemas/transaction.py", "backend/schemas/report.py",
     "backend/services/book_copy_service.py", "backend/services/loan_policy.py",
     "backend/services/reservation_policy.py",
+    "backend/models/inventory_write.py", "backend/services/borrowing_capacity.py",
+    "backend/services/list_queries.py",
+    "backend/services/member_deletion.py", "backend/services/storage_service.py",
+    "tests/security/check_member_deletion.py",
     "supabase/migrations/20261010000100_library_schema.sql",
     "supabase/migrations/20261016000100_auth_sessions.sql",
     "supabase/operations/prepare_runtime_role.sql", "supabase/operations/check_runtime_access.sql",
+    "supabase/operations/audit_runtime_identity.sql",
     "tests/security/Dockerfile", "tests/security/requirements.txt", "tests/security/run_checks.py",
     "tests/security/compose.yaml",
     "tests/security/check_circulation.py",
+    "tests/security/check_runtime_roles.py",
 )
 
 
@@ -71,7 +77,7 @@ def check_local_docker(docker, env):
     subprocess.run([docker, "compose", "version"], env=env, capture_output=True, check=True, timeout=20)
 
 
-def main():
+def main(stage=stage_context):
     docker = shutil.which("docker")
     if not docker:
         print("Docker is unavailable. Install/start Docker Desktop with Linux containers, then rerun this command.")
@@ -88,7 +94,7 @@ def main():
     if not workspace.is_relative_to((ROOT / ".tools").resolve()):
         raise RuntimeError("Unsafe integration workspace")
     workspace.mkdir(parents=True, exist_ok=False)
-    stage_context(workspace)
+    stage(workspace)
     # Explicit empty interpolation environment; never load the repository .env.
     empty_env = workspace / "empty.env"
     empty_env.write_text("", encoding="utf-8")

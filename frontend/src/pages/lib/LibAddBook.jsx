@@ -4,8 +4,9 @@ import {
   PlusSquare, Upload, FileText, CheckCircle2, AlertCircle,
   X, RefreshCw, Search, List, ImagePlus,
 } from 'lucide-react';
-import { addBook, bulkUpload, uploadBookCover } from '../../api/librarian';
+import { addBook, bulkUpload, uploadBookCover, getInventoryWrite } from '../../api/librarian';
 import { getCategories } from '../../api/books';
+import { errorMessage, matchCategory, readJournal, saveJournal, reconcileWrite, isDefiniteRejection, sha256 } from '../../api/inventoryWrites';
 
 // ── Shared ISBN fetcher ────────────────────────────────────────────────────────
 async function fetchBookByISBN(isbn) {
@@ -61,16 +62,6 @@ async function fetchBookByISBN(isbn) {
   throw new Error('Not found');
 }
 
-// Returns matched existing category, raw API value (as suggestion), or empty string
-function matchCategory(raw, categories) {
-  if (!raw) return { matched: '', isNew: false };
-  const exact   = categories.find((c) => c.toLowerCase() === raw.toLowerCase());
-  if (exact) return { matched: exact, isNew: false };
-  const partial = categories.find((c) => raw.toLowerCase().includes(c.toLowerCase()));
-  if (partial) return { matched: partial, isNew: false };
-  return { matched: raw, isNew: true };
-}
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── Extract ISBNs from an uploaded file ───────────────────────────────────────
@@ -104,6 +95,7 @@ export default function LibAddBook() {
   const [submitting, setSubmitting]   = useState(false);
   const [submitted, setSubmitted]     = useState(false);
   const [formError, setFormError]     = useState('');
+  const [coverRetry, setCoverRetry] = useState(null);
 
   // ── Category custom-input mode ────────────────────────────────────────────
   const [useCustomCategory, setUseCustomCategory] = useState(false);
@@ -123,7 +115,7 @@ export default function LibAddBook() {
   const [bulkFile, setBulkFile]         = useState(null);
   const [bulkText, setBulkText]         = useState('');
   const [bulkDragging, setBulkDragging] = useState(false);
-  const [bulkResults, setBulkResults]   = useState([]); // { isbn, status, data? }
+  const [bulkResults, setBulkResults]   = useState(() => { try { return readJournal().rows || []; } catch { return []; } }); // { isbn, status, data? }
   const [bulkProgress, setBulkProgress] = useState(null); // { done, total }
   const [bulkRunning, setBulkRunning]   = useState(false);
   const [selected, setSelected]         = useState(new Set());
@@ -139,11 +131,20 @@ export default function LibAddBook() {
   const [uploadResult, setUploadResult] = useState(null);
   const [uploadError, setUploadError] = useState('');
 
+  const [recoveryVersion, setRecoveryVersion] = useState(0);
+  let recovery = {}, recoveryError = '';
+  try { recovery = readJournal(); } catch (error) { recoveryError = errorMessage(error); }
+  const pendingManual = recovery.manual?.status === 'pending' ? recovery.manual : null;
+  const pendingWorkbook = recovery.workbook?.status === 'pending' ? recovery.workbook : null;
+  const [categoryError, setCategoryError] = useState('');
+  const [categoryAttempt, setCategoryAttempt] = useState(0);
   useEffect(() => {
+    let cancelled = false;
     getCategories()
-      .then((res) => setCategories(res.data.map((c) => c.category)))
-      .catch(() => {});
-  }, []);
+      .then((res) => { if (!cancelled) { setCategories(res.data.map((c) => c.category)); setCategoryError(''); } })
+      .catch(() => { if (!cancelled) setCategoryError('Categories could not be loaded.'); });
+    return () => { cancelled = true; };
+  }, [categoryAttempt]);
 
   // ── Single book handlers ───────────────────────────────────────────────────
   const handleFormChange = (e) => {
@@ -199,8 +200,38 @@ export default function LibAddBook() {
     }
   };
 
+  const submitManual = async (payload) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setFormError('');
+    setSubmitted(false);
+    let request;
+    try {
+      const previous = readJournal().manual;
+      request = previous?.status === 'pending' ? previous : { id: crypto.randomUUID(), payload, status: 'pending' };
+      saveJournal('manual', request);
+      setRecoveryVersion(value => value + 1);
+      const res = await reconcileWrite(request.id, getInventoryWrite, id => addBook(request.payload, id));
+      saveJournal('manual', { ...request, status: 'done', result: res.data });
+      if (coverFile) {
+        try { await uploadBookCover(res.data.id, coverFile); }
+        catch { setCoverRetry({ id: res.data.id, file: coverFile }); }
+      }
+      setSubmitted(true);
+      setForm({ title: '', author: '', category: '', year: '', isbn: '', copies: '', location: '', cover_url: '' });
+      setIsbnInput(''); setLookupSuccess(false); setLookupError(''); setUseCustomCategory(false);
+      removeCoverFile();
+    } catch (error) {
+      if (request && isDefiniteRejection(error)) {
+        try { saveJournal('manual', { ...request, status: 'rejected' }); } catch { /* Keep original request for recovery. */ }
+      }
+      setFormError(errorMessage(error));
+    } finally { setSubmitting(false); setRecoveryVersion(value => value + 1); }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (pendingManual) { submitManual(); return; }
     setFormError('');
 
     // ── Client-side validation ─────────────────────────────────────────────
@@ -208,11 +239,11 @@ export default function LibAddBook() {
     const a = form.author.trim();
     const c = form.category.trim();
     if (!t) return setFormError('Title is required.');
-    if (t.length > 500) return setFormError('Title must be at most 500 characters.');
+    if (t.length > 255) return setFormError('Title must be at most 255 characters.');
     if (!a) return setFormError('Author is required.');
-    if (a.length > 200) return setFormError('Author must be at most 200 characters.');
+    if (a.length > 180) return setFormError('Author must be at most 180 characters.');
     if (!c) return setFormError('Category is required.');
-    if (c.length > 100) return setFormError('Category must be at most 100 characters.');
+    if (c.length > 80) return setFormError('Category must be at most 80 characters.');
     if (form.year) {
       const yr = parseInt(form.year);
       if (isNaN(yr) || yr < 1000 || yr > 2200) return setFormError('Year must be between 1000 and 2200.');
@@ -225,8 +256,8 @@ export default function LibAddBook() {
       const cp = parseInt(form.copies);
       if (isNaN(cp) || cp < 1 || cp > 10000) return setFormError('Copies must be between 1 and 10,000.');
     }
-    if (form.location && form.location.trim().length > 100)
-      return setFormError('Shelf location must be at most 100 characters.');
+    if (form.location && form.location.trim().length > 80)
+      return setFormError('Shelf location must be at most 80 characters.');
     if (form.cover_url && form.cover_url.trim()) {
       if (!/^https?:\/\//i.test(form.cover_url.trim()))
         return setFormError('Cover URL must start with http:// or https://');
@@ -234,8 +265,7 @@ export default function LibAddBook() {
         return setFormError('Cover URL must be at most 500 characters.');
     }
 
-    setSubmitting(true);
-    addBook({
+    submitManual({
       title:          t,
       author:         a,
       category:       c,
@@ -244,38 +274,26 @@ export default function LibAddBook() {
       copies_total:   form.copies ? parseInt(form.copies) : 1,
       location_shelf: form.location ? form.location.trim() : null,
       cover_url:      form.cover_url ? form.cover_url.trim() : null,
-    })
-      .then(async (res) => {
-        if (coverFile) {
-          try { await uploadBookCover(res.data.id, coverFile); } catch { /* cover upload failed, book still added */ }
-        }
-        setSubmitted(true);
-        setForm({ title: '', author: '', category: '', year: '', isbn: '', copies: '', location: '', cover_url: '' });
-        setIsbnInput('');
-        setLookupSuccess(false);
-        setLookupError('');
-        setUseCustomCategory(false);
-        removeCoverFile();
-        setTimeout(() => setSubmitted(false), 3000);
-      })
-      .catch((err) => setFormError(err?.response?.data?.detail || 'Failed to add book. Please try again.'))
-      .finally(() => setSubmitting(false));
+    });
   };
 
   // ── Bulk ISBN handlers ─────────────────────────────────────────────────────
   const handleBulkDrop = async (e) => {
     e.preventDefault();
+    if (importing || bulkResults.some(row => row.requestId && !row.imported && !row.skipped)) return;
     setBulkDragging(false);
     const dropped = e.dataTransfer.files[0];
     if (dropped) { setBulkFile(dropped); setBulkResults([]); setImportSummary(null); }
   };
 
   const handleBulkFileChange = (e) => {
+    if (importing || bulkResults.some(row => row.requestId && !row.imported && !row.skipped)) return;
     const f = e.target.files[0];
     if (f) { setBulkFile(f); setBulkResults([]); setImportSummary(null); }
   };
 
   const startBulkLookup = async () => {
+    if (importing || bulkResults.some(row => row.requestId && !row.imported && !row.skipped)) { setFormError('Resolve the pending import rows before starting another lookup.'); return; }
     let isbns = [];
 
     if (bulkFile) {
@@ -310,7 +328,7 @@ export default function LibAddBook() {
       const isbn = isbns[i];
       try {
         const data = await fetchBookByISBN(isbn);
-        results.push({ isbn, status: 'found', data: { ...data, category: matchCategory(data.category, categories) } });
+        results.push({ isbn, status: 'found', data: { ...data, category: matchCategory(data.category, categories).matched } });
       } catch {
         results.push({ isbn, status: 'not_found', data: null });
       }
@@ -320,7 +338,8 @@ export default function LibAddBook() {
     }
 
     // Auto-select all found books
-    const foundSet = new Set(results.filter((r) => r.status === 'found').map((r) => r.isbn));
+    const foundSet = new Set(results.filter((r) => r.status === 'found' && !r.imported && !r.skipped).map((r) => r.isbn));
+    try { saveJournal('rows', results); } catch (error) { setFormError(errorMessage(error)); }
     setSelected(foundSet);
     setBulkRunning(false);
     setBulkProgress(null);
@@ -335,7 +354,7 @@ export default function LibAddBook() {
   };
 
   const toggleAll = () => {
-    const found = bulkResults.filter((r) => r.status === 'found').map((r) => r.isbn);
+    const found = bulkResults.filter((r) => r.status === 'found' && !r.imported && !r.skipped).map((r) => r.isbn);
     if (found.every((isbn) => selected.has(isbn))) {
       setSelected(new Set());
     } else {
@@ -344,43 +363,50 @@ export default function LibAddBook() {
   };
 
   const handleBulkImport = async () => {
-    const toImport = bulkResults.filter((r) => r.status === 'found' && selected.has(r.isbn));
+    if (importing) return;
+    const toImport = bulkResults.filter((r) => r.status === 'found' && !r.imported && !r.skipped && selected.has(r.isbn));
     if (toImport.length === 0) return;
     setImporting(true);
     let ok = 0, fail = 0, skipped = 0;
-    const rowErrors = {};
-    for (const row of toImport) {
-      try {
-        await addBook({
-          title:          (row.data.title  || 'Unknown Title').slice(0, 255),
-          author:         (row.data.author || 'Unknown Author').slice(0, 180),
-          category:       (row.data.category || categories[0] || 'General').slice(0, 80),
-          year:           row.data.year ? parseInt(row.data.year) : null,
-          isbn:           row.isbn,
-          copies_total:   parseInt(bulkCopies) || 1,
-          cover_url:      row.data.cover_url ? row.data.cover_url.slice(0, 500) : null,
-        });
-        ok++;
-      } catch (err) {
-        const detail = err?.response?.data?.detail || '';
-        if (detail.toLowerCase().includes('already exists')) {
-          skipped++;
-          rowErrors[row.isbn] = 'Already in catalog';
-        } else {
-          fail++;
-          rowErrors[row.isbn] = detail || 'Failed to add';
+    let rows = [...bulkResults];
+    const updateRow = (row) => {
+      rows = rows.map(item => item.isbn === row.isbn ? row : item);
+      saveJournal('rows', rows);
+      setBulkResults([...rows]);
+    };
+    try {
+      for (const original of toImport) {
+        let row = { ...original, requestId: original.requestId || crypto.randomUUID() };
+        row.payload ||= {
+          title: (row.data.title || 'Unknown Title').slice(0, 255),
+          author: (row.data.author || 'Unknown Author').slice(0, 180),
+          category: (row.data.category || categories[0] || 'General').slice(0, 80),
+          year: row.data.year ? parseInt(row.data.year) : null,
+          isbn: row.isbn, copies_total: parseInt(bulkCopies) || 1,
+          cover_url: row.data.cover_url ? row.data.cover_url.slice(0, 500) : null,
+        };
+        updateRow(row);
+        try {
+          const res = await reconcileWrite(row.requestId, getInventoryWrite, id => addBook(row.payload, id));
+          row = { ...row, imported: true, bookId: res.data.id, importError: '' };
+          ok++;
+        } catch (error) {
+          const detail = errorMessage(error);
+          if (error?.response?.status === 400 && detail.toLowerCase().includes('already exists')) {
+            row = { ...row, skipped: true, importError: 'Already in catalog' }; skipped++;
+          } else {
+            row = { ...row, importError: detail }; fail++;
+            if (isDefiniteRejection(error)) { delete row.requestId; delete row.payload; }
+          }
         }
+        updateRow(row);
       }
+    } catch (error) { setFormError(errorMessage(error)); }
+    finally {
+      setImporting(false);
+      setImportSummary({ ok, fail, skipped });
+      setSelected(new Set(rows.filter(row => row.status === 'found' && !row.imported && !row.skipped).map(row => row.isbn)));
     }
-    // Mark rows with errors in results
-    setBulkResults((prev) =>
-      prev.map((r) =>
-        rowErrors[r.isbn] ? { ...r, importError: rowErrors[r.isbn] } : r
-      )
-    );
-    setImporting(false);
-    setImportSummary({ ok, fail, skipped });
-    setSelected(new Set());
   };
 
   // ── Full-data upload handlers ──────────────────────────────────────────────
@@ -391,38 +417,61 @@ export default function LibAddBook() {
     if (dropped) { setFile(dropped); setUploadResult(null); setUploadError(''); }
   };
 
-  const handleUpload = () => {
-    if (!file) return;
+  const handleUpload = async () => {
+    if (uploading) return;
+    if (!file && !pendingWorkbook) return;
     const MAX_EXCEL_BYTES = 10 * 1024 * 1024;
-    if (file.size > MAX_EXCEL_BYTES) {
+    if (file && file.size > MAX_EXCEL_BYTES) {
       setUploadError('File too large — maximum size is 10 MB.');
       return;
     }
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (!['xlsx', 'xls'].includes(ext)) {
-      setUploadError('Only .xlsx or .xls files are accepted.');
+    const ext = file?.name.split('.').pop().toLowerCase();
+    if (file && ext !== 'xlsx') {
+      setUploadError('Full inventory import requires .xlsx; convert legacy .xls first.');
       return;
     }
     setUploading(true);
     setUploadError('');
     setUploadResult(null);
-    const fd = new FormData();
-    fd.append('file', file);
-    bulkUpload(fd)
-      .then((res) => { setUploadResult(res.data); setFile(null); })
-      .catch((err) => setUploadError(err?.response?.data?.detail || 'Upload failed. Check your file format.'))
-      .finally(() => setUploading(false));
+    let request;
+    try {
+      const previous = readJournal().workbook;
+      const digest = file ? await sha256(file) : null;
+      if (previous?.status === 'pending' && digest && digest !== previous.digest) throw new Error('Resolve the pending workbook before importing a different file. Reselect the original workbook.');
+      request = previous && (previous.status === 'pending' || previous.digest === digest) ? previous : { id: crypto.randomUUID(), digest, filename: file.name, status: 'pending' };
+      saveJournal('workbook', request);
+      setRecoveryVersion(value => value + 1);
+      const res = await reconcileWrite(request.id, getInventoryWrite, id => {
+        if (!file) throw new Error('No saved result yet. Reselect the original workbook and retry with this request.');
+        const fd = new FormData(); fd.append('file', file);
+        return bulkUpload(fd, id, request.digest);
+      });
+      saveJournal('workbook', { ...request, status: 'done', result: res.data });
+      setUploadResult(res.data); setFile(null);
+    } catch (error) {
+      if (request && isDefiniteRejection(error)) {
+        try { saveJournal('workbook', { ...request, status: 'rejected' }); } catch { /* Keep recovery data. */ }
+      }
+      setUploadError(errorMessage(error));
+    } finally { setUploading(false); setRecoveryVersion(value => value + 1); }
   };
 
   // ── Derived ────────────────────────────────────────────────────────────────
   const foundCount    = bulkResults.filter((r) => r.status === 'found').length;
   const notFoundCount = bulkResults.filter((r) => r.status === 'not_found').length;
-  const canLookup     = bulkFile || bulkText.trim();
+  const canLookup = (bulkFile || bulkText.trim()) && !bulkResults.some(row => row.requestId && !row.imported && !row.skipped);
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-5 md:px-8 pt-8">
 
+        <div aria-live="polite" data-recovery-version={recoveryVersion}>
+          {recoveryError && <p role="alert" className="text-danger">{recoveryError}</p>}
+          {categoryError && <p role="alert" className="text-danger">{categoryError} <button onClick={() => setCategoryAttempt(value => value + 1)}>Retry categories</button></p>}
+          {pendingManual && <p role="alert">The result for “{pendingManual.payload.title}” is unconfirmed. <button disabled={submitting} onClick={() => submitManual()}>Recover saved book request</button></p>}
+          {pendingWorkbook && <p role="alert">Workbook “{pendingWorkbook.filename}” has an unconfirmed result. <button disabled={uploading} onClick={handleUpload}>Recover workbook result</button></p>}
+          {mode !== 'manual' && formError && <p role="alert" className="text-danger">{formError}</p>}
+        </div>
         {/* Header */}
         <div className="animate-fade-in-up mb-8">
           <p className="text-sm font-semibold tracking-normal text-link mb-1">
@@ -464,10 +513,12 @@ export default function LibAddBook() {
                   <CheckCircle2 size={32} className="text-success" />
                 </div>
                 <h3 className="font-semibold tracking-normal mb-1 rpl-subheading">Book Added!</h3>
-                <p className="text-sm text-muted font-medium">The book has been added to the catalog.</p>
+                <button className="mt-3 underline" onClick={() => setSubmitted(false)}>{coverRetry ? 'Retry saved book cover' : 'Add another book'}</button>
+                <p className="text-sm text-muted font-medium">{coverRetry ? "Book saved, but its cover upload was not confirmed. Use the cover retry button to finish the saved book." : "The book has been added to the catalog."}</p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit}>
+                <fieldset disabled={submitting || !!pendingManual || !!recoveryError} className="space-y-4">
 
                 {/* ISBN Auto-Fill */}
                 <div className="bg-info-soft border border-line rounded-xl p-4">
@@ -529,6 +580,15 @@ export default function LibAddBook() {
                     <p className="text-sm font-bold text-danger">{formError}</p>
                   </div>
                 )}
+                {coverRetry && <div role="alert" className="p-3 border border-line rounded-lg text-sm">
+                  Book saved, but its cover upload was not confirmed.
+                  <button type="button" disabled={submitting} className="ml-2 underline" onClick={async () => {
+                    setSubmitting(true);
+                    try { await uploadBookCover(coverRetry.id, coverRetry.file); setCoverRetry(null); }
+                    catch { setFormError('Cover upload still could not be confirmed. Retry the cover upload.'); }
+                    finally { setSubmitting(false); }
+                  }}>Retry cover upload</button>
+                </div>}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Field label="Title"  name="title"  value={form.title}  onChange={handleFormChange} required />
@@ -554,7 +614,7 @@ export default function LibAddBook() {
                           onChange={handleFormChange}
                           placeholder="Type a new category…"
                           required
-                          maxLength={100}
+                          maxLength={80}
                           className="w-full bg-subtle border border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted"
                         />
                         {form.category && (
@@ -634,11 +694,12 @@ export default function LibAddBook() {
                   </div>
                 </div>
 
-                <button type="submit" disabled={submitting}
+                <button type="submit" disabled={submitting || !!pendingManual || !!recoveryError}
                   className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold text-sm tracking-normal transition-all shadow-sm flex items-center justify-center gap-2 mt-2">
                   {submitting ? <RefreshCw size={15} className="animate-spin" /> : <PlusSquare size={15} />}
                   {submitting ? 'Adding...' : 'Add to Catalog'}
                 </button>
+              </fieldset>
               </form>
             )}
           </div>
@@ -678,7 +739,7 @@ export default function LibAddBook() {
                       <p className="text-sm font-bold text-muted mb-3">Drag & drop .xlsx / .csv here</p>
                       <label className="px-5 py-2.5 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal cursor-pointer transition-all">
                         Browse File
-                        <input type="file" accept=".xlsx,.csv" className="hidden" onChange={handleBulkFileChange} />
+                        <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleBulkFileChange} />
                       </label>
                     </>
                   )}
@@ -772,8 +833,8 @@ export default function LibAddBook() {
                       }`}
                     >
                       {/* Checkbox */}
-                      {row.status === 'found' ? (
-                        <input type="checkbox" checked={selected.has(row.isbn)} onChange={() => toggleSelect(row.isbn)}
+                      {row.status === 'found' && !row.imported && !row.skipped ? (
+                        <input type="checkbox" disabled={importing} checked={selected.has(row.isbn)} onChange={() => toggleSelect(row.isbn)}
                           className="w-4 h-4 rounded accent-blue-600 flex-shrink-0 cursor-pointer" />
                       ) : (
                         <div className="w-4 h-4 flex-shrink-0" />
@@ -809,6 +870,7 @@ export default function LibAddBook() {
                           <p className="text-sm font-bold text-danger">Not found</p>
                         )}
                         <p className="text-sm font-sans text-muted mt-0.5">{row.isbn}</p>
+                        {row.imported && <p className="text-sm text-success">Imported — book #{row.bookId}</p>}
                         {row.importError && (
                           <p className="text-sm font-bold text-danger mt-0.5">{row.importError}</p>
                         )}
@@ -892,11 +954,11 @@ export default function LibAddBook() {
                 Drag & drop your file here
               </p>
               <p className="text-sm text-muted font-medium mb-6">
-                Supports .xlsx and .csv — max 10 MB
+                Full inventory import: .xlsx — max 10 MB
               </p>
               <label className="px-7 py-3.5 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal cursor-pointer transition-all">
                 Browse File
-                <input type="file" accept=".xlsx,.csv" className="hidden"
+                <input type="file" accept=".xlsx" className="hidden"
                   onChange={(e) => { setFile(e.target.files[0]); setUploadResult(null); setUploadError(''); }} />
               </label>
             </div>
@@ -920,10 +982,11 @@ export default function LibAddBook() {
               <div className="bg-success-soft border border-success rounded-xl p-5 flex items-center gap-3">
                 <CheckCircle2 size={18} className="text-success flex-shrink-0" />
                 <p className="text-sm font-bold text-success">
-                  {uploadResult.imported ?? uploadResult.count ?? 'Books'} books imported successfully!
+                    {uploadResult.added} books imported; {uploadResult.skipped} duplicate ISBNs skipped; {uploadResult.errors?.length ?? 0} rows could not be imported.
                 </p>
               </div>
             )}
+              {uploadResult?.errors?.length > 0 && <ul role="alert" className="p-4 text-sm text-danger">{uploadResult.errors.map((message, index) => <li key={index}>{message}</li>)}</ul>}
             {uploadError && (
               <div className="bg-danger-soft border border-danger rounded-xl p-5 flex items-center gap-3">
                 <AlertCircle size={18} className="text-danger flex-shrink-0" />
@@ -943,7 +1006,7 @@ export default function LibAddBook() {
                   </div>
                 ))}
               </div>
-              <button onClick={handleUpload} disabled={!file || uploading}
+              <button onClick={handleUpload} disabled={(!file && !pendingWorkbook) || uploading || !!recoveryError}
                 className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-2">
                 {uploading ? <RefreshCw size={15} className="animate-spin" /> : <FileText size={15} />}
                 {uploading ? 'Processing...' : 'Process & Import'}

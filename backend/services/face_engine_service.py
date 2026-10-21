@@ -270,6 +270,42 @@ def _purpose_threshold(purpose: str, engine: str) -> float:
     return FACE_MATCH_THRESHOLD_LOGIN
 
 
+def _lock_current_match(db, match, encoding, threshold):
+    """Do not authenticate or auto-upgrade a template removed during detection."""
+    user = db.query(User).filter(User.id == match.user.id).with_for_update(key_share=True).populate_existing().first()
+    if user is None or user.deleted_at is not None:
+        return None
+    templates = [user.face_encoding] if match.engine == "dlib" else [
+        row.embedding for row in db.query(FaceEmbedding).filter(
+            FaceEmbedding.user_id == user.id, FaceEmbedding.engine == match.engine,
+            FaceEmbedding.is_active.is_(True)).populate_existing().all()
+    ]
+    for template in templates:
+        if not template:
+            continue
+        try:
+            score = _distance(encoding, json.loads(template), match.engine)
+        except (ValueError, TypeError):
+            continue
+        if score <= threshold:
+            return FaceMatch(user=user, score=score, engine=match.engine)
+    return None
+
+
+def revalidate_match_for_face(db, face, match, *, purpose="login", threshold=None):
+    if match is None:
+        return None
+    encoding = face.get("encoding") if match.engine == face.get("engine", "dlib") else face.get("dlib_encoding")
+    if not encoding:
+        return None
+    current = _lock_current_match(
+        db, match, encoding, threshold if threshold is not None else _purpose_threshold(purpose, match.engine))
+    if current and current.engine != face.get("engine", "dlib") and FACE_AUTO_UPGRADE_EMBEDDINGS:
+        upsert_face_embedding(db, current.user, face["engine"], face["encoding"],
+                             quality_score=(face.get("quality") or {}).get("score"), source="auto_upgrade")
+    return current
+
+
 def find_match_for_face(
     db: Session,
     face: dict,
@@ -277,6 +313,7 @@ def find_match_for_face(
     purpose: str = "login",
     excluded_user_id: Optional[int] = None,
     threshold: Optional[float] = None,
+    lock_match: bool = True,
 ) -> Optional[FaceMatch]:
     engine = face.get("engine", "dlib")
     encoding = face.get("encoding")
@@ -291,7 +328,8 @@ def find_match_for_face(
         excluded_user_id=excluded_user_id,
     )
     if match:
-        return match
+        return match if excluded_user_id is not None or not lock_match else revalidate_match_for_face(
+            db, face, match, purpose=purpose, threshold=threshold)
 
     dlib_encoding = face.get("dlib_encoding") if engine != "dlib" else None
     if not dlib_encoding:
@@ -304,16 +342,8 @@ def find_match_for_face(
         threshold=threshold if threshold is not None else _purpose_threshold(purpose, "dlib"),
         excluded_user_id=excluded_user_id,
     )
-    if fallback and FACE_AUTO_UPGRADE_EMBEDDINGS:
-        upsert_face_embedding(
-            db,
-            fallback.user,
-            engine,
-            encoding,
-            quality_score=(face.get("quality") or {}).get("score"),
-            source="auto_upgrade",
-        )
-    return fallback
+    return fallback if excluded_user_id is not None or not lock_match else revalidate_match_for_face(
+        db, face, fallback, purpose=purpose, threshold=threshold)
 
 
 def find_duplicate_for_enrollment(db: Session, face: dict, user_id: int) -> Optional[FaceMatch]:
@@ -355,6 +385,9 @@ def upsert_face_embedding(
 
 
 def store_enrollment_face(db: Session, user: User, face: dict, *, source: str = "enrollment") -> None:
+    # Explicit replacement must not leave an older engine recognizing the old face.
+    db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).delete(synchronize_session=False)
+    user.face_encoding = None
     dlib_encoding = face.get("dlib_encoding")
     if face.get("engine") == "dlib":
         dlib_encoding = face.get("encoding")
@@ -373,7 +406,8 @@ def store_enrollment_face(db: Session, user: User, face: dict, *, source: str = 
 
 
 def legacy_sync_user_embedding(db: Session, user: User) -> None:
-    if not user.face_encoding:
+    user = db.query(User).filter(User.id == user.id).with_for_update(key_share=True).populate_existing().one()
+    if user.deleted_at is not None or not user.face_encoding:
         return
     exists = (
         db.query(FaceEmbedding)

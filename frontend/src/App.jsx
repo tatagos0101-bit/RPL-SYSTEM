@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import UserLayout from './components/UserLayout';
 import LibLayout from './components/LibLayout';
 import RequireRole from './components/RequireRole';
@@ -61,7 +62,7 @@ const AppContent = () => {
     <>
       <PasswordChangeNotice />
       {showNavbar && <Navbar />}
-      <Suspense fallback={<RouteFallback />}>
+      <AppErrorBoundary><Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/browse" element={<PublicBrowse />} />
@@ -103,7 +104,7 @@ const AppContent = () => {
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
-      </Suspense>
+      </Suspense></AppErrorBoundary>
     </>
   );
 };

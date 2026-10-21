@@ -1,19 +1,21 @@
+import ModalFrame from '../../components/ModalFrame';
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, User, BadgeCheck, UserPlus, MoreHorizontal, RefreshCw,
   ScanFace, X, Camera, Upload, ImageIcon, CheckCircle2, Info,
-  KeyRound,
+  KeyRound, Trash2,
 } from 'lucide-react';
-import Webcam from 'react-webcam';
+import FaceEnrollModal from '../../components/FaceEnrollModal';
+import MemberDeletionModal from '../../components/MemberDeletionModal';
 import FloatingActions from '../../components/FloatingActions';
 import {
-  getMembers,
+  getMemberStats,
   updateMemberStatus,
-  enrollMemberFace,
   registerMember,
   resetMemberPassword,
 } from '../../api/librarian';
-import { memberMatchesSearch } from '../../api/memberSearch';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 
 const formatApiError = (err, fallback) => {
@@ -21,70 +23,6 @@ const formatApiError = (err, fallback) => {
   if (Array.isArray(detail)) return detail.map((item) => item.msg).join(', ');
   return detail || fallback;
 };
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Face Enrollment Modal
-// ─────────────────────────────────────────────────────────────────────────────
-function FaceEnrollModal({ user, onClose, onSuccess }) {
-  const webcamRef = useRef(null);
-  const [step, setStep] = useState('preview');
-  const [img, setImg]   = useState(null);
-  const [err, setErr]   = useState('');
-
-  const capture = useCallback(() => {
-    const s = webcamRef.current?.getScreenshot();
-    if (s) { setImg(s); setStep('captured'); }
-  }, []);
-
-  const retake  = () => { setImg(null); setStep('preview'); setErr(''); };
-  const confirm = () => {
-    setStep('loading');
-    enrollMemberFace(user.id, img)
-      .then(() => { setStep('success'); setTimeout(() => { onSuccess(); onClose(); }, 1500); })
-      .catch(e  => { setErr(e?.response?.data?.detail || 'Enrollment failed.'); setStep('error'); });
-  };
-
-  return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
-      <div className="bg-panel border border-line rounded-xl shadow-sm w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto p-6 relative">
-        <button aria-label="Close" onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-muted hover:text-muted hover:bg-subtle transition-all">
-          <X size={16}/>
-        </button>
-        <p className="text-sm font-semibold tracking-normal text-link mb-1">Face Registration</p>
-        <h2 className="font-semibold tracking-normal text-ink mb-0.5 rpl-section-title">Enroll <span className="text-link">Face ID</span></h2>
-        <p className="text-sm text-muted font-medium mb-5">{user.name}</p>
-
-        <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-panel border-2 border-line mb-5">
-          {step === 'preview' && (
-            <>
-              <Webcam ref={webcamRef} screenshotFormat="image/jpeg" videoConstraints={{ facingMode:'user', width:480, height:480 }} className="w-full h-full object-cover" mirrored />
-              {['tl','tr','bl','br'].map(c => (
-                <div key={c} className={`absolute w-7 h-7 border-line pointer-events-none
- ${c==='tl'?'top-3 left-3 border-t-2 border-l-2 rounded-tl-lg':''}
- ${c==='tr'?'top-3 right-3 border-t-2 border-r-2 rounded-tr-lg':''}
- ${c==='bl'?'bottom-3 left-3 border-b-2 border-l-2 rounded-bl-lg':''}
- ${c==='br'?'bottom-3 right-3 border-b-2 border-r-2 rounded-br-lg':''}`}/>
-              ))}
-            </>
-          )}
-          {(step==='captured'||step==='loading') && img && <img src={img} alt="" className="w-full h-full object-cover"/>}
-          {step==='loading' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-panel"><RefreshCw size={32} className="animate-spin text-link mb-2"/><p className="text-sm font-semibold tracking-normal text-link">Enrolling…</p></div>}
-          {step==='success' && <div className="absolute inset-0 flex flex-col items-center justify-center bg-success-soft"><div className="w-16 h-16 rounded-full bg-success-soft border-2 border-success flex items-center justify-center mb-3"><ScanFace size={32} className="text-success"/></div><p className="text-success font-semibold tracking-normal text-sm">Face Enrolled!</p></div>}
-          {step==='error'   && <div className="absolute inset-0 flex flex-col items-center justify-center bg-danger-soft px-4"><div className="w-14 h-14 rounded-full bg-danger-soft border-2 border-danger flex items-center justify-center mb-3"><X size={24} className="text-danger"/></div><p className="text-danger font-semibold tracking-normal text-sm text-center">{err}</p></div>}
-        </div>
-
-        <div className="flex gap-2">
-          {step==='preview' && <button onClick={capture} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all"><Camera size={14}/>Capture</button>}
-          {(step==='captured'||step==='error') && <>
-            <button onClick={retake} className="flex-1 px-4 py-3 bg-subtle text-muted rounded-lg font-semibold text-sm tracking-normal transition-all">Retake</button>
-            {step==='captured' && <button onClick={confirm} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all"><ScanFace size={14}/>Enroll</button>}
-          </>}
-        </div>
-        {step==='preview' && <p className="text-center text-sm text-muted tracking-normal font-bold mt-3">Position the member's face clearly in frame</p>}
-      </div>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Register Member Modal
@@ -108,7 +46,7 @@ function PasswordResetModal({ user, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
       <div className="relative w-full max-w-md rounded-xl border border-line bg-panel p-7 shadow-sm">
         <button aria-label="Close" onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-muted hover:text-muted hover:bg-subtle transition-all">
           <X size={16}/>
@@ -182,7 +120,7 @@ function PasswordResetModal({ user, onClose }) {
           </div>
         )}
       </div>
-    </div>
+    </ModalFrame>
   );
 }
 
@@ -249,7 +187,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
     `w-full bg-subtle border ${err ? 'border-danger' : 'border-line '} focus:border-line outline-none rounded-lg px-4 py-2.5 text-base font-medium text-ink placeholder-muted transition-colors`;
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
+    <ModalFrame onClose={onClose} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
       <div className="bg-panel border border-line rounded-xl shadow-sm w-full max-w-lg flex flex-col" style={{ maxHeight: '90vh' }}>
 
         {/* Header */}
@@ -419,7 +357,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
           </>
         )}
       </div>
-    </div>
+    </ModalFrame>
   );
 }
 
@@ -427,44 +365,37 @@ function RegisterMemberModal({ onClose, onSuccess }) {
 // Main Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LibUsers() {
-  const [users,        setUsers]        = useState([]);
   const [stats,        setStats]        = useState({ total:0, active:0, suspended:0 });
   const [search,       setSearch]       = useState('');
-  const [loading,      setLoading]      = useState(true);
   const [actionMenu,   setActionMenu]   = useState(null);
   const [actionAnchor, setActionAnchor] = useState(null);
   const closeActionMenu = useCallback(() => setActionMenu(null), []);
   const [enrollTarget, setEnrollTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [resetTarget,  setResetTarget]  = useState(null);
   const [showRegister, setShowRegister] = useState(false);
 
+  const listing = useServerPage('/api/librarian/users', { search }, '/api/librarian/users/count');
+  const { items: users, loading, reload } = listing;
+  const [operationError, setOperationError] = useState('');
   const fetchMembers = useCallback(() => {
-    setLoading(true);
-    getMembers()
-      .then(res => {
-        const d = res.data;
-        setUsers(d);
-        setStats({ total: d.length, active: d.filter(u=>u.status==='active').length, suspended: d.filter(u=>u.status==='suspended').length });
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const id = setTimeout(fetchMembers, 0);
-    return () => clearTimeout(id);
-  }, [fetchMembers]);
+    reload();
+    getMemberStats().then(({ data }) => setStats(data)).catch(() => setOperationError('Member totals unavailable. Retry loading.'));
+  }, [reload]);
+  useEffect(() => { const timer = setTimeout(fetchMembers, 0); return () => clearTimeout(timer); }, [fetchMembers]);
 
   const toggleStatus = (id, cur) => {
-    updateMemberStatus(id, cur==='active'?'suspended':'active').then(fetchMembers).catch(()=>{});
+    updateMemberStatus(id, cur==='active'?'suspended':'active').then(fetchMembers).catch(() => setOperationError('Status update could not be confirmed. Refresh before retrying.'));
     setActionMenu(null);
   };
 
-  const filtered = users.filter((u) => memberMatchesSearch(u, search));
+  const filtered = users;
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8">
+        <PageControls {...listing} />
+        {operationError && <p role="alert">{operationError} <button className="underline" onClick={fetchMembers}>Retry loading</button></p>}
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -563,12 +494,20 @@ export default function LibUsers() {
                         </button>
                         {actionMenu===u.id && (
                           <FloatingActions anchor={actionAnchor} onClose={closeActionMenu}>
-                            {!u.face_enrolled && (
+                            {(
                               <button onClick={() => { setActionMenu(null); setEnrollTarget(u); }}
                                 className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold tracking-normal text-link hover:bg-info-soft flex items-center gap-2 transition-all">
-                                <ScanFace size={13}/> Register Face
+                                <ScanFace size={13}/> {u.face_enrolled ? 'Replace Face' : 'Register Face'}
                               </button>
                             )}
+                            {u.face_enrolled && <button onClick={() => { setActionMenu(null); setDeleteTarget({ user: u, kind: 'face' }); }}
+                              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-danger hover:bg-danger-soft">
+                              <Trash2 size={13}/> Delete Face Data
+                            </button>}
+                            <button onClick={() => { setActionMenu(null); setDeleteTarget({ user: u, kind: 'account' }); }}
+                              className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-danger hover:bg-danger-soft">
+                              <Trash2 size={13}/> Delete Account
+                            </button>
                             <button onClick={() => { setActionMenu(null); setResetTarget(u); }}
                               className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold tracking-normal text-warning hover:bg-warning-soft flex items-center gap-2 transition-all">
                               <KeyRound size={13}/> Reset Password
@@ -606,6 +545,7 @@ export default function LibUsers() {
           onSuccess={fetchMembers}
         />
       )}
+      {deleteTarget && <MemberDeletionModal {...deleteTarget} onClose={() => setDeleteTarget(null)} onSuccess={fetchMembers}/>}
       {resetTarget && (
         <PasswordResetModal
           user={resetTarget}

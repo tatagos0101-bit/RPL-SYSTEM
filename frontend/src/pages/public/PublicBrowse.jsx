@@ -1,8 +1,12 @@
+import useReadResource from '../../api/useReadResource';
+import ModalFrame from '../../components/ModalFrame';
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X, RefreshCw, BookOpen, LogIn, ChevronLeft, ChevronRight } from 'lucide-react';
 import BookCard from '../../components/BookCard';
-import { getBooks, getCategories } from '../../api/books';
+import { getCategories } from '../../api/books';
 import { getStoredAuth } from '../../api/authRoutes';
 
 const PublicBrowse = () => {
@@ -11,33 +15,18 @@ const PublicBrowse = () => {
   const { isLoggedIn, role } = getStoredAuth();
   const isLibrarian = isLoggedIn && role === 'librarian';
   const isMember = isLoggedIn && role === 'member';
-  const [books, setBooks] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const categoryResource = useReadResource(getCategories);
+  const categories = ['All', ...(categoryResource.data || []).map(item => item.category)];
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [slideDir, setSlideDir] = useState('right');
   const [animKey, setAnimKey] = useState(0);
   const touchStartX = useRef(null);
 
-  useEffect(() => {
-    Promise.all([getBooks({ limit: 1000 }), getCategories()])
-      .then(([bRes, cRes]) => {
-        setBooks(bRes.data.items ?? bRes.data);
-        setCategories(['All', ...cRes.data.map((c) => c.category)]);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  const filtered = books.filter((book) => {
-    const matchCat = activeCategory === 'All' || book.category === activeCategory;
-    const matchSearch =
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCat && matchSearch;
-  });
+  const listing = useServerPage('/api/books', { search: searchQuery, category: activeCategory === 'All' ? '' : activeCategory });
+  const { items: books, loading } = listing;
+  const filtered = books;
 
   const navigateBook = (dir) => {
     const idx = filtered.findIndex(b => b.id === selected?.id);
@@ -69,6 +58,8 @@ const PublicBrowse = () => {
   return (
     <div className="rpl-page rpl-public min-h-screen bg-panel text-ink pt-[calc(var(--rpl-header-height)+2rem)] pb-20 font-sans transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 md:px-12">
+        {categoryResource.error && <p role="alert" className="text-danger">Categories could not be loaded. <button onClick={categoryResource.retry}>Retry categories</button></p>}
+          <PageControls {...listing} />
 
         {/* Header */}
         <div className="mb-10 border-b border-line pb-8">
@@ -167,7 +158,7 @@ const PublicBrowse = () => {
         const currentIdx = filtered.findIndex(b => b.id === selected.id);
         const isAvailable = (selected.copies_available ?? 0) > 0;
         return (
-          <div
+          <ModalFrame onClose={() => setSelected(null)}
             className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/70"
             onClick={() => setSelected(null)}
           >
@@ -345,7 +336,7 @@ const PublicBrowse = () => {
                 <ChevronRight size={28} />
               </button>
             )}
-          </div>
+          </ModalFrame>
         );
       })()}
     </div>

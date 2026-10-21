@@ -12,6 +12,8 @@ FastAPI backend run on Vercel; library records and uploads are stored in Supabas
 
 See [deployment instructions](docs/DEPLOYMENT.md) for Supabase setup, Vercel
 projects, environment variables, migrations, and initial administrator access.
+The `fixing-the-issue` repairs are local branch changes until separately released;
+see the [repair ledger](docs/REPAIR_LEDGER.md) and [rollout checklist](docs/REPAIR_ROLLOUT.md).
 
 ## Features
 
@@ -28,23 +30,37 @@ projects, environment variables, migrations, and initial administrator access.
   similarity learned from favorites, book-detail views, and borrowing history.
   Members can favorite books on cards or in details. New readers see community
   popularity, with newest books filling gaps when activity is sparse.
-- **Reservations:** signed-in members select and reserve books, view queue or
-  pickup status, and cancel reservations. Available books become ready for pickup;
-  unavailable books join a queue. Returns can promote waiting reservations.
+- **Reservations:** members share five slots across active/overdue loans and
+  ready/pending reservations. Selections hold no stock until atomic confirmation.
+  Available capacity is protected for 24 hours; unavailable titles require explicit
+  queue agreement. Existing queued readers have priority. Pickup converts a slot
+  into a loan; return, cancellation and expiry free slots. Confirmation retries
+  reuse a member-scoped request ID to prevent duplicates.
   Confirmation uses the authenticated session, without an additional face scan.
 - **Librarian tools:** register members with a government ID upload, enroll faces,
-  suspend/reactivate accounts, issue temporary password resets, manage inventory,
-  import Excel workbooks, and process borrowing/returns for individual copies.
+  replace/delete enrolled face data, delete member accounts after all books are
+  returned, suspend/reactivate accounts, issue temporary password resets, manage inventory,
+  import `.xlsx` workbooks with per-row validation/savepoints, and process
+  borrowing/returns for individual copies. Failed cover uploads can be retried
+  after a successful book save without creating another title. Book creation and
+  workbook imports retain request IDs and server receipts for interrupted-response
+  recovery; bulk ISBN retries skip confirmed rows. QR lists and reservations use
+  server pagination. Complete QR export downloads every matching identity in bounded
+  PDF batches and assembles a ZIP with a label-count manifest.
+  Account deletion removes personal details and referenced private files while
+  retaining deidentified loan/attendance history; see the
+  [member deletion policy and release checks](docs/MEMBER_MANAGEMENT.md).
 - **Entrance station:** a station PIN unlocks camera scanning and recent entry
   logs. Recognized enrolled faces create time-in/out sessions; frames can contain
-  multiple people. Kiosk scans do not issue login tokens.
+  multiple people. Kiosk scans do not issue login tokens; website face login does
+  not create attendance. Entry transitions serialize per member.
 - **Reports:** member reading transcripts and monthly circulation PDFs, plus
   librarian CSV exports, printable reports, and QR label images/PDFs. These are
   library records; the application does not certify academic credits.
 
-Default policies are a 14-day loan, a PHP 5 daily overdue fine, and a 24-hour
-reservation pickup window. `LOAN_DAYS`, `FINE_PER_DAY`, and
-`PICKUP_WINDOW_HOURS` configure these values. Members with overdue loans cannot
+Default policies are a 14-day loan and a PHP 5 daily overdue fine, configured by
+`LOAN_DAYS` and `FINE_PER_DAY`; the checkout summary reads these values from the API. The reservation pickup window is fixed at 24 hours
+from ready status; refreshing never extends it. Members with overdue loans cannot
 borrow additional books until those loans are returned.
 
 ## Architecture and data
@@ -52,7 +68,7 @@ borrow additional books until those loans are returned.
 | Component | Implementation |
 | --- | --- |
 | Frontend | React 19, Vite 7, Tailwind CSS 4, React Router, Axios |
-| Backend | Python, FastAPI, SQLAlchemy, JWT authentication, bcrypt password hashing |
+| Backend | Python, FastAPI, SQLAlchemy, JWT authentication, bcrypt-SHA256 password hashing (legacy bcrypt verification) |
 | Production database | Supabase PostgreSQL through the transaction pooler with TLS |
 | Production uploads | Supabase Storage with signed uploads and private viewing links |
 | Face processing | `face_recognition`/dlib and OpenCV; optional InsightFace support |
@@ -60,9 +76,12 @@ borrow additional books until those loans are returned.
 
 Authentication and member/librarian authorization are handled by FastAPI;
 Supabase Auth is not used. New browser logins use HttpOnly cookies, secure in
-production. PostgreSQL holds the application's 12 tables, including accounts,
+production. PostgreSQL holds the application's 16 tables, including accounts,
 password hashes, face embeddings, books/copies, loans, reservations, entry logs,
 notifications, and goals. Browser Data API roles cannot directly read those tables.
+The additive migration also stores private confirmation IDs, prevents normalized
+email and active-reservation duplicates, and widens notification text. It aborts on
+conflicting existing records without silently rewriting them.
 
 Book covers are publicly readable. Avatars, government IDs, and temporary imports
 use private Storage buckets. The backend authorizes access and generates signed
@@ -175,9 +194,12 @@ node --test frontend/src/api/*.test.js
 npm --prefix frontend run build
 ```
 
-Backend tests use an isolated SQLite database and test settings; they do not need
-production credentials. QA on October 11, 2026 passed 68 backend tests and 50
-frontend tests, plus live cloud workflows and desktop/mobile browser checks.
+Default backend tests use isolated SQLite and test settings; they need no production
+credentials. The repair suite also has an opt-in disposable localhost PostgreSQL
+check via `REPAIR_TEST_DATABASE_URL`, restricted to an empty `rpl_repair_test`
+database. It verifies migrations, runtime grants, savepoints and concurrent writes.
+See the [repair ledger](docs/REPAIR_LEDGER.md) for current local results and skipped
+checks. These results do not verify production deployment or real-camera accuracy.
 
 - **Photo spoofing remains possible:** static photographs passed the current
   brightness/texture heuristic and obtained a face-login session during QA.

@@ -8,7 +8,8 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from database import get_db
-from dependencies import get_current_user, get_session_user
+from dependencies import get_current_user, get_session_user, get_locked_current_user, get_locked_session_user
+from services.member_deletion import lock_active_account
 from services.auth_cookie import set_auth_cookie
 from services.auth_sessions import create_session_token, revoke_user_sessions
 from services.password_reset import expire_unused_reset_codes_for_user
@@ -64,16 +65,17 @@ def get_profile(current_user: User = Depends(get_session_user), db: Session = De
 @router.put("/profile", response_model=UserProfile)
 def update_profile(
     body: UserProfileUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_locked_current_user),
     db: Session = Depends(get_db),
 ):
+    current_user = lock_active_account(db, current_user.id)
     if body.name is not None:
         current_user.name = body.name
-    if body.phone is not None:
+    if "phone" in body.model_fields_set:
         if body.phone != current_user.phone:
             current_user.phone_verified = False
         current_user.phone = body.phone
-    if body.location is not None:
+    if "location" in body.model_fields_set:
         current_user.location = body.location
     db.commit()
     db.refresh(current_user)
@@ -84,17 +86,16 @@ def update_profile(
 def change_password(
     body: ChangePasswordRequest,
     response: Response,
-    current_user: User = Depends(get_session_user),
+    current_user: User = Depends(get_locked_session_user),
     db: Session = Depends(get_db),
 ):
-    from passlib.context import CryptContext
-    pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    from services.passwords import hash_password, verify_password
 
-    current_user = db.query(User).filter(User.id == current_user.id).with_for_update().populate_existing().one()
-    if not pwd_ctx.verify(body.current_password, current_user.password_hash):
+    current_user = lock_active_account(db, current_user.id)
+    if not verify_password(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
-    current_user.password_hash = pwd_ctx.hash(body.new_password)
+    current_user.password_hash = hash_password(body.new_password)
     current_user.must_change_password = False
     revoke_user_sessions(db, current_user.id)
     expire_unused_reset_codes_for_user(db, current_user.id)
@@ -114,7 +115,7 @@ def change_password(
 async def upload_avatar(
     file: UploadFile | None = File(None),
     upload_ticket: str | None = Form(None),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_locked_current_user),
     db: Session = Depends(get_db),
 ):
     content, original_filename, reference = await read_upload(folder="avatars", user_id=current_user.id, file=file, ticket=upload_ticket)
@@ -126,13 +127,15 @@ async def upload_avatar(
         human_label="Avatar",
     )
 
+    current_user = lock_active_account(db, current_user.id)
     old_avatar = current_user.avatar_url
     filename = f"{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
     current_user.avatar_url = reference or save_upload("avatars", filename, content)
     db.commit()
     # Keep the previous avatar until the new reference is committed successfully.
     try:
-        delete_upload(old_avatar, folder="avatars")
+        if old_avatar != current_user.avatar_url:
+            delete_upload(old_avatar, folder="avatars")
     except HTTPException:
         logger.warning("Could not delete previous avatar for user_id=%s", current_user.id)
     return {"avatar_url": resolve_upload_url(current_user.avatar_url)}

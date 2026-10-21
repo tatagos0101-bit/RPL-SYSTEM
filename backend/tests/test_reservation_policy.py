@@ -65,7 +65,7 @@ def test_unavailable_book_can_be_reserved_as_pending_queue_item(client, db_sessi
     response = client.post(
         "/api/reservations",
         headers={"Authorization": f"Bearer {token}"},
-        json={"book_id": book.id},
+        json={"book_id": book.id, "accept_queue": True},
     )
 
     assert response.status_code == 201

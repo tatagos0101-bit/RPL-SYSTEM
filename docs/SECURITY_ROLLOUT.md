@@ -1,5 +1,11 @@
 # Authentication and infrastructure security rollout
 
+Subsequent [frontend credential cleanup](FRONTEND_CREDENTIAL_CLEANUP.md) was
+completed October 19: the frontend Supabase connection was removed and its build
+guard released. The API connection/deployment was preserved. The dated release
+records below describe the earlier baseline; shared Redis production activation
+and runtime-role/credential-rotation cutovers remain separate.
+
 Source preparation is not a live deployment. The October 17 release below records
 the applied session migration and deployed source. Credentials, Vercel integration
 settings, database runtime roles, and Redis provisioning remain unchanged.
@@ -188,7 +194,12 @@ authorized and in flight are not retroactively cancelled by logout/reset.
 
 ## 2. Shared Redis limits
 
-Redis support is prepared, not provisioned. `redis==8.1.0` is pinned in both Python
+The [October 18 staging evidence and provider preflight](REDIS_STAGING.md) record
+the direct Vercel preview checks, managed Upstash staging provision, and successful
+shared-counter/credential-failure tests across two Vercel previews. Production
+activation and actual frontend/kiosk acceptance remain pending.
+
+Redis is provisioned for API Preview only. `redis==8.1.0` is pinned in both Python
 manifests and the uv lockfile; Docker installs requirements and Vercel uses uv.
 Existing route limits remain unchanged. The added backend variables are:
 
@@ -223,10 +234,17 @@ validation or fall back to memory to resolve an outage.
 
 ## 3. PostgreSQL runtime role
 
+The [October 19 audit/rehearsal](RUNTIME_ROLE_REHEARSAL.md) confirmed that the live
+API still uses an owner/admin-capable role, while browser roles remain denied.
+The strengthened verifier and isolated 16-table rehearsal passed; live has only
+the 14-table baseline, so a runtime cutover must use a separately rehearsed baseline
+candidate or coordinate with the pending repair schema release.
+
 `supabase/operations/prepare_runtime_role.sql` is a reviewable operation script,
 not an automatically applied migration. It creates the non-login group
 `rpl_app_runtime` with no administrative or RLS-bypass attributes. It grants CRUD
-only on the 14 named application tables and usage/select on their ID sequences.
+only on the 16 named repair-branch application tables (14 at the original release)
+and usage/select on their ID sequences.
 It retains RLS and denies PUBLIC/anon/authenticated table access. Its explicit
 runtime-only policies allow the trusted backend to perform application operations;
 FastAPI still enforces member/librarian roles and ownership.
@@ -245,7 +263,8 @@ login inherits the group, owns no application objects, and cannot assume a more
 privileged role. Keep migration credentials outside the application's runtime.
 
 Run `check_runtime_access.sql` as that login: all boolean checks must be true and
-all 14 tables present. Also test sequence-backed inserts, updates/deletes, actual
+all application tables present (16 on the repair branch; the original security
+release had 14). Also test sequence-backed inserts, updates/deletes, actual
 runtime policies, denied DDL/TRUNCATE, and denied anon/authenticated access using
 synthetic data. Metadata checks alone are insufficient. Verify TLS and Supabase
 transaction-pooler connectivity using the new login before changing Vercel.

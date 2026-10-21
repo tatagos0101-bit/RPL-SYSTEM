@@ -1,8 +1,8 @@
 import client from './client';
 import { prepareUploadForm } from './uploads';
 
-export const getProfile = () =>
-  client.get('/api/user/profile');
+export const getProfile = (config) =>
+  client.get('/api/user/profile', config);
 
 export const updateProfile = (data) =>
   client.put('/api/user/profile', data);

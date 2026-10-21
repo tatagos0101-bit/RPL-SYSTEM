@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
+import { useState } from 'react';
 import { BookMarked, Clock, CheckCircle2, Search, RefreshCw, X, Users } from 'lucide-react';
-import { getLibReservations, cancelLibReservation } from '../../api/librarian';
+import { cancelLibReservation } from '../../api/librarian';
 import { formatTimeLeft, parseApiDateTime } from '../../api/dateTime';
 import BookCover from '../../components/BookCover';
 
@@ -10,53 +12,29 @@ const STATUS_CFG = {
 };
 
 export default function LibReservations() {
-  const [reservations, setReservations] = useState([]);
-  const [loading, setLoading]           = useState(true);
   const [filter, setFilter]             = useState('all');
   const [search, setSearch]             = useState('');
   const [cancelling, setCancelling]     = useState(null);
 
-  const fetchReservations = useCallback((f = filter, s = search) => {
-    setLoading(true);
-    const params = {};
-    if (f !== 'all') params.status = f;
-    if (s)           params.search = s;
-    getLibReservations(params)
-      .then((res) => setReservations(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [filter, search]);
-
-  useEffect(() => {
-    const id = setTimeout(fetchReservations, 0);
-    return () => clearTimeout(id);
-  }, [fetchReservations]);
-
-  const handleFilterChange = (f) => {
-    setFilter(f);
-    fetchReservations(f, search);
-  };
-
-  const handleSearch = (s) => {
-    setSearch(s);
-    fetchReservations(filter, s);
-  };
+  const listing = useServerPage('/api/librarian/reservations', { status: filter, search }, '/api/librarian/reservations/count');
+  const { items: reservations, loading } = listing;
+  const [cancelError, setCancelError] = useState('');
 
   const handleCancel = async (r) => {
     if (!window.confirm(`Cancel ${r.member_name}'s reservation for "${r.book_title}"?`)) return;
-    setCancelling(r.id);
+    setCancelError(''); setCancelling(r.id);
     try {
       await cancelLibReservation(r.id);
-      setReservations((prev) => prev.filter((x) => x.id !== r.id));
+      listing.reload();
     } catch {
-      // silently fail
+      setCancelError('Cancellation could not be confirmed. Refresh the list to check its current status before retrying Cancel.');
     } finally {
       setCancelling(null);
     }
   };
 
-  const readyCount   = reservations.filter((r) => r.status === 'ready').length;
-  const pendingCount = reservations.filter((r) => r.status === 'pending').length;
+  const readyCount   = listing.totals.ready ?? 0;
+  const pendingCount = listing.totals.pending ?? 0;
 
   const fmt = (dateStr) =>
     parseApiDateTime(dateStr).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -97,7 +75,7 @@ export default function LibReservations() {
           <div className="col-span-2 md:col-span-1 bg-info-soft border border-line rounded-xl p-6 flex items-center gap-4 hover:shadow-sm transition-all duration-200 cursor-default">
             <Users size={20} className="text-link flex-shrink-0" />
             <div>
-              <p className="text-3xl font-semibold tracking-normal text-link">{reservations.length}</p>
+              <p className="text-3xl font-semibold tracking-normal text-link">{listing.total}</p>
               <p className="text-sm font-semibold tracking-normal text-link">Total Active</p>
             </div>
           </div>
@@ -115,6 +93,8 @@ export default function LibReservations() {
           </div>
         )}
 
+        <PageControls {...listing} />
+        {cancelError && <p role="alert" className="text-danger">{cancelError} <button onClick={listing.reload}>Refresh reservations</button></p>}
         {/* Table */}
         <div className="animate-fade-in-up delay-200 bg-panel border border-line rounded-xl overflow-hidden shadow-sm">
           {/* Toolbar */}
@@ -123,7 +103,7 @@ export default function LibReservations() {
               {['all', 'ready', 'pending'].map((f) => (
                 <button
                   key={f}
-                  onClick={() => handleFilterChange(f)}
+                  onClick={() => setFilter(f)}
                   className={`px-4 py-2 rounded-full text-sm font-semibold tracking-normal transition-all duration-200 ${
                     filter === f
                       ? f === 'ready'
@@ -145,12 +125,12 @@ export default function LibReservations() {
                   type="text"
                   placeholder="Search member or book..."
                   value={search}
-                  onChange={(e) => handleSearch(e.target.value)}
+                  onChange={(e) => setSearch(e.target.value)}
                   className="bg-subtle border border-line rounded-lg py-2 pl-8 pr-4 text-base font-medium outline-none focus:ring-2 focus:ring-line w-52 text-muted placeholder:text-muted"
                 />
               </div>
               <button
-                onClick={() => fetchReservations()}
+                onClick={listing.reload}
                 className="p-2 rounded-lg bg-subtle text-muted hover:text-link hover:bg-info-soft transition-all"
                 title="Refresh"
               >
@@ -164,7 +144,7 @@ export default function LibReservations() {
             <div className="flex justify-center py-16">
               <RefreshCw size={24} className="animate-spin text-link" />
             </div>
-          ) : reservations.length === 0 ? (
+          ) : listing.error ? null : reservations.length === 0 ? (
             <div className="text-center py-16">
               <BookMarked size={32} className="mx-auto mb-3 text-link text-muted" />
               <p className="text-sm font-semibold tracking-normal text-muted">

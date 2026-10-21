@@ -1,8 +1,12 @@
+import useReadResource from '../../api/useReadResource';
+import ModalFrame from '../../components/ModalFrame';
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import { Search, Sparkles, Heart, Bookmark, XCircle, RefreshCw, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import 'react-toastify/dist/ReactToastify.css';
-import { getBook, getBooks, getCategories } from '../../api/books';
+import { getBook, getCategories } from '../../api/books';
 import { recordBookView } from '../../api/bookInteractions';
 import useBookRecommendations from '../../api/useBookRecommendations';
 import { getReservations, cancelReservation as apiCancelReservation } from '../../api/reservations';
@@ -12,13 +16,16 @@ import {
   saveReservationCart,
 } from '../../api/reservationCart';
 import BookCover from '../../components/BookCover';
+import BorrowingCapacity from '../../components/BorrowingCapacity';
+import useBorrowingCapacity from '../../api/useBorrowingCapacity';
+import { loadPendingConfirmation } from '../../api/reservationCart';
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 export default function UserBrowseBooks() {
-  const [books, setBooks] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const allowance = useBorrowingCapacity();
+  const categoryResource = useReadResource(getCategories);
+  const categories = ['All', ...(categoryResource.data || []).map(item => item.category)];
   const [reservations, setReservations] = useState([]);
 
   const [cart, setCart] = useState(() => loadReservationCart());
@@ -35,28 +42,20 @@ export default function UserBrowseBooks() {
   const [animKey, setAnimKey] = useState(0);
   const touchStartX = useRef(null);
 
-  const fetchData = () => {
-    Promise.all([
-      getBooks({ limit: 1000 }),
-      getCategories(),
-      getReservations()
-    ])
-      .then(([bRes, cRes, resRes]) => {
-        setBooks(bRes.data.items ?? bRes.data);
-        setCategories(['All', ...cRes.data.map((c) => c.category)]);
-        setReservations(resRes.data);
-      })
-      .catch(() => toast.error('Failed to load books.', { position: 'bottom-right' }))
-      .finally(() => setLoading(false));
-  };
-
+  const listing = useServerPage('/api/books', { search, category: activeCategory === 'All' ? '' : activeCategory });
+  const { items: books, loading } = listing;
   useEffect(() => {
-    fetchData();
+    getReservations().then(({ data }) => setReservations(data)).catch(() => toast.error('Could not load reservations. Please reload to retry.'));
   }, []);
 
   const isDark = document.documentElement.classList.contains('dark');
 
   const addToCart = (book) => {
+    if (loadPendingConfirmation()) return toast.info('Resolve your pending confirmation in My Reservations first.');
+    if (!allowance.capacity || cart.length >= allowance.capacity.remaining_slots) {
+      allowance.refreshCapacity();
+      return toast.info('Your selection has reached the remaining book allowance. Return or cancel a book to free a slot.');
+    }
     if (cart.find((c) => c.id === book.id) || reservations.find(r => r.book_id === book.id)) {
       return toast.info('Already in your reservations.', { position: 'bottom-right' });
     }
@@ -66,7 +65,7 @@ export default function UserBrowseBooks() {
     const available = (book.copies_available ?? 0) > 0;
     toast.success(
       available
-        ? `"${book.title}" added to reservations!`
+        ? `"${book.title}" added to your selection. Confirm in My Reservations.`
         : `"${book.title}" added to your queue selection.`,
       { position: 'bottom-right' }
     );
@@ -78,19 +77,14 @@ export default function UserBrowseBooks() {
     try {
       await apiCancelReservation(res.id);
       setReservations(prev => prev.filter(r => r.id !== res.id));
+      allowance.refreshCapacity();
       toast.success('Reservation cancelled.', { position: 'bottom-right' });
     } catch {
       toast.error('Failed to cancel reservation.', { position: 'bottom-right' });
     }
   };
 
-  const filteredBooks = useMemo(() => books.filter((b) => {
-    const matchCat = activeCategory === 'All' || b.category === activeCategory;
-    const matchSearch =
-      b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.author.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
-  }), [books, activeCategory, search]);
+  const filteredBooks = books;
 
   const openBook = useCallback((book) => {
     const requestId = ++detailRequest.current;
@@ -150,6 +144,7 @@ export default function UserBrowseBooks() {
     <div className="rpl-page min-h-screen bg-subtle text-ink pb-16 transition-colors duration-300">
       <ToastContainer theme={isDark ? 'dark' : 'light'} />
 
+
       {/* ── HEADER ── */}
       <div className="animate-fade-in-up px-4 sm:px-6 md:px-10 pt-5 pb-4 border-b border-line">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -181,6 +176,8 @@ export default function UserBrowseBooks() {
             </div>
             <div className="min-w-0">
               <h2 id="recommendations-title" className="rpl-section-title text-ink">Recommended for you</h2>
+              <BorrowingCapacity {...allowance} />
+              <p className="text-sm text-muted">Books are not held until you confirm. Availability may change.</p>
               <p className="text-sm text-muted mt-1">
                 Discover your next read, using favorites, book views, and borrowing activity.
               </p>
@@ -224,6 +221,8 @@ export default function UserBrowseBooks() {
             <div className="h-px flex-1 bg-subtle" />
           </div>
 
+          {categoryResource.error && <p role="alert" className="text-danger">Categories could not be loaded. <button onClick={categoryResource.retry}>Retry categories</button></p>}
+          <PageControls {...listing} />
           {/* ── FILTER & SEARCH ── */}
           <div className="animate-fade-in-up delay-200 flex flex-col lg:flex-row gap-4">
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -293,7 +292,7 @@ export default function UserBrowseBooks() {
         const isReserved = !!reservations.find((r) => r.book_id === selected.id);
         const isAvailable = (selected.copies_available ?? 0) > 0;
         return (
-          <div
+          <ModalFrame onClose={() => setSelected(null)}
             role="dialog" aria-modal="true" aria-label="Book details"
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
             onClick={() => setSelected(null)}
@@ -427,7 +426,7 @@ export default function UserBrowseBooks() {
                 <ChevronRight size={28} />
               </button>
             )}
-          </div>
+          </ModalFrame>
         );
       })()}
     </div>

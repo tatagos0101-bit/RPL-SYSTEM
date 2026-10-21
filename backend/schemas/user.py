@@ -2,6 +2,7 @@ import re
 from pydantic import BaseModel, field_validator
 from typing import Optional, Literal
 from datetime import datetime
+from services.passwords import validate_new_password
 
 _PHONE_RE = re.compile(r"^[\d\s\-\+\(\)]{7,20}$")
 
@@ -61,8 +62,8 @@ class UserProfileUpdate(BaseModel):
         if v is None:
             return v
         v = v.strip()
-        if len(v) > 200:
-            raise ValueError("Location must be at most 200 characters")
+        if len(v) > 120:
+            raise ValueError("Location must be at most 120 characters")
         return v or None
 
 
@@ -78,9 +79,7 @@ class ChangePasswordRequest(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
-        if len(v) < 6:
-            raise ValueError("New password must be at least 6 characters")
-        return v
+        return validate_new_password(v)
 
 
 class ChangePasswordResponse(BaseModel):

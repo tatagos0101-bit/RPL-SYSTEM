@@ -1,3 +1,4 @@
+import { isValidNewPassword, passwordPolicyMessage } from '../../api/passwordPolicy';
 import { useState } from 'react';
 import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound, Mail, MessageSquareText } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -50,8 +51,8 @@ export default function ForgotPasswordPage() {
     event.preventDefault();
     setError('');
 
-    if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters.');
+    if (!isValidNewPassword(newPassword)) {
+      setError(passwordPolicyMessage);
       return;
     }
 
@@ -210,7 +211,7 @@ export default function ForgotPasswordPage() {
                       type="password"
                       value={newPassword}
                       onChange={(event) => setNewPassword(event.target.value)}
-                      minLength={6}
+                      minLength={8} maxLength={128}
                       className="w-full rounded-lg border border-line bg-subtle px-4 py-4 text-base font-bold outline-none transition-all focus:ring-2 focus:ring-line text-ink"
                       required
                     />
@@ -225,7 +226,7 @@ export default function ForgotPasswordPage() {
                     type="password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    minLength={6}
+                    minLength={8} maxLength={128}
                     className="w-full rounded-lg border border-line bg-subtle px-4 py-4 text-base font-bold outline-none transition-all focus:ring-2 focus:ring-line text-ink"
                     required
                   />

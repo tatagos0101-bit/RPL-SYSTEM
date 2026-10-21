@@ -8,13 +8,15 @@ import string
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from passlib.context import CryptContext
+from services.passwords import hash_password, verify_password, needs_legacy_replacement
+from services.email_identity import find_email_user, email_matches, normalize_email
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_, and_
 
 from config import LIBRARIAN_AUTH_CODE, ENVIRONMENT
 from database import get_db
-from dependencies import get_current_user, require_librarian, oauth2_scheme
+from dependencies import get_current_user, get_locked_current_user, require_librarian, oauth2_scheme
 from limiter import limiter
 from logger import security_logger
 from middleware.security import _client_ip
@@ -39,16 +41,15 @@ from schemas.auth import (
 )
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _hash(password: str) -> str:
-    return pwd_ctx.hash(password)
+    return hash_password(password)
 
 def _verify(plain: str, hashed: str) -> bool:
-    return pwd_ctx.verify(plain, hashed)
+    return verify_password(plain, hashed)
 
 def _make_token(user_id: int, db: Session | None = None) -> str:
     # Compatibility for local test helpers; request handlers pass their session
@@ -82,15 +83,22 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
     ip = _client_ip(request)
     identifier = body.email.strip()
     user = (
-        db.query(User).filter(User.email == identifier.lower()).first()
+        find_email_user(db, identifier)
         or db.query(User).filter(User.member_id == identifier.upper()).first()
     )
-    if not user or not _verify(body.password, user.password_hash):
+    if user:
+        user = db.query(User).filter(User.id == user.id).with_for_update().populate_existing().one()
+    if not user or user.deleted_at is not None or not _verify(body.password, user.password_hash):
         security_logger.warning("LOGIN_FAILED ip=%s", ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email/Member ID or password")
     if user.status == "suspended":
         security_logger.warning("LOGIN_SUSPENDED ip=%s user_id=%d", ip, user.id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended. Contact librarian.")
+    if body.expected_role is not None and body.expected_role != user.role:
+        raise HTTPException(403, "This account belongs to the other portal. Use its matching sign-in page.")
+    if needs_legacy_replacement(body.password, user.password_hash):
+        user.must_change_password = True
+        revoke_user_sessions(db, user.id)
     security_logger.info("LOGIN_SUCCESS ip=%s user_id=%d role=%s", ip, user.id, user.role)
     token = _make_token(user.id, db)
     db.commit()
@@ -115,13 +123,13 @@ def signup(request: Request, response: Response, body: SignupRequest, db: Sessio
             security_logger.warning("SIGNUP_BAD_LIBCODE ip=%s", ip)
             raise HTTPException(status_code=403, detail="Invalid librarian authorization code")
 
-    if db.query(User).filter(User.email == body.email).first():
+    if email_matches(db, body.email):
         security_logger.info("SIGNUP_DUPLICATE ip=%s", ip)
         raise HTTPException(status_code=400, detail="Unable to register. Contact the librarian for assistance.")
 
     user = User(
         name=body.name,
-        email=body.email,
+        email=normalize_email(body.email),
         password_hash=_hash(body.password),
         role=body.role,
         phone=body.phone,
@@ -131,7 +139,11 @@ def signup(request: Request, response: Response, body: SignupRequest, db: Sessio
         member_id=_generate_member_id(db),
     )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, 'Unable to register. Account details conflict with an existing record.') from None
     db.refresh(user)
 
     security_logger.info("SIGNUP_SUCCESS ip=%s user_id=%d role=%s", ip, user.id, user.role)
@@ -255,7 +267,7 @@ def _close_idle_session(ip: str, db: Session) -> None:
 @router.post("/face", response_model=FaceAuthResponse)
 @limiter.limit("120/minute")
 def face_auth(request: Request, response: Response, body: FaceAuthRequest, db: Session = Depends(get_db)):
-    return process_entry_face(request, response, body.image, db, issue_token=True)
+    return process_entry_face(request, response, body.image, db, issue_token=True, expected_role=body.expected_role)
 
 
 def _legacy_process_entry_face(
@@ -406,6 +418,7 @@ def process_entry_face(
     image: str,
     db: Session,
     issue_token: bool = True,
+    expected_role: Optional[str] = None,
 ) -> FaceAuthResponse:
     """
     Entrance-station face processing.
@@ -463,7 +476,7 @@ def process_entry_face(
     if issue_token and len(detected_faces) > 1:
         return FaceAuthResponse(matched=False, message="multiple_faces")
 
-    now = now_ph().replace(tzinfo=None)
+    now = now_ph()
     faces = []
     first_match = None
     recorded_user_ids = set()
@@ -471,7 +484,7 @@ def process_entry_face(
 
     def log_unknown_face_once() -> None:
         nonlocal unknown_logged
-        if unknown_logged:
+        if unknown_logged or issue_token:
             return
         unknown_logged = True
         security_logger.info("FACE_UNRECOGNIZED entry_gate")
@@ -501,8 +514,14 @@ def process_entry_face(
                 time_out=now,
             ))
 
-    for face in detected_faces:
-        match = face_engine_service.find_match_for_face(db, face, purpose="login" if issue_token else "gate")
+    matches = [face_engine_service.find_match_for_face(db, face, purpose="login" if issue_token else "gate", lock_match=False) for face in detected_faces]
+    user_ids = sorted({match.user.id for match in matches if match is not None})
+    # Stable order prevents overlapping multi-face frames from reversing member locks.
+    db.query(User).filter(User.id.in_(user_ids)).order_by(User.id).with_for_update().populate_existing().all()
+    for face, match in zip(detected_faces, matches):
+        match = face_engine_service.revalidate_match_for_face(
+            db, face, match, purpose="login" if issue_token else "gate")
+
         if match is None or match.user.status == "suspended":
             log_unknown_face_once()
             faces.append({
@@ -514,8 +533,12 @@ def process_entry_face(
             })
             continue
         matched_user = match.user
+        if issue_token and expected_role is not None and matched_user.role != expected_role:
+            raise HTTPException(403, "This account belongs to the other portal. Use its matching sign-in page.")
 
-        if matched_user.id in recorded_user_ids:
+        if issue_token:
+            session_action = 'authenticated'
+        elif matched_user.id in recorded_user_ids:
             session_action = "seen_in_frame"
         else:
             _, session_action = record_entry_scan(db, matched_user, seen_at=now)
@@ -539,7 +562,8 @@ def process_entry_face(
         if first_match is None:
             first_match = (matched_user, face_result)
 
-    db.commit()
+    if not issue_token:
+        db.commit()
 
     if first_match is None:
         return FaceAuthResponse(matched=False, faces=faces, message="not_recognized")
@@ -654,9 +678,11 @@ def face_lookup(
 def enroll_face(
     request: Request,
     body: EnrollFaceRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_locked_current_user),
     db: Session = Depends(get_db),
 ):
+    from services.member_deletion import lock_active_account
+    current_user = lock_active_account(db, current_user.id)
     import services.face_engine_service as face_engine_service
     from services.liveness_service import check_liveness
     from models.security_alert import SecurityAlert

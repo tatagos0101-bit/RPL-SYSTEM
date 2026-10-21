@@ -57,6 +57,8 @@ def test_additive_migration_keeps_existing_rows_and_runs_twice(monkeypatch):
     database.init_db()
     with legacy.connect() as conn:
         assert conn.execute(text("SELECT name, must_change_password FROM users WHERE id=1")).one() == ("Existing member", 0)
+        assert conn.execute(text("SELECT deleted_at FROM users WHERE id=1")).scalar() is None
+        assert "deleted_at" in {column["name"] for column in inspect(conn).get_columns("users")}
         assert "security_alerts" in inspect(conn).get_table_names()
     legacy.dispose()
 
@@ -165,6 +167,11 @@ def test_direct_avatar_uses_storage_content_validation(client, db_session, cloud
     db_session.refresh(user)
     assert user.avatar_url.startswith("supabase://rpl-avatars/")
     assert client.post("/api/uploads/prepare", json={"category": "ids", "filename": "id.png", "size": len(PNG)}).status_code == 403
+    deleted = []
+    monkeypatch.setattr('routers.users.delete_upload', lambda *args, **kwargs: deleted.append(args))
+    retry = client.post("/api/user/avatar", data={"upload_ticket": prepared.json()["upload_ticket"]})
+    assert retry.status_code == 200
+    assert deleted == []
 
 
 def test_direct_upload_still_rejects_spoofed_file_content(cloud_storage, monkeypatch):

@@ -1,9 +1,11 @@
+import useServerPage from '../../api/useServerPage';
+import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Package, CheckCircle, Clock, BookOpen, Trash2, RefreshCw, ImagePlus, Library, Pencil } from 'lucide-react';
 import BookCover from '../../components/BookCover';
 import BookEditDialog from '../../components/BookEditDialog';
-import { getBooks, getCategories } from '../../api/books';
+import { getCategories } from '../../api/books';
 import { getInventoryStats, deleteBook, uploadBookCover } from '../../api/librarian';
 
 const getStatus = (status) => {
@@ -14,40 +16,32 @@ const getStatus = (status) => {
 
 const LibInventory = () => {
   const navigate = useNavigate();
-  const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [invStats, setInvStats] = useState({ total_titles: 0, total_copies: 0, available_copies: 0, borrowed_copies: 0 });
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [loading, setLoading] = useState(true);
   const [uploadingId, setUploadingId] = useState(null);
   const [editingBook, setEditingBook] = useState(null);
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef(null);
   const uploadTargetId = useRef(null);
 
+  const listing = useServerPage('/api/books', { search, category: activeCategory === 'All' ? '' : activeCategory });
+  const { items: books, setItems: setBooks, loading, reload } = listing;
+  const [operationError, setOperationError] = useState('');
   const fetchData = useCallback(() => {
-    setLoading(true);
-    Promise.all([getBooks({ limit: 1000 }), getCategories(), getInventoryStats()])
-      .then(([bRes, cRes, sRes]) => {
-        setBooks(bRes.data.items ?? bRes.data);
-        setCategories(['All', ...cRes.data.map((c) => c.category)]);
-        setInvStats(sRes.data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    const id = setTimeout(fetchData, 0);
-    return () => clearTimeout(id);
-  }, [fetchData]);
+    setOperationError('');
+    reload();
+    getCategories().then(({ data }) => setCategories(['All', ...data.map(c => c.category)])).catch(() => setOperationError('Categories unavailable. Retry loading.'));
+    getInventoryStats().then(({ data }) => setInvStats(data)).catch(() => setOperationError('Inventory totals unavailable. Retry loading.'));
+  }, [reload]);
+  useEffect(() => { const timer = setTimeout(fetchData, 0); return () => clearTimeout(timer); }, [fetchData]);
 
   const handleDelete = (id) => {
     if (!window.confirm('Delete this book from inventory?')) return;
     deleteBook(id)
       .then(() => fetchData())
-      .catch(() => {});
+      .catch(err => setOperationError(err.response?.data?.detail || 'Operation could not be confirmed. Refresh before retrying.'));
   };
 
   const handleCoverClick = (bookId) => {
@@ -62,16 +56,11 @@ const LibInventory = () => {
     setUploadingId(uploadTargetId.current);
     uploadBookCover(uploadTargetId.current, file)
       .then(() => fetchData())
-      .catch(() => {})
+      .catch(() => setOperationError('Cover upload could not be confirmed. Click the cover to retry.'))
       .finally(() => setUploadingId(null));
   };
 
-  const filtered = books.filter((b) => {
-    const matchCat = activeCategory === 'All' || b.category === activeCategory;
-    const matchSearch = b.title.toLowerCase().includes(search.toLowerCase()) ||
-      b.author.toLowerCase().includes(search.toLowerCase());
-    return matchCat && matchSearch;
-  });
+  const filtered = books;
 
   const handleSaved = (book) => {
     setBooks((current) => current.map((item) => item.id === book.id ? book : item));
@@ -96,6 +85,8 @@ const LibInventory = () => {
       />
 
       <div className="max-w-7xl mx-auto">
+        <PageControls {...listing} />
+        {operationError && <p role="alert">{operationError} <button className="underline" onClick={fetchData}>Retry loading</button></p>}
 
         {/* Header */}
         <header className="animate-fade-in-up flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-6">

@@ -212,9 +212,9 @@ export const fetchAllPaginated = async (
     const skip = page * limit;
     const pageRows = responseData(await fetchPage({ skip, limit }));
     rows.push(...pageRows);
-    if (pageRows.length < limit) break;
+      if (pageRows.length < limit) return rows;
   }
-  return rows;
+    throw new Error('Export exceeds the safety limit. A complete export cannot be produced; no partial export was generated.');
 };
 
 export const getReportFilename = (base, filters = {}) => {

@@ -20,9 +20,16 @@ import secrets
 import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
-from passlib.context import CryptContext
-from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, and_, or_
+from services.passwords import hash_password
+from services.passwords import verify_password
+from services.member_deletion import lock_existing_member, delete_face_data, delete_account
+from limiter import limiter
+from services.list_queries import member_query, reservation_query
+from services.reservation_confirmation import cancel_locked_reservation
+from services.email_identity import email_matches
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, desc, and_, or_, case
 
 from database import get_db
 from dependencies import require_librarian
@@ -51,7 +58,7 @@ from schemas.librarian import (
     DueBookOut, EntryLogOut,
     LibMemberOut, LibMemberStats, MemberStatusUpdate,
     NotificationOut, LibReservationOut, MemberReservationOut,
-    MemberActiveLoanOut,
+    MemberActiveLoanOut, MemberDeletionRequest,
 )
 
 router = APIRouter(prefix="/api/librarian", tags=["Librarian"])
@@ -143,7 +150,7 @@ def dashboard_stats(
         .scalar()
     )
 
-    total_members = db.query(func.count(User.id)).filter(User.role == "member").scalar()
+    total_members = db.query(func.count(User.id)).filter(User.role == "member", User.deleted_at.is_(None)).scalar()
 
     pending_registrations = (
         db.query(func.count(User.id))
@@ -151,7 +158,7 @@ def dashboard_stats(
             FaceEmbedding,
             and_(FaceEmbedding.user_id == User.id, FaceEmbedding.is_active == True),
         )
-        .filter(User.role == "member", User.face_encoding.is_(None), FaceEmbedding.id.is_(None))
+        .filter(User.role == "member", User.deleted_at.is_(None), User.face_encoding.is_(None), FaceEmbedding.id.is_(None))
         .scalar()
     )
 
@@ -295,34 +302,21 @@ def list_members(
     db:     Session = Depends(get_db),
     _:      User    = Depends(require_librarian),
 ):
-    if status and status not in ("active", "suspended"):
-        raise HTTPException(status_code=400, detail="Status filter must be 'active' or 'suspended'")
+    q = member_query(db, search, status)
 
-    q = db.query(User).filter(User.role == "member")
-
-    if status:
-        q = q.filter(User.status == status)
-    if search:
-        like = f"%{search}%"
-        conditions = [User.name.ilike(like), User.email.ilike(like), User.member_id.ilike(like)]
-        if search.isdigit():
-            conditions.append(User.id == int(search))
-        q = q.filter(or_(*conditions))
-
-    members = q.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+    members = q.order_by(User.created_at.desc(), User.id.desc()).offset(skip).limit(limit).all()
+    member_ids = [m.id for m in members]
+    counts = {row.user_id: row for row in db.query(Transaction.user_id,
+        func.sum(case((Transaction.status.in_(['active', 'overdue']), 1), else_=0)).label('active'),
+        func.count(Transaction.borrow_date).label('total'))
+        .filter(Transaction.user_id.in_(member_ids)).group_by(Transaction.user_id).all()}
+    enrolled_ids = {
+        row[0] for row in db.query(FaceEmbedding.user_id).filter(
+            FaceEmbedding.user_id.in_(member_ids), FaceEmbedding.is_active.is_(True)).distinct().all()}
 
     result = []
     for m in members:
-        active_loans = (
-            db.query(func.count(Transaction.id))
-            .filter(Transaction.user_id == m.id, Transaction.status.in_(["active", "overdue"]))
-            .scalar()
-        )
-        total_loans = (
-            db.query(func.count(Transaction.id))
-            .filter(Transaction.user_id == m.id, Transaction.borrow_date.isnot(None))
-            .scalar()
-        )
+        count = counts.get(m.id)
         result.append(LibMemberOut(
             id           = m.id,
             member_id    = m.member_id or f"RPL-{m.id:05d}",
@@ -333,13 +327,18 @@ def list_members(
             phone_verified = bool(m.phone_verified),
             location     = m.location,
             status       = m.status,
-            face_enrolled = _face_enrolled(db, m),
-            active_loans = active_loans,
-            total_loans  = total_loans,
+            face_enrolled = bool(m.face_encoding) or m.id in enrolled_ids,
+            active_loans = count.active if count else 0,
+            total_loans  = count.total if count else 0,
             joined_at    = m.created_at,
         ))
     return result
 
+
+@router.get("/users/count")
+def count_members(search: str = Query("", max_length=200), status: str = Query(""),
+                  db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    return {"total": member_query(db, search, status).count()}
 
 # ── Member stats ──────────────────────────────────────────────────────────────
 
@@ -348,18 +347,22 @@ def member_stats(
     db: Session = Depends(get_db),
     _:  User    = Depends(require_librarian),
 ):
-    members = db.query(User).filter(User.role == "member").all()
+    enrolled = or_(and_(User.face_encoding.isnot(None), User.face_encoding != ''),
+        db.query(FaceEmbedding.id).filter(FaceEmbedding.user_id == User.id,
+                                         FaceEmbedding.is_active.is_(True)).exists())
+    counts = db.query(func.count(User.id),
+        func.sum(case((User.status == 'active', 1), else_=0)),
+        func.sum(case((User.status == 'suspended', 1), else_=0)),
+        func.sum(case((enrolled, 1), else_=0))).filter(User.role == 'member', User.deleted_at.is_(None)).one()
     return LibMemberStats(
-        total     = len(members),
-        active    = sum(1 for m in members if m.status == "active"),
-        suspended = sum(1 for m in members if m.status == "suspended"),
-        enrolled  = sum(1 for m in members if _face_enrolled(db, m)),
+        total=counts[0], active=counts[1] or 0,
+        suspended=counts[2] or 0, enrolled=counts[3] or 0,
     )
 
 
 # ── Register new member (librarian-assisted) ─────────────────────────────────
 
-_pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 
 def _generate_temporary_password(length: int = 14) -> str:
@@ -372,10 +375,10 @@ def _generate_temporary_password(length: int = 14) -> str:
 
 @router.post("/users/register", status_code=201)
 async def register_member(
-    name:     str              = Form(...),
-    email:    str | None       = Form(None),
-    phone:    str | None       = Form(None),
-    location: str              = Form(...),
+    name:     str              = Form(..., max_length=120),
+    email:    str | None       = Form(None, max_length=180),
+    phone:    str | None       = Form(None, max_length=30),
+    location: str              = Form(..., max_length=120),
     id_image: UploadFile | None = File(None),
     upload_ticket: str | None = Form(None),
     db:       Session          = Depends(get_db),
@@ -390,7 +393,7 @@ async def register_member(
     if not location or not location.strip():
         raise HTTPException(status_code=422, detail="Address is required.")
 
-    if email and db.query(User).filter(User.email == email).first():
+    if email and email_matches(db, email):
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
     content, original_filename, reference = await read_upload(folder="ids", user_id=_.id, file=id_image, ticket=upload_ticket)
@@ -409,7 +412,7 @@ async def register_member(
     new_user = User(
         name          = name,
         email         = email or None,
-        password_hash = _pwd_ctx.hash(temporary_password),
+        password_hash = hash_password(temporary_password),
         must_change_password = True,
         email_verified = False,
         phone_verified = False,
@@ -421,7 +424,11 @@ async def register_member(
         member_id     = _generate_member_id(db),
     )
     db.add(new_user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, 'Registration conflicts with an existing account. Refresh and check before retrying.') from None
     db.refresh(new_user)
 
     return {
@@ -454,12 +461,12 @@ def reset_member_password(
     db:      Session = Depends(get_db),
     _:       User    = Depends(require_librarian),
 ):
-    member = db.query(User).filter(User.id == user_id, User.role == "member").with_for_update().populate_existing().first()
+    member = lock_existing_member(db, user_id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
     temporary_password = _generate_temporary_password()
-    member.password_hash = _pwd_ctx.hash(temporary_password)
+    member.password_hash = hash_password(temporary_password)
     member.must_change_password = True
     revoke_user_sessions(db, member.id)
     expire_unused_reset_codes_for_user(db, member.id)
@@ -487,11 +494,13 @@ def update_member_status(
     if body.status not in ("active", "suspended"):
         raise HTTPException(status_code=400, detail="Status must be 'active' or 'suspended'")
 
-    member = db.query(User).filter(User.id == user_id, User.role == "member").first()
+    member = lock_existing_member(db, user_id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
     member.status = body.status
+    if body.status == "suspended":
+        revoke_user_sessions(db, member.id)
     db.commit()
 
     return {
@@ -503,6 +512,27 @@ def update_member_status(
 
 
 # ── Enroll face for a member (librarian-assisted) ────────────────────────────
+
+@router.delete("/users/{user_id}/face", status_code=204)
+@limiter.limit("5/minute")
+def delete_member_face(user_id: int, body: MemberDeletionRequest, request: Request,
+                       db: Session = Depends(get_db), librarian: User = Depends(require_librarian)):
+    if not verify_password(body.current_password, librarian.password_hash):
+        raise HTTPException(403, "Your librarian password is incorrect.")
+    member = lock_existing_member(db, user_id)
+    delete_face_data(db, member)
+    db.commit()
+
+
+@router.delete("/users/{user_id}", status_code=204)
+@limiter.limit("5/minute")
+def delete_member_account(user_id: int, body: MemberDeletionRequest, request: Request,
+                          db: Session = Depends(get_db), librarian: User = Depends(require_librarian)):
+    if not verify_password(body.current_password, librarian.password_hash):
+        raise HTTPException(403, "Your librarian password is incorrect.")
+    member = lock_existing_member(db, user_id, allow_deleted=True)
+    delete_account(db, member)
+    db.commit()
 
 @router.post("/users/{user_id}/enroll-face")
 def librarian_enroll_face(
@@ -518,7 +548,7 @@ def librarian_enroll_face(
     import services.face_engine_service as face_engine_service
     from logger import security_logger
 
-    member = db.query(User).filter(User.id == user_id, User.role == "member").first()
+    member = lock_existing_member(db, user_id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
@@ -574,15 +604,7 @@ def notify_member(
     if dl >= 0:
         raise HTTPException(status_code=400, detail="Book is not yet overdue")
 
-    # Placeholder — Phase 5 will wire real email/SMS here
-    return {
-        "success":     True,
-        "notified":    tx.user.name if tx.user else "Unknown",
-        "book":        tx.book.title if tx.book else "Unknown",
-        "days_overdue": abs(dl),
-        "fine":        float(_calc_fine(tx.due_date)),
-        "message":     "Reminder logged. Email/SMS will be wired in Phase 5.",
-    }
+    raise HTTPException(501, 'Overdue reminder delivery is unavailable. No email or SMS was sent.')
 
 
 # ── Reservation notifications ─────────────────────────────────────────────────
@@ -651,22 +673,13 @@ def all_reservations(
     search: str = Query("", max_length=200, description="Search by member name or book title"),
     db:     Session = Depends(get_db),
     _:      User    = Depends(require_librarian),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
 ):
     sync_expired_reservations(db)
-    if status and status not in ("pending", "ready", "all"):
-        raise HTTPException(status_code=400, detail="Status filter must be 'pending', 'ready', or 'all'")
-
-    q = db.query(Reservation).filter(Reservation.status.in_(["pending", "ready"]))
-
-    if status in ("pending", "ready"):
-        q = q.filter(Reservation.status == status)
-    if search:
-        like = f"%{search}%"
-        q = q.join(Reservation.user).join(Reservation.book).filter(
-            User.name.ilike(like) | Book.title.ilike(like)
-        )
-
-    reservations = q.order_by(Reservation.reserved_at).all()
+    q = reservation_query(db, search, status)
+    reservations = q.options(joinedload(Reservation.book), joinedload(Reservation.user)).order_by(
+        Reservation.reserved_at, Reservation.id).offset(skip).limit(limit).all()
 
     return [
         LibReservationOut(
@@ -683,6 +696,15 @@ def all_reservations(
         )
         for r in reservations
     ]
+
+
+@router.get("/reservations/count")
+def count_reservations(search: str = Query('', max_length=200), status: str = Query(''),
+                       db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    sync_expired_reservations(db)
+    counts = dict(reservation_query(db, search, status).with_entities(
+        Reservation.status, func.count(Reservation.id)).group_by(Reservation.status).all())
+    return {'total': sum(counts.values()), 'ready': counts.get('ready', 0), 'pending': counts.get('pending', 0)}
 
 
 @router.get("/member/{user_id}/reservations", response_model=list[MemberReservationOut])
@@ -767,14 +789,5 @@ def cancel_reservation_librarian(
     reservation = db.query(Reservation).filter(Reservation.id == reservation_id).first()
     if not reservation:
         raise HTTPException(status_code=404, detail="Reservation not found")
-    if reservation.status not in ("pending", "ready"):
-        raise HTTPException(status_code=400, detail="Reservation is already fulfilled or cancelled")
-
-    original_status = reservation.status
-    reservation.status = "cancelled"
-
-    renumber_pending_queue(db, reservation.book_id)
-    if original_status == "ready":
-        promote_next_pending_reservation(db, reservation.book_id)
-
+    cancel_locked_reservation(db, reservation)
     db.commit()

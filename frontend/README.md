@@ -43,6 +43,10 @@ npm run build
 
 `npm run preview` serves the built frontend locally. `npm run lint` runs the
 configured ESLint checks; the build and Node tests are separate commands.
+Builds reject known server database, Supabase, authentication and Redis settings
+in the frontend environment before emitting assets. Keep those settings on the API
+project; see the [cleanup procedure](../docs/FRONTEND_CREDENTIAL_CLEANUP.md).
+Run build-guard and artifact-scanner tests with `node --test scripts/*.test.mjs`.
 
 The production Vercel project uses repository root `.` and builds `frontend/dist`
 through the root `vercel.json`. Leave `VITE_API_URL` unset to use the website's

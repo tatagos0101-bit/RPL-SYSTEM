@@ -9,7 +9,11 @@ import { useNavigate } from 'react-router-dom';
 import { getStoredAuth, homeForRole } from '../../api/authRoutes';
 import { parseApiDateTime } from '../../api/dateTime';
 import { faceBoxToStyle, summarizeFaceResults } from '../../api/entryFaceOverlay';
-import { isQuietWalkThroughMessage, shouldLoadEntryStationLogsOnMount } from '../../api/entryStationState';
+import {
+  ENTRY_SCAN_INTERVAL_MS, ENTRY_LOG_MIN_INTERVAL_MS, entryStationRetryDelay,
+  isQuietWalkThroughMessage, shouldLoadEntryStationLogsOnMount,
+} from '../../api/entryStationState';
+import { errorMessage } from '../../api/inventoryWrites';
 import {
   clearStoredEntryStationPin,
   entryStationFaceAuth,
@@ -19,7 +23,8 @@ import {
 } from '../../api/entryStation';
 
 // ── Tunables ──────────────────────────────────────────────────────────────────
-const POLL_INTERVAL    = 1000;   // ms between poll attempts (actual rate limited by request time)
+const POLL_INTERVAL    = ENTRY_SCAN_INTERVAL_MS;
+const POLL_TICK_MS     = 250;    // check deadlines without encoding frames before the scan interval
 const RESULT_HOLD_TIME = 2500;   // ms to show the result overlay
 const UNKNOWN_COOLDOWN = 10000;  // ms before "Not Recognized" fires again
 const UNKNOWN_CONFIRM_FRAMES = 2; // consecutive unknown frames required before showing overlay
@@ -42,6 +47,7 @@ const EntryGate = () => {
   const unknownStreakRef = useRef(0);      // consecutive not_recognized responses
   const nextAllowedRef = useRef(0);        // rate-limit backoff timestamp
   const nextLogAllowedRef = useRef(0);     // backoff timestamp for log refresh
+  const logPendingRef = useRef(false);
   const resultTimeoutRef = useRef(null);
   const faceResultTimeoutRef = useRef(null);
   const initialStationPinRef = useRef(getStoredEntryStationPin());
@@ -76,7 +82,9 @@ const EntryGate = () => {
       setLoadingLogs(false);
       return;
     }
-    if (Date.now() < nextLogAllowedRef.current) return;
+    if (logPendingRef.current || Date.now() < nextLogAllowedRef.current) return;
+    logPendingRef.current = true;
+    nextLogAllowedRef.current = Date.now() + ENTRY_LOG_MIN_INTERVAL_MS;
     try {
       const res = await getEntryStationLogs(stationPin, 30);
       setRecentEntries(res.data);
@@ -89,8 +97,9 @@ const EntryGate = () => {
         setUnlocked(false);
         setPinError('Enter the station PIN again.');
       }
-      nextLogAllowedRef.current = Date.now() + 5000;
+      nextLogAllowedRef.current = Date.now() + entryStationRetryDelay(err);
     } finally {
+      logPendingRef.current = false;
       setLoadingLogs(false);
     }
   }, [stationPin, unlocked]);
@@ -106,7 +115,7 @@ const EntryGate = () => {
   const showResult = useCallback((result) => {
     clearTimeout(resultTimeoutRef.current);
     setScanResult(result);
-    // Immediately refresh log so new time-in row appears
+    // Refresh within the shared-address budget; the periodic refresh catches deferred updates.
     if (result.type === 'recognized' || result.type === 'not_recognized') refreshLogs();
     resultTimeoutRef.current = setTimeout(() => setScanResult(null), RESULT_HOLD_TIME);
   }, [refreshLogs]);
@@ -119,16 +128,18 @@ const EntryGate = () => {
 
   // ── Capture one frame and call the face-recognition API ───────────────────
   // isPendingRef prevents concurrent in-flight requests — dlib takes 1-3s
-  // so without this guard the 1-second poll would stack up dozens of requests.
+  // so polling must not stack up requests, including after a manual restart.
   const captureAndSend = useCallback(async () => {
     if (!unlocked || !stationPin) return;
     if (isPendingRef.current) return;  // skip — previous request still running
-    if (Date.now() < nextAllowedRef.current) return;  // temporary backoff on 429s
+    const startedAt = Date.now();
+    if (startedAt < nextAllowedRef.current) return;
 
     const frame = webcamRef.current?.getScreenshot();
     if (!frame) return;
 
     isPendingRef.current = true;
+    nextAllowedRef.current = startedAt + POLL_INTERVAL;
     try {
       const { data } = await entryStationFaceAuth(frame, stationPin);
       setScanError(false);
@@ -180,10 +191,7 @@ const EntryGate = () => {
         showResult({ type: 'not_recognized', data: {} });
       }
     } catch (err) {
-      if (err.response?.status === 429) {
-        nextAllowedRef.current = Date.now() + 3000;
-        return;
-      }
+      nextAllowedRef.current = Date.now() + entryStationRetryDelay(err);
       if (err.response?.status === 403) {
         clearStoredEntryStationPin();
         setStationPin('');
@@ -192,7 +200,9 @@ const EntryGate = () => {
         return;
       }
       setScanError(true);
-      const detail = err.response?.data?.detail ?? err.message ?? 'Connection error';
+      const detail = err.response?.status === 429
+        ? 'Too many scan requests. Scanning will resume automatically.'
+        : errorMessage(err, 'Connection error. Scanning will retry automatically.');
       showResult({
         type: 'error',
         data: {
@@ -210,21 +220,19 @@ const EntryGate = () => {
   useEffect(() => {
     cooldownRef.current = {};
     captureAndSend();
-    pollRef.current = setInterval(captureAndSend, POLL_INTERVAL);
+    pollRef.current = setInterval(captureAndSend, POLL_TICK_MS);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [captureAndSend]);
 
   // ── Restart scanner (after error) ─────────────────────────────────────────
   const restartScanner = useCallback(() => {
     if (pollRef.current) clearInterval(pollRef.current);
-    isPendingRef.current = false;
     cooldownRef.current  = {};
     setScanResult(null);
     setFaceResults([]);
     setScanError(false);
-    nextAllowedRef.current = 0;
     captureAndSend();
-    pollRef.current = setInterval(captureAndSend, POLL_INTERVAL);
+    pollRef.current = setInterval(captureAndSend, POLL_TICK_MS);
   }, [captureAndSend]);
 
   const handleUnlock = async (e) => {
@@ -239,6 +247,7 @@ const EntryGate = () => {
     setLoadingLogs(true);
     try {
       const res = await getEntryStationLogs(pin, 30);
+      nextLogAllowedRef.current = Date.now() + ENTRY_LOG_MIN_INTERVAL_MS;
       storeEntryStationPin(pin);
       setStationPin(pin);
       setRecentEntries(res.data);
@@ -249,7 +258,7 @@ const EntryGate = () => {
       clearStoredEntryStationPin();
       setStationPin('');
       setUnlocked(false);
-      setPinError(err.response?.data?.detail || 'Invalid entry station PIN.');
+      setPinError(errorMessage(err, 'Unable to unlock the station. Please retry.'));
       setIsOnline(false);
     } finally {
       setLoadingLogs(false);

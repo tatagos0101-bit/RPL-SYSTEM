@@ -64,13 +64,13 @@ const LoginPage = ({ expectedRole = 'member' }) => {
       const image = screenshot;
       isPendingRef.current = true;
       try {
-        const { data } = await faceAuth(image);
+        const { data } = await faceAuth(image, expectedRole);
 
         if (data.matched) {
           spoofConfidence = 0;
           stopPolling();
           if (data.role !== expectedRole) {
-            clearAuth();
+            await clearAuth();
             setFaceStatus('failed');
             setFaceMessage(wrongPortalMessage(data.role, expectedRole));
             return;
@@ -113,6 +113,8 @@ const LoginPage = ({ expectedRole = 'member' }) => {
           }
         }
       } catch (err) {
+        setFaceStatus('failed');
+        setFaceMessage('Could not complete sign-in or sign-out. Please retry.');
         if (err.response?.status === 429) {
           nextAllowedRef.current = Date.now() + 3000;
         }
@@ -144,9 +146,9 @@ const LoginPage = ({ expectedRole = 'member' }) => {
     setError('');
     setIsLoading(true);
     try {
-      const { data } = await login(email, password);
+      const { data } = await login(email, password, expectedRole);
       if (data.role !== expectedRole) {
-        clearAuth();
+        await clearAuth();
         setError(wrongPortalMessage(data.role, expectedRole));
         setIsLoading(false);
         return;

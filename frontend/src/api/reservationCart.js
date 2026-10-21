@@ -1,5 +1,21 @@
 export const RESERVATION_CART_KEY = 'rp_cart';
 
+export const reservationCartKey = (storage = localStorage) => {
+  const userId = storage.getItem('userId');
+  return userId ? `${RESERVATION_CART_KEY}:member:${userId}` : `${RESERVATION_CART_KEY}:anonymous`;
+};
+
+export const clearReservationCart = (storage = localStorage) => {
+  storage.removeItem(reservationCartKey(storage));
+  storage.removeItem(`${reservationCartKey(storage)}:confirmation`);
+};
+
+export const pendingConfirmationKey = () => `${reservationCartKey()}:confirmation`;
+export const loadPendingConfirmation = () => {
+  try { return JSON.parse(localStorage.getItem(pendingConfirmationKey()) || 'null'); }
+  catch { return null; }
+};
+
 export const bookToReservationCartItem = (book) => ({
   id: book.id,
   title: book.title,
@@ -23,7 +39,7 @@ export const addReservationCartItem = (items, book) => {
 
 export const loadReservationCart = (storage = localStorage) => {
   try {
-    const parsed = JSON.parse(storage.getItem(RESERVATION_CART_KEY) || '[]');
+    const parsed = JSON.parse(storage.getItem(reservationCartKey(storage)) || '[]');
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
@@ -32,6 +48,6 @@ export const loadReservationCart = (storage = localStorage) => {
 
 export const saveReservationCart = (items, storage = localStorage) => {
   const current = Array.isArray(items) ? items : [];
-  storage.setItem(RESERVATION_CART_KEY, JSON.stringify(current));
+  storage.setItem(reservationCartKey(storage), JSON.stringify(current));
   return current;
 };

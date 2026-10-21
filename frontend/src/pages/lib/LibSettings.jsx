@@ -29,8 +29,14 @@ export default function LibSettings() {
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
-    await clearAuth();
-    navigate('/librarian/login', { replace: true });
+    try {
+      await clearAuth();
+      navigate('/librarian/login', { replace: true });
+    } catch {
+      setError('Sign out could not be confirmed. Please try Sign out again.');
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   useEffect(() => {

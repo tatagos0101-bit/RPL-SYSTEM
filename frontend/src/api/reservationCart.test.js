@@ -4,7 +4,29 @@ import assert from 'node:assert/strict';
 import {
   addReservationCartItem,
   bookToReservationCartItem,
+  loadReservationCart, saveReservationCart, clearReservationCart,
 } from './reservationCart.js';
+
+test('selections are isolated by account and anonymous visitor', () => {
+  const data = new Map();
+  const storage = { getItem: (key) => data.get(key), setItem: (key, value) => data.set(key, value), removeItem: (key) => data.delete(key) };
+  saveReservationCart([{ id: 1 }], storage);
+  storage.setItem('userId', '10');
+  assert.deepEqual(loadReservationCart(storage), []);
+  saveReservationCart([{ id: 2 }], storage);
+  storage.setItem('userId', '20');
+  assert.deepEqual(loadReservationCart(storage), []);
+  saveReservationCart([{ id: 3 }], storage);
+  storage.setItem('rp_cart:member:20:confirmation', 'synthetic pending confirmation');
+  storage.setItem('rp_cart:member:10:confirmation', 'other account confirmation');
+  clearReservationCart(storage);
+  assert.equal(storage.getItem('rp_cart:member:20:confirmation'), undefined);
+  assert.equal(storage.getItem('rp_cart:member:10:confirmation'), 'other account confirmation');
+  storage.setItem('userId', '10');
+  assert.deepEqual(loadReservationCart(storage), [{ id: 2 }]);
+  storage.removeItem('userId');
+  assert.deepEqual(loadReservationCart(storage), [{ id: 1 }]);
+});
 
 test('bookToReservationCartItem maps API book data to My Selection item shape', () => {
   const item = bookToReservationCartItem({

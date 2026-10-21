@@ -65,7 +65,7 @@ def download_transcript(
 def monthly_report(
     request: Request,
     month: int = Query(..., ge=1, le=12, description="Month number 1-12"),
-    year:  int = Query(..., ge=2020,     description="4-digit year"),
+    year:  int = Query(..., ge=2020, le=9998, description="4-digit year"),
     db:    Session = Depends(get_db),
     _:     User    = Depends(require_librarian),
 ):
@@ -126,7 +126,9 @@ def monthly_report(
     book_titles = db.query(func.count(Book.id)).scalar() or 0
     total_copies = db.query(func.sum(Book.copies_total)).scalar() or 0
     available_copies = db.query(func.sum(Book.copies_available)).scalar() or 0
-    borrowed_copies = max(int(total_copies or 0) - int(available_copies or 0), 0)
+    borrowed_copies = db.query(func.count(Transaction.id)).filter(
+        Transaction.status.in_(["active", "overdue"]),
+    ).scalar() or 0
 
     stats = {
         "borrows":     borrows,

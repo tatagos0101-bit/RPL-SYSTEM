@@ -31,6 +31,8 @@ class User(Base):
 
     created_at     = Column(DateTime(timezone=True), server_default=func.now())
     updated_at     = Column(DateTime(timezone=True), onupdate=func.now())
+    # An identity-free, permanently disabled row preserves historical foreign keys.
+    deleted_at     = Column(DateTime(timezone=True), nullable=True)
 
     # Relationships
     transactions   = relationship("Transaction",  back_populates="user")

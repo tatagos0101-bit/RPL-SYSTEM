@@ -1,0 +1,7 @@
+# Additional baseline HTTP checks; pins from deployed 8975023 uv.lock.
+httpx==0.28.1
+passlib==1.7.4
+bcrypt==3.2.2
+email-validator==2.2.0
+reportlab==4.2.2
+pillow==12.3.0

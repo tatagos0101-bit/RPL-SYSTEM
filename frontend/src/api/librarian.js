@@ -1,3 +1,4 @@
+import { exportCopyBatches } from './zipDownload';
 import client from './client';
 import { resetMemberPasswordPath } from './passwordRecovery';
 import { prepareUploadForm } from './uploads';
@@ -39,6 +40,12 @@ export const resetMemberPassword = (userId) =>
 export const enrollMemberFace = (userId, imageBase64) =>
   client.post(`/api/librarian/users/${userId}/enroll-face`, { image: imageBase64 });
 
+export const deleteMemberFace = (userId, currentPassword) =>
+  client.delete(`/api/librarian/users/${userId}/face`, { data: { current_password: currentPassword } });
+
+export const deleteMemberAccount = (userId, currentPassword) =>
+  client.delete(`/api/librarian/users/${userId}`, { data: { current_password: currentPassword } });
+
 export const notifyMember = (transactionId) =>
   client.post(`/api/librarian/notify/${transactionId}`);
 
@@ -64,8 +71,10 @@ export const returnBook = (userId, bookId, copyId = null) =>
 export const getInventoryStats = () =>
   client.get('/api/inventory/stats');
 
-export const addBook = (data) =>
-  client.post('/api/inventory/books', data);
+export const addBook = (data, requestId) =>
+  client.post('/api/inventory/books', data, { headers: requestId ? { 'Idempotency-Key': requestId } : {} });
+
+export const getInventoryWrite = (requestId) => client.get(`/api/inventory/write-requests/${requestId}`);
 
 export const updateBook = (id, data) =>
   client.put(`/api/inventory/books/${id}`, data);
@@ -73,9 +82,9 @@ export const updateBook = (id, data) =>
 export const deleteBook = (id) =>
   client.delete(`/api/inventory/books/${id}`);
 
-export const bulkUpload = async (formData) =>
+export const bulkUpload = async (formData, requestId, digest) =>
   client.post('/api/inventory/bulk-upload', await prepareUploadForm(formData, 'file', 'imports'), {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    headers: { 'Content-Type': 'multipart/form-data', ...(requestId ? { 'Idempotency-Key': requestId, 'X-Content-SHA256': digest } : {}) },
   });
 
 export const getQRImage = (bookId) =>
@@ -132,3 +141,8 @@ export const getMemberReservations = (userId) =>
 
 export const getMemberActiveLoans = (userId) =>
   client.get(`/api/librarian/member/${userId}/active-loans`);
+
+export const exportAllCopyQRs = async (search, onProgress) => {
+  const snapshot = await client.get('/api/inventory/book-copies/export', { params: { search } });
+  return exportCopyBatches(snapshot.data, bulkCopyQRPdf, onProgress);
+};

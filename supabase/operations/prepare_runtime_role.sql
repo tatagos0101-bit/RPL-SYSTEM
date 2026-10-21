@@ -1,5 +1,5 @@
 -- REVIEW ONLY until explicitly authorized. Run as the migration owner on an
--- isolated PostgreSQL target first. Requires all 14 application tables.
+-- isolated PostgreSQL target first. Requires all 16 application tables.
 -- Creates no login/password and changes no existing connection credential.
 BEGIN;
 SELECT pg_advisory_xact_lock(72851001);
@@ -21,7 +21,7 @@ BEGIN
     GRANT USAGE ON SCHEMA public TO rpl_app_runtime;
     FOREACH table_name IN ARRAY ARRAY[
         'users', 'auth_sessions', 'books', 'book_copies', 'book_interactions', 'transactions',
-        'reservations', 'notifications', 'entry_logs', 'reading_goals',
+        'reservations', 'reservation_confirmations', 'inventory_writes', 'notifications', 'entry_logs', 'reading_goals',
         'face_embeddings', 'password_reset_codes', 'security_alerts', 'library_settings'
     ] LOOP
         IF to_regclass(format('public.%I', table_name)) IS NULL THEN
@@ -42,7 +42,7 @@ BEGIN
                             AND pg_get_expr(polwithcheck, polrelid) = 'true') THEN
             RAISE EXCEPTION 'Existing runtime policy differs from expected policy; review manually';
         END IF;
-        IF table_name NOT IN ('library_settings', 'book_interactions') THEN
+        IF table_name NOT IN ('library_settings', 'book_interactions', 'reservation_confirmations', 'inventory_writes') THEN
             sequence_name := pg_get_serial_sequence(format('public.%I', table_name), 'id');
             IF sequence_name IS NOT NULL THEN
                 EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE %s TO rpl_app_runtime', sequence_name);

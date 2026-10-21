@@ -29,7 +29,7 @@ def get_session_user(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_error
-    if user.status == "suspended":
+    if user.status == "suspended" or user.deleted_at is not None:
         raise credentials_error
     if not session_is_current(db.get(AuthSession, sid), user):
         raise credentials_error
@@ -40,6 +40,24 @@ def get_current_user(current_user: User = Depends(get_session_user)) -> User:
     if current_user.must_change_password:
         raise HTTPException(status_code=403, detail="Password change required.")
     return current_user
+
+
+def get_locked_session_user(
+    request: Request,
+    current_user: User = Depends(get_session_user),
+    token: str | None = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    # Identity writes must recheck the session after waiting for a concurrent
+    # account/face deletion. Otherwise an already-authorized request could
+    # recreate personal data after the deletion revoked its session.
+    db.query(User).filter(User.id == current_user.id).with_for_update(
+        key_share=True).populate_existing().one()
+    return get_session_user(request, token, db)
+
+
+def get_locked_current_user(current_user: User = Depends(get_locked_session_user)) -> User:
+    return get_current_user(current_user)
 
 
 def require_librarian(current_user: User = Depends(get_current_user)) -> User:

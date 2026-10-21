@@ -24,7 +24,7 @@ def member(db, *, status="active", email="audit@example.test"):
 
 
 def test_invalid_password_and_pin_are_not_reflected(client):
-    sentinel = "PRIVATE_SENTINEL_" * 12
+    sentinel = "PRIVATE_SENTINEL_" * 70
     response = client.post("/api/auth/login", json={"email": "RPL-AUDIT", "password": sentinel})
     assert response.status_code == 422
     assert sentinel not in response.text
@@ -92,9 +92,10 @@ def test_unhandled_errors_and_probe_urls_are_private():
 def test_suspended_face_match_does_not_disclose_identity_or_issue_token(client, db_session, monkeypatch):
     from services import face_engine_service, liveness_service
     user = member(db_session, status="suspended")
+    user.face_encoding = "[0.1]"
+    db_session.commit()
     monkeypatch.setattr(liveness_service, "check_liveness", lambda image: ("ok", 1.0))
     monkeypatch.setattr(face_engine_service, "detect_faces", lambda *a, **kw: [{"encoding": [0.1]}])
-    monkeypatch.setattr(face_engine_service, "find_match_for_face", lambda *a, **kw: SimpleNamespace(user=user))
     response = client.post("/api/auth/face", json={"image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD"})
     assert response.status_code == 200
     assert response.json()["matched"] is False

@@ -1,4 +1,6 @@
+import { loadSections } from '../../api/loadSections';
 import FineContent from '../../components/FineContent';
+import ModalFrame from '../../components/ModalFrame';
 import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -128,6 +130,7 @@ const LibDashboard = () => {
   const [loans, setLoans] = useState([]);
   const [entryLogs, setEntryLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [failedSections, setFailedSections] = useState([]);
   const [showRegModal, setShowRegModal] = useState(false);
   const [loanSearch, setLoanSearch] = useState('');
   const refreshRef = useRef(null);
@@ -142,21 +145,12 @@ const LibDashboard = () => {
 
   const fetchAll = useCallback((showSpinner = false) => {
     if (showSpinner) setLoading(true);
-    Promise.all([
-      getStats(),
-      getBorrowTrend(6),
-      getTransactions({ status: 'active', limit: 100 }),
-      getTransactions({ status: 'overdue', limit: 100 }),
-      getEntryLogs({ limit: 20 }),
-    ])
-      .then(([sRes, tRes, activeRes, overdueRes, eRes]) => {
-        setStats(sRes.data);
-        setTrend(tRes.data);
-        setLoans([...(overdueRes.data || []), ...(activeRes.data || [])]);
-        setEntryLogs(eRes.data);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    loadSections([
+      ['totals', getStats, setStats], ['borrowing trend', () => getBorrowTrend(6), setTrend],
+      ['active loans', () => getTransactions({ status: 'active', limit: 100 }), rows => setLoans(previous => [...previous.filter(row => row.status !== 'active'), ...rows])],
+      ['overdue loans', () => getTransactions({ status: 'overdue', limit: 100 }), rows => setLoans(previous => [...previous.filter(row => row.status !== 'overdue'), ...rows])],
+      ['entry log', () => getEntryLogs({ limit: 20 }), setEntryLogs],
+    ]).then(setFailedSections).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -266,6 +260,8 @@ const LibDashboard = () => {
   return (
     <div className={`rpl-page min-w-0 [overflow-wrap:anywhere] ${layoutClasses.page}`}>
       <div className={layoutClasses.content}>
+        {failedSections.length > 0 && <p role="alert" className="text-danger">Unavailable: {failedSections.join(', ')}. Displayed values may be incomplete. <button className="underline" onClick={() => fetchAll(false)}>Retry dashboard</button></p>}
+        <p className="text-sm text-muted">Recent activity preview. Use Borrow / Return for complete searchable history.</p>
         <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="mb-2 text-sm font-semibold tracking-normal text-muted">
@@ -750,7 +746,7 @@ const RegisterMemberModal = ({
   onClose,
   onSubmit,
 }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6">
+  <ModalFrame onClose={onClose} aria-label="Register member" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6">
     <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-panel p-8 shadow-sm sm:p-10">
       <button aria-label="Close"
         onClick={onClose}
@@ -907,7 +903,7 @@ const RegisterMemberModal = ({
         </div>
       </form>
     </div>
-  </div>
+  </ModalFrame>
 );
 
 const FormInput = ({ label, value, onChange, placeholder, type = 'text', required = false, optional = false }) => (
