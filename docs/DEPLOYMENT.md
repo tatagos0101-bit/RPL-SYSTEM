@@ -1,8 +1,9 @@
 # Vercel and Supabase deployment
 
-The local member-management update requires migrating `users.deleted_at` before
-API rollout. Its deletion endpoints and camera UI have not been deployed; see
-[member-management policy and acceptance gates](MEMBER_MANAGEMENT.md).
+The October 21 repair release migrated `users.deleted_at` and deployed the
+member-management endpoints, camera UI and portal synchronization to both projects.
+See [release evidence and recovery limits](REPAIR_RELEASE_2026-10-21.md) and
+[member-management policy](MEMBER_MANAGEMENT.md).
 
 The website runs in the Vercel `rpl-system` project. The FastAPI application runs
 in a separate Vercel `rpl-system-api` project with `backend` as its root directory.
@@ -26,8 +27,9 @@ strengthened isolated checks.
 October 20's protected Preview also passed the actual candidate's encrypted pooler
 login and all 14-table permission checks. It was removed and the candidate disabled
 again. Cloud API/Storage workflow acceptance is still required before cutover.
-Production still uses that login; the 16-table repair role preparation cannot be
-applied to the current 14-table live schema without the corresponding repair upgrade.
+Production still uses the existing owner connection. The live repair schema now
+contains 16 application tables; restricted-role grants and application acceptance
+must cover all 16 before a separate runtime-role cutover.
 The October 17 integration uses PyJWT with the existing HMAC token format and
 requires an explicit HS256, HS384, or HS512 configuration (HS256 remains the default).
 Apply `20261016000100_auth_sessions.sql` before the API release; preserve the
@@ -297,7 +299,9 @@ deployment. Preserve an export/backup and migrate those separately if they exist
 
 For the `fixing-the-issue` branch, use the [repair rollout checklist](REPAIR_ROLLOUT.md):
 validated additive migration and runtime access, then backend, then frontend.
-The repair branch has not been merged, pushed or deployed by this implementation.
+The October 21 release completed that rollout; see its
+[verification record](REPAIR_RELEASE_2026-10-21.md). Future releases still require
+their own recovery point and applicable checks.
 
 Check the API `/health`, open a nested frontend route directly, log in, reload,
 and confirm the session remains active. Add a book/upload its cover, register a

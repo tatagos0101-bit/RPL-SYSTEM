@@ -1,8 +1,14 @@
-# Repair rollout — prepared, not executed
+# Repair rollout — executed October 21, 2026
 
 Branch: `fixing-the-issue`. Local verification is recorded in the
 [ledger](REPAIR_LEDGER.md). Production migration, role changes, merge/push and
-deployments were authorized by the user on October 21, conditional on completion and safety. The user confirmed no production backup exists, so recovery/rehearsal remains a release gate. Preserve the independent PAD branch.
+deployments were authorized by the user on October 21, conditional on completion
+and safety. The initial missing-backup gate was resolved with an encrypted local
+application-database backup and successful restore/repeat-migration rehearsal.
+The migration, PR #1 merge and both live deployments completed; see the
+[release record](REPAIR_RELEASE_2026-10-21.md) for verification and backup limits.
+Preserve the independent PAD branch. The sequence below remains the procedure
+for future releases and must use a fresh recovery point each time.
 
 1. Record the current backend/frontend revisions and an authorized database backup.
    Schedule a maintenance window that stops old API writers: old code does not

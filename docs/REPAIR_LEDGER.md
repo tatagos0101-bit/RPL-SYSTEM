@@ -1,7 +1,9 @@
 # Repair ledger — fixing-the-issue
 
-Base: main `8975023`. Work is isolated from pending PAD. No production rollout
-is authorized by this repair cycle. Each tested issue is committed independently.
+Base: main `8975023`. Work is isolated from pending PAD. Each tested issue was
+committed independently. The later October 21 authorization, recovery rehearsal,
+main merge and live rollout are recorded in [release evidence](REPAIR_RELEASE_2026-10-21.md).
+Earlier entries below retain the state at the time of their checks.
 
 ## Acceptance contract
 

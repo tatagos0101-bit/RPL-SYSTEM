@@ -1,4 +1,4 @@
-# Implementation status — October 20, 2026
+# Implementation status — October 21, 2026
 
 This reconciles the numbered lists without treating code completion, staging
 acceptance and production release as the same milestone. It is not a new
@@ -8,9 +8,10 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
 
 ## Counts
 
-- **12/12 confirmed defects fixed and tested locally; zero code fixes outstanding
-  in that specific set.** Their coordinated production rollout remains one
-  separate release workstream, including restored-database rehearsal/migration.
+- **12/12 confirmed defects fixed, tested and deployed; zero fixes outstanding
+  in that specific set.** The October 21 release completed the restored-database
+  rehearsal, migration, main merge and production rollout; see
+  [release evidence](REPAIR_RELEASE_2026-10-21.md).
 - **2/15 security follow-ups completed within their defined scope; 13 remain open.**
   Excluding the user's deferred PAD work gives **12 open non-PAD security items**.
   An open item can contain completed code or staging tests; this count does not
@@ -32,7 +33,7 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
 | 6 | Frontend database/storage credentials | Completed frontend disconnect, variable removal and guarded build release. Historical credential retirement belongs to item 7. |
 | 7 | Credential handling | API Sensitive conversion, consumer-aware rotation and old credential retirement pending. |
 | 8 | Biometric consent | Product policy and implementation pending. |
-| 9 | Biometric retention/deletion | Librarian-triggered member/face deletion policy approved and implemented locally; retention schedules, broader evidence policy and production rollout remain pending. |
+| 9 | Biometric retention/deletion | Approved librarian-triggered member/face deletion deployed and cloud-tested; retention schedules and broader evidence policy remain pending. |
 | 10 | Biometric encryption | Key-management/recovery design and implementation pending. |
 | 11 | Staff security-alert workflow | Evidence/access/audit policy and workflow pending. |
 | 12 | Administrator MFA | Enrollment/recovery/emergency-access design and implementation pending. |
@@ -50,7 +51,7 @@ Camera QR decoding and atomic multi-book circulation are also absent; they requi
 explicit product scope rather than being incidental fixes. See the architecture
 and repair rollout documents for behavior and limitations.
 
-## Current next step
+## Separate pending runtime-role work
 
 Proceed with security item 5's cloud API workflow acceptance using deployed
 baseline application code before changing the production connection. Real pooler
@@ -82,7 +83,9 @@ only after release safety checks. Member capture/deletion and cross-tab portal
 synchronization are documented in [MEMBER_MANAGEMENT](MEMBER_MANAGEMENT.md).
 A read-only production preflight returned zero normalized-email collisions,
 duplicate active reservations and overcommitted ready-hold titles. Local tests
-and disposable PostgreSQL checks pass. The user confirmed no production backup
-exists. Live migration, main merge/push and deployment remain gated by a secure
-restorable backup and production-shaped rehearsal. PAD, Redis activation,
-restricted-runtime cutover and other pending implementations remain unchanged.
+and disposable PostgreSQL checks pass. The initial missing-backup gate was resolved
+with an encrypted local application-database backup and restored migration
+rehearsal, including a fresh maintenance-window backup. Live migration, PR #1 merge
+and both deployments completed. See [release evidence and backup limitations](REPAIR_RELEASE_2026-10-21.md).
+PAD, Redis activation, restricted-runtime cutover and other pending implementations
+remain unchanged; their open-item counts are not reduced by this repair release.

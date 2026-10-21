@@ -1,7 +1,8 @@
 # Rizal Provincial Library architecture
 
-Repair branch implementation checked **October 18, 2026**; see the
-[repair ledger](REPAIR_LEDGER.md) for local evidence and release limits.
+Repair branch implementation checked **October 18, 2026** and released from
+merged main **October 21, 2026**; see the [repair ledger](REPAIR_LEDGER.md) and
+[live release evidence](REPAIR_RELEASE_2026-10-21.md) for checks and limits.
 Baseline inspection: **October 14, 2026**. Station PIN management documentation
 updated **October 15, 2026** and checked against the main-branch release. Repository
 configuration alone does not verify live production state. MiniFASNet PAD work

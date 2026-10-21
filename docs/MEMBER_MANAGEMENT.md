@@ -84,9 +84,12 @@ external-service tests were skipped. The dedicated disposable PostgreSQL/Redis
 runner separately passed repeat migrations, runtime permissions, session checks,
 concurrent circulation and competing account deletion/borrow operations. All 64
 frontend helper tests, lint, production build and credential scan passed.
-Live Storage deletion and physical camera acceptance were not performed.
-The user confirmed no production backup exists; backup/recovery rehearsal is
-still a release gate. No production schema or deployment was changed.
+Subsequent October 21 rollout verified live private-avatar deletion with a
+generated image and synthetic account, plus cloud session/circulation/deletion
+workflows. An encrypted application-database backup was restored and migrated
+twice before the live upgrade. Both projects were deployed from merged main.
+Physical-camera acceptance remains pending. See the
+[release record and backup scope](REPAIR_RELEASE_2026-10-21.md).
 
 ## Portal session synchronization
 
