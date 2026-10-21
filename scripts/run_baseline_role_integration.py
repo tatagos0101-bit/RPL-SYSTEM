@@ -11,6 +11,7 @@ BASELINE = "897502349ae16f52209bc2d533566d2e08d3f2d1"
 EXCLUDED = {
     "backend/models/inventory_write.py", "backend/services/borrowing_capacity.py",
     "backend/services/list_queries.py",
+    "backend/services/member_deletion.py",
 }
 BASELINE_FILES = tuple(path for path in runner.FILES
                        if path.startswith(("backend/", "supabase/migrations/"))

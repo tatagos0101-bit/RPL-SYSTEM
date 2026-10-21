@@ -74,9 +74,13 @@ Physical-camera recognition and PAD acceptance remain pending. One browser
 profile still shares one account cookie; independent simultaneous accounts need
 separate browser profiles. The UI fix synchronizes tabs with that shared session.
 
-The fresh Dependabot lookup returned three medium-severity alerts, all setuptools,
-with no high or critical alerts. The previously approved compatibility exception
-remains. Supabase's security advisor returned two informational RLS/no-policy
+The pre-merge Dependabot lookup returned three medium-severity alerts, all
+setuptools. A later GitHub refresh reported 40 alerts: newly reported Pillow and
+certifi vulnerabilities accounted for the additional 37 manifest findings,
+including five critical and 24 high. The repair merge did not change those runtime
+versions, but the new findings required a security follow-up. The previously
+approved setuptools compatibility exception remains. Supabase's security advisor
+returned two informational RLS/no-policy
 notices for the new backend-only receipt tables; browser grants remain revoked.
 The current owner connection works; restricted-role grants and cutover remain a
 separate pending implementation.
@@ -84,3 +88,23 @@ separate pending implementation.
 PAD source/assets, shared Redis activation, restricted-runtime cutover, credential
 rotation and unspecified policy/features were not included. This release does not
 close those items or establish biometric security/accuracy certification.
+
+## Post-merge dependency remediation
+
+Updated Pillow from 12.3.0 to 13.0.0 and certifi from 2026.7.22 to 2026.10.19.
+Both application manifests pin the fixes, and `uv lock` regenerated the lockfile;
+no lockfile was edited by hand. Docker's requirements path and Vercel's uv path
+therefore select the fixes. The isolated baseline harness also uses these two
+documented security exceptions while preserving its frozen application source.
+Its staging test exposed a new-file lookup against the old revision; excluding
+the repair-only member-deletion service restored the intended baseline boundary.
+
+The patched backend passed all 213 tests (four optional skips), and all three
+baseline-runner tests passed. A fresh OSV scan of the resolved lockfile returned
+only the existing setuptools exception. The actual Python 3.11 Docker image built
+successfully and passed synthetic PNG/JPEG/WebP decoding/thumbnailing, face-library
+import and blank-image handling, OpenCV, QR/PDF output and HTTPS trust checks with
+both patched package versions asserted at runtime. No schema migration or production
+environment change was needed for this dependency patch. See
+[Pillow 13 release notes](https://pillow.readthedocs.io/en/stable/releasenotes/13.0.0.html)
+and the [certifi advisory](https://github.com/advisories/GHSA-6q48-6c7w-9gw2).

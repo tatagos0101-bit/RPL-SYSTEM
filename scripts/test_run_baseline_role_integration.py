@@ -31,10 +31,13 @@ class BaselineRunnerTests(unittest.TestCase):
                     baseline.stage_context(Path(directory))
             self.assertFalse(list(Path(directory).rglob("*.py")))
 
-    def test_pins_match_baseline_lock_including_shared_harness_requirements(self):
+    def test_pins_match_baseline_lock_except_explicit_security_updates(self):
         lock = tomllib.loads(subprocess.check_output(
             ["git", "show", f"{baseline.BASELINE}:backend/uv.lock"], cwd=baseline.runner.ROOT).decode())
         versions = {item["name"]: item["version"] for item in lock["package"]}
+        # Preserve baseline source behavior without installing known vulnerable
+        # image decoders or certificate roots in future rehearsal containers.
+        versions.update(pillow="13.0.0", certifi="2026.10.19")
         for filename in ("requirements.txt", "baseline-requirements.txt"):
             for line in (baseline.runner.ROOT / "tests/security" / filename).read_text().splitlines():
                 if line and not line.startswith("#"):
