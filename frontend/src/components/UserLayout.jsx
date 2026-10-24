@@ -3,7 +3,9 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuth } from '../api/auth';
 import { isPasswordChangePath } from '../api/authRoutes';
-import { getNotifications, markNotificationRead, markAllNotificationsRead, getFines } from '../api/user';
+import { getNotifications, markNotificationRead, markAllNotificationsRead, getFines, getProfile } from '../api/user';
+import { PROFILE_UPDATED, PROFILE_REVISION_KEY } from '../api/profileUpdates';
+import UserAvatar from './UserAvatar';
 import { parseApiDateTime } from '../api/dateTime';
 import {
   LayoutDashboard, BookOpen, Bookmark, User,
@@ -35,6 +37,7 @@ const timeAgo = (dateStr) => {
 
 const UserLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [memberProfile, setMemberProfile] = useState(null);
   const [logoutError, setLogoutError] = useState('');
   const [isDark, setIsDark] = useState(
     document.documentElement.classList.contains('dark')
@@ -48,6 +51,32 @@ const UserLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const changingPassword = isPasswordChangePath(location.pathname);
+
+  useEffect(() => {
+    let active = true;
+    let revision = 0;
+    const refresh = () => {
+      const current = ++revision;
+      getProfile().then(({ data }) => {
+        if (active && current === revision) setMemberProfile(data);
+      }).catch(() => {});
+    };
+    const updated = event => {
+      ++revision; // An older fetch must not replace the just-saved photo.
+      setMemberProfile(previous => ({ ...previous, ...event.detail }));
+    };
+    const stored = event => { if (event.key === PROFILE_REVISION_KEY) refresh(); };
+    refresh();
+    window.addEventListener(PROFILE_UPDATED, updated);
+    window.addEventListener('storage', stored);
+    window.addEventListener('focus', refresh);
+    return () => {
+      active = false;
+      window.removeEventListener(PROFILE_UPDATED, updated);
+      window.removeEventListener('storage', stored);
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
 
   // Restricted sessions may only retrieve their profile or change their password.
   useEffect(() => {
@@ -276,11 +305,9 @@ const UserLayout = () => {
           {/* User Badge */}
           <div className="px-5 py-4 border-b border-line">
             <div className="flex items-center gap-3 px-3 py-3 bg-panel rounded-xl">
-              <div className="w-10 h-10 bg-action rounded-xl flex items-center justify-center flex-shrink-0">
-                <User size={18} className="text-white" />
-              </div>
+              <UserAvatar url={memberProfile?.avatar_url} name={memberProfile?.name || localStorage.getItem('userName') || 'Member'} size={40} />
               <div className="min-w-0">
-                <p className="font-bold text-ink text-sm truncate">{localStorage.getItem('userName') || 'Member'}</p>
+                <p className="font-bold text-ink text-sm truncate">{memberProfile?.name || localStorage.getItem('userName') || 'Member'}</p>
                 <p className="text-sm font-semibold tracking-normal text-muted mt-0.5">
                   Verified Member
                 </p>

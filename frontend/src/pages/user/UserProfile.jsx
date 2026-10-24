@@ -8,62 +8,58 @@ import {
 } from 'lucide-react';
 import { getProfile, getBiometricStatus, updateProfile, changePassword, uploadAvatar } from '../../api/user';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
-import { assetUrl } from '../../api/urls';
+import UserAvatar from '../../components/UserAvatar';
+import { avatarFileError, publishProfileUpdate, PROFILE_UPDATED, PROFILE_REVISION_KEY } from '../../api/profileUpdates';
 
-const getInitials = (name = '') =>
-  name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
-
-// ── Avatar Upload ─────────────────────────────────────────────────────────────
-
+// Display only a confirmed upload; a failed request keeps the previous photo.
 function AvatarUpload({ currentUrl, name, onUploaded }) {
   const inputRef = useRef(null);
+  const pending = useRef(false);
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState(null);
+  const [uploadError, setUploadError] = useState('');
 
-  const imgSrc = preview || assetUrl(currentUrl);
-
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => setPreview(ev.target.result);
-    reader.readAsDataURL(file);
+  const handleFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || pending.current) return;
+    const validation = avatarFileError(file);
+    if (validation) {
+      setUploadError(validation);
+      event.target.value = '';
+      return;
+    }
+    pending.current = true;
     setUploading(true);
+    setUploadError('');
     try {
-      const res = await uploadAvatar(file);
-      onUploaded(res.data.avatar_url);
-    } catch {
-      setPreview(null);
+      const { data } = await uploadAvatar(file);
+      onUploaded(data.avatar_url);
+      publishProfileUpdate({ avatar_url: data.avatar_url });
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+      setUploadError(typeof detail === 'string' ? detail : 'Photo could not be saved. Please try again.');
     } finally {
+      pending.current = false;
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
 
   return (
-    <div className="relative group cursor-pointer" onClick={() => inputRef.current?.click()}>
-      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFile} className="hidden" />
-
-      {/* Avatar circle */}
-      <div className="w-24 h-24 rounded-xl overflow-hidden bg-action border-4 border-line shadow-sm flex items-center justify-center flex-shrink-0">
-        {imgSrc ? (
-          <img src={imgSrc} alt={name} className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-white font-semibold text-2xl tracking-normal select-none">{getInitials(name)}</span>
-        )}
-      </div>
-
-      {/* Upload overlay */}
-      <div className="absolute inset-0 rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1">
-        {uploading ? (
-          <RefreshCw size={18} className="animate-spin text-white" />
-        ) : (
-          <>
-            <Camera size={16} className="text-white" />
-            <span className="text-sm font-semibold tracking-normal text-white text-center leading-tight">Upload<br />Photo</span>
-          </>
-        )}
-      </div>
+    <div className="relative self-start shrink-0 max-w-full">
+      <input ref={inputRef} aria-label="Choose profile photo" type="file"
+        accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={handleFile} className="hidden" />
+      <button type="button" aria-label="Change profile photo" disabled={uploading}
+        onClick={() => inputRef.current?.click()} style={{ width: 96, height: 96 }}
+        className="relative group block rounded-xl ring-4 ring-line shadow-sm disabled:cursor-wait">
+        <UserAvatar url={currentUrl} name={name} size={96} />
+        <span className={`absolute inset-0 rounded-xl bg-black/50 flex flex-col items-center justify-center gap-1 text-white ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}`}>
+          {uploading ? <RefreshCw size={18} className="animate-spin" /> : <Camera size={18} />}
+          <span className="text-xs">{uploading ? 'Saving…' : 'Change photo'}</span>
+        </span>
+      </button>
+      <p className="mt-3 text-xs text-muted">JPG, PNG or WebP · Up to 5 MB</p>
+      {uploading && <p role="status" className="mt-1 text-sm text-muted">Saving profile photo…</p>}
+      {uploadError && <p role="alert" className="mt-2 max-w-xs text-sm text-danger">{uploadError}</p>}
     </div>
   );
 }
@@ -214,6 +210,29 @@ export default function UserProfile() {
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  useEffect(() => {
+    let active = true;
+    let revision = 0;
+    const updated = event => {
+      ++revision;
+      setProfile(previous => previous ? { ...previous, ...event.detail } : previous);
+    };
+    const stored = event => {
+      if (event.key !== PROFILE_REVISION_KEY) return;
+      const current = ++revision;
+      getProfile().then(({ data }) => {
+        if (active && current === revision) setProfile(data);
+      }).catch(() => {});
+    };
+    window.addEventListener(PROFILE_UPDATED, updated);
+    window.addEventListener('storage', stored);
+    return () => {
+      active = false;
+      window.removeEventListener(PROFILE_UPDATED, updated);
+      window.removeEventListener('storage', stored);
+    };
+  }, []);
+
   const load = () => {
     setLoading(true);
     Promise.all([getProfile(), getBiometricStatus()])
@@ -234,6 +253,7 @@ export default function UserProfile() {
     try {
       const res = await updateProfile({ name: form.name.trim(), phone: form.phone.trim() || null, location: form.location.trim() || null });
       setProfile(res.data);
+      publishProfileUpdate(res.data);
       setEditing(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
