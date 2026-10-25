@@ -12,10 +12,10 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
   in that specific set.** The October 21 release completed the restored-database
   rehearsal, migration, main merge and production rollout; see
   [release evidence](REPAIR_RELEASE_2026-10-21.md).
-- **3/15 security follow-ups completed within their defined scope; 12 remain open.**
-  Excluding the user's deferred PAD work gives **11 open non-PAD security items**.
+- **4/15 security follow-ups completed within their defined scope; 11 remain open.**
+  Excluding the user's deferred PAD work gives **10 open non-PAD security items**.
   An open item can contain completed code or staging tests; this count does not
-  mean 12 new vulnerabilities or 12 unstarted implementations.
+  mean 11 new vulnerabilities or 11 unstarted implementations.
 - The historical reference to **17 feature/policy/release follow-ups** does not
   contain the complete numbered list in the available repository records. Do not
   add 17 to the counts above: there are overlapping security/policy/release topics.
@@ -38,7 +38,7 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
 | 11 | Staff security-alert workflow | Evidence/access/audit policy and workflow pending. |
 | 12 | Administrator MFA | Enrollment/recovery/emergency-access design and implementation pending. |
 | 13 | Setuptools exception | Approved moderate compatibility exception remains open; no new advisory scan in this update. |
-| 14 | Broader CSP | Implemented and local browser/configuration acceptance passed; cloud release verification pending. See [CSP acceptance](BROWSER_CSP.md). |
+| 14 | Broader CSP | Completed scoped implementation and release: configuration tests, browser compatibility/negative probes and actual edge headers passed. Inline-style and image-source exceptions are documented in [CSP acceptance](BROWSER_CSP.md). |
 | 15 | OS image / optional face runtime | Full image scanning and optional InsightFace acceptance pending; neither is established by import tests. |
 
 ## Other known feature/release gaps

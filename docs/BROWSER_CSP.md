@@ -44,5 +44,21 @@ requires explicit review of both policy copies. No CSP report collector is added
 
 These are browser-compatibility checks, not a new database/Storage integration
 test or PAD accuracy certification. Browser scripts/screenshots remain outside
-the repository. Local acceptance is complete; cloud edge/release verification
-is recorded separately after deployment.
+the repository.
+
+## Release
+
+Implementation commit `6e54f57` was fast-forwarded into local `main`. A clean
+tracked-file frontend candidate, `dpl_HWyu8XhvQxoHSZwUG2JPiJaxbDSf`, passed actual
+Vercel header checks on `/`, `/user/profile`, `/librarian/users` and `/entry-station`
+before promotion. Promotion and public health/access smoke checks passed. The
+full synthetic browser suite then passed again against the live frontend's
+actual headers and assets; all API/upload requests in that suite were intercepted,
+so no real account, biometric or circulation data was changed.
+
+The API deployment and environment were unchanged during frontend promotion.
+The frontend still has no environment variables, the restricted database
+configuration is preserved and the removed owner `POSTGRES_*` variables remain
+absent. The main push includes this record and triggers the existing Git-linked
+deployment workflow; there are no backend, schema or dependency changes in it.
+PAD and shared-rate-limit activation remain separate pending work.
