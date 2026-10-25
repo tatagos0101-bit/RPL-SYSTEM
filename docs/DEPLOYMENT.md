@@ -129,12 +129,25 @@ uv run --project backend --with pytest python -m pytest backend/tests/test_deplo
 
 Both frontend Vercel configurations apply frame protection, `nosniff`, and a
 referrer policy to frontend routes, excluding API/upload/health proxy routes.
-The minimal CSP restricts framing, base URLs, and embedded objects; it is not a
-complete script-injection policy. It does not restrict camera permissions,
-scripts, images, or API connections. The proxy configuration script preserves
-these headers. After a separately authorized deployment, verify the actual HTTP
-headers on `/` and a nested frontend route, then check login, camera capture,
-private images, and API proxy behavior. Local builds do not verify edge headers.
+The CSP defaults to denying resources. Scripts must come from the frontend's own
+origin; inline scripts, inline event handlers and JavaScript evaluation are not
+allowed. Connections are limited to the frontend origin, the configured RPL API,
+the RPL Supabase project, Google Books and Open Library. Frames, objects and
+workers are disabled. Forms and base URLs are restricted to the frontend origin.
+The proxy configuration script also replaces the old API origin in `connect-src`.
+When changing the Supabase project or adding a browser integration, update both
+frontend policies and verify the new origin before release.
+
+Inline styles remain allowed for React positioning, notifications and print
+reports. Images retain HTTP/HTTPS sources for existing external cover URLs,
+plus data/blob previews; browser mixed-content rules still apply. Media permits
+same-origin/blob sources and camera `srcObject` playback. These exceptions mean
+the policy is a defense layer, not proof against all injection or data leakage.
+There is no CSP reporting endpoint. Camera permission remains browser-managed.
+See [CSP acceptance](BROWSER_CSP.md) for the exact scope and checks. After an
+authorized deployment, verify actual headers on `/` and nested frontend routes,
+then check login, camera capture, private images and API proxies. Local builds
+alone do not verify edge headers.
 
 References: [Vite environment variables](https://vite.dev/guide/env-and-mode),
 [Supabase API keys](https://supabase.com/docs/guides/getting-started/api-keys),

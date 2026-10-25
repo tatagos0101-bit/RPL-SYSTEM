@@ -38,7 +38,7 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
 | 11 | Staff security-alert workflow | Evidence/access/audit policy and workflow pending. |
 | 12 | Administrator MFA | Enrollment/recovery/emergency-access design and implementation pending. |
 | 13 | Setuptools exception | Approved moderate compatibility exception remains open; no new advisory scan in this update. |
-| 14 | Broader CSP | Candidate implementation and browser acceptance pending. |
+| 14 | Broader CSP | Implemented and local browser/configuration acceptance passed; cloud release verification pending. See [CSP acceptance](BROWSER_CSP.md). |
 | 15 | OS image / optional face runtime | Full image scanning and optional InsightFace acceptance pending; neither is established by import tests. |
 
 ## Other known feature/release gaps
