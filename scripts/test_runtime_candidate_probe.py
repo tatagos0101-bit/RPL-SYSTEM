@@ -63,6 +63,8 @@ def test_verifier_receives_only_candidate_and_drops_connection_overrides(monkeyp
     assert probe.collect_metadata() == probe.EXPECTED
     args, kwargs = run.call_args
     assert args[0] == uri
+    assert args[1:] == (probe.POOLER_HOST, "quzhxkgkdrctiosyjxcr", "rpl_api_runtime", "repair16")
+    assert probe.EXPECTED["tables_checked"] == 16
     assert "DATABASE_URL" not in os.environ
     assert "SUPABASE_SERVICE_ROLE_KEY" not in os.environ
     assert "PGOPTIONS" not in os.environ
@@ -101,4 +103,12 @@ def test_config_diagnostic_is_protected_and_only_returns_booleans(protected_prob
     assert all(type(value) is bool for value in checks.values())
     assert checks["username"] is False and checks["port"] is False
     assert "synthetic-secret" not in response.text
+    collector.assert_not_called()
+
+
+def test_packaging_check_uses_checker_root_when_probe_is_imported(protected_probe, monkeypatch, tmp_path):
+    client, collector, headers = protected_probe
+    monkeypatch.setattr(probe, "__file__", str(tmp_path / "scripts/runtime_candidate_probe.py"))
+    response = client.get("/api/runtime-candidate-config", headers=headers)
+    assert response.json()["setup_checks"]["checker_file"] is True
     collector.assert_not_called()

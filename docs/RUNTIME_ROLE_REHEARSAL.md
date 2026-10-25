@@ -1,12 +1,14 @@
 # Runtime database-role audit and rehearsal — October 19, 2026
 
-Latest follow-up, October 20: actual candidate TLS pooler login and all role/14-table
-permission checks passed in a protected Preview. The Preview was removed and the
-candidate returned to NOLOGIN. The API still uses its existing owner connection;
-cloud API workflow acceptance and production cutover remain pending. Earlier
-sections record historical preparation/diagnostics; the final section is current.
+Latest follow-up, October 25: the live API now uses the restricted account after
+16-table permission, full-API synthetic workflow and real Storage acceptance.
+The clean main-source release is promoted, public health/access checks passed,
+and the runtime login remains enabled. A subsequent [owner-credential cleanup](OWNER_CREDENTIAL_RETIREMENT.md)
+removed owner variables from the new live runtime. The operator confirmed the
+provider password reset and post-reset cloud checks passed. Earlier sections record
+historical preparation/diagnostics.
 
-## Production finding
+## Historical production finding — October 19
 
 A fixed read-only catalog query through the API's configured database connection
 confirmed that the live runtime is an **owner/admin-capable role**, not the prepared
@@ -426,3 +428,219 @@ Next is step 4's protected baseline API workflow acceptance, followed by the
 reviewed production switch/recovery procedure. The live API still uses its owner
 connection; the original security follow-up remains open until those gates pass.
 PAD and unrelated working-tree changes remain untouched.
+
+## October 24: current 16-table acceptance
+
+The deployed application is now `03525120ad49e862ec84dfc70fc518fa34d0333f`.
+Do not reuse the earlier 14-table release candidate. A fresh catalog check found
+the restricted account still disabled and correctly restricted, but missing CRUD
+and runtime policies for `reservation_confirmations` and `inventory_writes`.
+Switching the application connection at that point would break those operations.
+
+Applied the already rehearsed `prepare_runtime_role.sql` with transaction-local
+lock/statement timeouts through provider migration
+`complete_runtime_permissions_repair16`. All 16 application tables now have the
+required runtime CRUD and policies, RLS remains enabled, and browser roles remain
+denied. No application records, table definitions or live connection settings were
+changed by this permission preparation.
+
+The protected Preview checker now pins `repair16` and requires all 17 verifier
+rows. Preview `dpl_AwHKkFBjq5Dnzn6TcSTf7mFbJraY` passed the actual TLS pooler
+connection, expected login, and every role/table/sequence permission check.
+The Preview was removed, NOLOGIN restored, and production deployment/environment
+metadata preserved. A final catalog check confirmed password presence, disabled
+login and restricted attributes; security advisors returned no lints.
+
+The temporary `runtime_workflow_probe.py` additionally prepares selected current-main
+API route checks using only generated synthetic identities and inventory. Route
+commits use savepoints inside an outer transaction that always rolls back. It is
+protected by the existing Preview/token/expiry/candidate-verification guard and
+rejects repeat/concurrent execution within an instance. It never mounts the main
+application, runs startup/migration, invokes face endpoints, or queries patron-wide
+reports. Only fixed boolean outcomes leave the endpoint. It must never be mounted
+in the production application. Sequence allocations can leave harmless gaps.
+
+Local PostgreSQL 17 rehearsal passed login/Secure HttpOnly cookies, anonymous and
+wrong-role denial, owner-scoped loans, borrowing/returns, reservation promotion and
+cancellation, synthetic-member transcript generation, attendance and inventory
+receipt access, suspension and logout revocation. A deliberately revoked inventory
+INSERT grant caused failure as expected. Both successful and failing runs left all
+ten written tables empty after rollback. Cached images were reused, data was
+RAM-backed, and each temporary container was removed. The focused checker/probe
+suite passed 68 tests; existing Starlette/httpx deprecation warnings remain.
+
+The first workflow Preview stopped at its packaging self-check before database
+access. The checker now resolves its artifact from `CHECKER_ROOT` when imported;
+a regression test covers this layout. The replacement protected Preview
+`dpl_79b8AYagGWjJuYVy1VzLG9jHJtGL` passed the same workflows against the real
+Supabase transaction pooler as the restricted account. Its current-main application
+modules were copied from immutable Git objects, not the dirty PAD/Redis worktrees.
+It confirmed the synthetic users/book were absent after rollback. The Preview was
+removed and NOLOGIN restored; the production deployment and environment metadata
+were unchanged. The final catalog check confirmed disabled login, password presence
+and restricted attributes. No patron data or credentials were returned.
+
+Storage objects, real-camera behavior and public browser workflows are outside
+this rollback-only probe's coverage. The previously proposed full API/Storage
+candidate acceptance is not equivalent to this selected-route cloud rehearsal;
+remaining release checks must be stated explicitly when requesting cutover.
+
+### Current switch/recovery candidate (not executed)
+
+- API project: `rpl-system-api`; existing healthy production deployment:
+  `dpl_8gmqdS2rSyRWC1QZ5WksRBJPD1a3`, application revision `0352512`.
+- Recheck that revision/metadata and current role restrictions before proceeding.
+  Stage only the reviewed current-main application, never either temporary probe.
+- The verified credential is still Secret/Sensitive, Preview-only, under
+  `RPL_RUNTIME_CANDIDATE_URI`. No Production `DATABASE_URL` override exists.
+  For cutover, securely configure the verified restricted URI as the API's
+  Production-only Sensitive `DATABASE_URL`. Keep `AUTO_MIGRATE=false`, TLS/pooler
+  options, Storage, JWT and station PIN unchanged. Do not retrieve the Sensitive
+  value into chat/logs or silently downgrade its type.
+- Enable the guarded runtime LOGIN only for the approved candidate release.
+  Require production health, restricted runtime identity and access smoke checks
+  before promotion, plus agreed remaining application/Storage acceptance. Do not
+  promote an operational probe. Frontend deployment is unnecessary.
+- Before public promotion, record a secure reversible environment change and the
+  exact previous deployment. On failure, restore the previous deployment and
+  remove the new override (or restore its recorded prior state). Confirm service
+  recovery before disabling the candidate. No data/schema restore is needed for
+  a connection-only rollback; do not overwrite new library transactions.
+- Production `POSTGRES_URL` still exists as an encrypted owner credential.
+  Connection switching alone does not remove that credential from the process or
+  old deployments. Review integration ownership/consumers before its separate
+  retirement; do not claim full credential isolation while it remains accessible.
+
+No production activation, commit or push was performed in this readiness pass.
+PAD and Redis activation remain pending and untouched.
+
+## October 25: preparation before the secure credential handoff
+
+The operator approved final API/Storage validation and production activation only
+if those checks pass. Fresh metadata still showed the previous healthy API
+`dpl_8gmqdS2rSyRWC1QZ5WksRBJPD1a3` on `0352512`, no Production `DATABASE_URL`,
+and the candidate credential as Preview-only Sensitive. Role restrictions matched.
+
+Prepared a protected, unaliased full-API candidate using immutable current-main
+source and the new `runtime_release_probe.py`. Every request to that diagnostic
+candidate requires an expiring private header; the probe checks the actual loaded
+database configuration/role, all 16 permissions, rollback-only API workflows, and
+synthetic Storage uploads/reads/signing/deletion across the four categories. It also
+checks avatar ticket ownership and profile refresh. No such diagnostic code is to
+be included in the separately built clean release artifact.
+
+The expanded tool suite passed 76 tests. Local PostgreSQL checks passed success
+and injected-permission-failure rollback, plus current-main full API routes,
+middleware and the protected-candidate header. Test-only in-memory limits were reset
+between repeated scenarios; no live rate settings changed. Temporary containers
+were removed. This local run does not establish cloud Storage acceptance.
+
+The proposed server-side rename of the saved Sensitive candidate variable was
+rejected without changing project environment metadata. Vercel explicitly forbids
+editing a Sensitive variable's key and does not return its saved plaintext value;
+see [Sensitive environment variables](https://vercel.com/docs/environment-variables/sensitive-environment-variables).
+Do not retry the rename, retrieve the secret through a diagnostic route, or change
+the application to consume a candidate variable as a workaround.
+
+At this stage the operator was asked to privately add **`DATABASE_URL`**, Secret/Sensitive and
+**Production-only**, using the previously verified restricted-account URI, leaving
+`RPL_RUNTIME_CANDIDATE_URI` in Preview. Do not redeploy from the dashboard yet.
+The confirmed endpoint uses username `rpl_api_runtime.quzhxkgkdrctiosyjxcr`, host
+`aws-0-ap-southeast-1.pooler.supabase.com`, port `6543`, database `postgres`, and
+`sslmode=require`. The account password must be URL-encoded; it is not the project's
+`postgres` password. No password is recorded here or requested in chat.
+
+The account was restored to NOLOGIN and reverified after the rejected rename.
+No full-API cloud candidate, clean release, public promotion, commit or push had yet occurred.
+The approved rollout was to resume after the secure handoff: verify only variable metadata,
+enable the guarded account, run final protected cloud checks, remove the diagnostic
+candidate, build the exact clean main artifact, verify it, then promote. Keep the
+existing frontend deployment and Storage/JWT/PIN/Redis settings unchanged.
+
+The ignored `.tools/runtime_cutover.py` has an `adopt` action for the user-created
+Production variable; do not rerun its superseded `configure` rename attempt.
+Its rollback removes only that new Production override and restores the recorded
+previous API deployment, preserving the Preview candidate variable. The state file
+contains deployment/variable metadata only. Owner-credential retirement remains
+separate from this approved connection switch.
+
+## October 25: production switch completed
+
+The operator saved the new Production-only Sensitive `DATABASE_URL` privately.
+Metadata-only adoption confirmed that the Preview candidate and all pre-existing
+environment entries were unchanged. Guarded provider migration
+`enable_runtime_after_production_secret_handoff` enabled LOGIN for the restricted
+account. `rpl_api_runtime` retains only the non-admin runtime group membership;
+it has no ownership, create-role/database, bypass-RLS or replication capabilities.
+Keep LOGIN enabled now that the production API uses this account.
+
+Protected, unaliased full-API candidate `dpl_DecRTVKwsdqdm9jy8v8dC6NHw8fw` passed:
+
+- Actual application-engine identity, encrypted pooler connection and every
+  `repair16` role/table/sequence permission check.
+- Synthetic password login and Secure HttpOnly cookies, anonymous/wrong-role/
+  cross-owner denials, borrowing and original-loan returns, reservation promotion
+  and cancellation, member transcript, attendance and inventory receipt access,
+  suspended-account rejection and logout revocation.
+- Avatar prepare/upload/commit/profile refresh and wrong-owner ticket denial;
+  anonymous and member-category restrictions; real private avatar/ID/import
+  public-access denial and signed reads; public cover reads. Only generated small
+  images and a synthetic workbook were used. All generated objects were deleted
+  and absence verified using Storage search.
+
+Synthetic database rows were rolled back and their absence verified. PostgreSQL
+sequence allocations can leave harmless gaps. No patron records, biometric data,
+passwords or signed URLs were returned. The diagnostic deployment was removed.
+
+Earlier candidate failures were confined to the test harness: production HTTPS
+middleware expects the proxy's `X-Forwarded-Proto: https`, which the internal
+TestClient initially omitted. The corrected harness supplies it and passed an
+isolated HTTPS-middleware regression before the successful cloud run. Production
+HTTPS settings and application source were unchanged. The focused operational
+suite passed **76 tests**; disposable PostgreSQL checks covered successful workflows
+and deliberate permission failure with rollback. Existing dependency deprecation
+warnings remain. Temporary containers were removed; no new image download was needed.
+
+The separately built clean release was hashed against immutable GitHub main source
+`03525120ad49e862ec84dfc70fc518fa34d0333f`; main was rechecked before promotion.
+It contains no diagnostic scripts/routes and preserves the original API deployment
+configuration. Health and unauthorized-access checks passed before promotion.
+
+| Deployment | Recorded ID |
+| --- | --- |
+| New production API | `dpl_5m5XgzvhJfnf6NoHZDctWp7HXCHM` |
+| Previous healthy API, retained for rollback | `dpl_8gmqdS2rSyRWC1QZ5WksRBJPD1a3` |
+| Unchanged frontend | `dpl_HUYUMetQZr5tYVRiJ4CtqMqjZzbN` |
+
+After promotion, both public API and website rewrite paths passed health (200,
+database connected), anonymous profile/librarian-stat denial (401), and diagnostic
+route absence (404). A follow-up metadata check confirmed the expected API target,
+unchanged frontend target and unchanged configured environment metadata. Supabase's
+security advisor returned no lints before promotion; this is not a complete security
+assessment. Browser UI and real-camera acceptance were not rerun for this connection
+change. PAD and Redis activation were untouched.
+
+Recovery is connection-only: restore the recorded previous API deployment and
+remove only the new Production `DATABASE_URL` override, preserving the Preview
+candidate. Confirm service recovery before disabling the runtime login. No data
+restore is required, and new library transactions must not be overwritten.
+
+Old owner-capable integration credentials, including `POSTGRES_URL`, still exist
+in the API environment and old deployments. Consumer review and separate retirement
+remain necessary; this release does not claim complete credential isolation.
+No application source changes, commit or push were needed for this switch.
+Operational test tools and these documentation updates were prepared in the
+`restricted-db-account` worktree and are included in the subsequent
+[repository handoff](COMPLETED_WORK_HANDOFF_2026-10-25.md).
+
+### Subsequent owner-variable cleanup
+
+The operator authorized continuing with owner-credential retirement. All seven
+`POSTGRES_*` variables have since been removed and clean API
+`dpl_3NwB7oo7JWNqLs9tW6UQ5yzETckn` promoted on the same main source, preserving
+Storage and all other environment settings. Fresh protected cloud and public
+health/access checks passed. The operator subsequently confirmed resetting the old
+owner password; post-reset checks passed and integration-recreated owner variables
+were removed again. See the [current consumer review and retirement record](OWNER_CREDENTIAL_RETIREMENT.md).
+The connection-only rollback procedure above describes the first switch and is
+historical; prefer the new clean runtime when recovering from future incidents.

@@ -17,7 +17,7 @@ from scripts.check_runtime_candidate import verify, VerificationFailure, failure
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 NO_STORE = {"Cache-Control": "no-store"}
-EXPECTED = {"schema": "baseline14", "tables_checked": 14,
+EXPECTED = {"schema": "repair16", "tables_checked": 16,
             "permissions_passed": True, "tls_encrypted": True, "expected_login": True}
 FAILURES = {"configuration", "authentication", "database_permissions", "connection", "validation", "internal",
             "missing_artifact", "missing_dependency", "unsupported_attribute", "unexpected_type", "query_rejected"}
@@ -72,7 +72,7 @@ def collect_metadata():
         raise CandidateFailure("configuration", checks)
     # The operator-provided host must be a Supabase shared pooler; the project
     # reference, role, port and database are fixed independently of that URI.
-    data = verify(uri, POOLER_HOST, "quzhxkgkdrctiosyjxcr", "rpl_api_runtime", "baseline14")
+    data = verify(uri, POOLER_HOST, "quzhxkgkdrctiosyjxcr", "rpl_api_runtime", "repair16")
     if data != EXPECTED:
         raise ValueError("Candidate verification failed")
     return dict(EXPECTED)
@@ -99,9 +99,9 @@ def runtime_candidate_check(request: Request, response: Response):
         if request.url.path == "/api/runtime-candidate-config":
             from psycopg import pq
             return {"configuration_checks": configuration_checks(), "setup_checks": {
-                "checker_file": (Path(__file__).resolve().parent / "scripts/check_runtime_candidate.py").is_file(),
+                "checker_file": (CHECKER_ROOT / "scripts/check_runtime_candidate.py").is_file(),
                 "config_helper": (CHECKER_ROOT / "backend/services/database_config.py").is_file(),
-                "metadata_sql": (CHECKER_ROOT / "supabase/operations/check_runtime_access_baseline14.sql").is_file(),
+                "metadata_sql": (CHECKER_ROOT / "supabase/operations/check_runtime_access.sql").is_file(),
                 "tls_attribute": hasattr(pq.PGconn, "ssl_in_use"),
                 "python_executable": Path(sys.executable).is_file(),
             }}

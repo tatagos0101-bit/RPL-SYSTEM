@@ -20,16 +20,24 @@ For the session migration, Redis preparation, restricted database role, and the
 approval sequence for cloud changes, see [security rollout](SECURITY_ROLLOUT.md).
 The [Redis staging checklist](REDIS_STAGING.md) records the managed API Preview
 service and Vercel checks; shared Redis is not yet enabled in production.
-The [runtime-role audit/rehearsal](RUNTIME_ROLE_REHEARSAL.md) includes the tested
-14-table baseline permission candidate and its pending cloud switch/recovery plan.
-It also records the confirmed live owner/admin-capable database login and the
-strengthened isolated checks.
-October 20's protected Preview also passed the actual candidate's encrypted pooler
-login and all 14-table permission checks. It was removed and the candidate disabled
-again. Cloud API/Storage workflow acceptance is still required before cutover.
-Production still uses the existing owner connection. The live repair schema now
-contains 16 application tables; restricted-role grants and application acceptance
-must cover all 16 before a separate runtime-role cutover.
+The [runtime-role audit/rehearsal](RUNTIME_ROLE_REHEARSAL.md) records the historical
+owner-capable connection and the October 25 restricted-account production switch.
+The API now connects as `rpl_api_runtime` through a Production-only Sensitive
+`DATABASE_URL`; the Preview candidate variable remains unchanged. All 16 table
+permission checks, protected full-API synthetic workflows and real Storage checks
+passed before promotion. Public API and website-rewrite health/access checks passed
+afterward. The diagnostic deployment was removed; the clean release uses unchanged
+main application source at `03525120ad49e862ec84dfc70fc518fa34d0333f`.
+Keep the runtime login enabled and `AUTO_MIGRATE=false`. A subsequent October 25
+[owner-credential cleanup](OWNER_CREDENTIAL_RETIREMENT.md) removed all seven
+`POSTGRES_*` variables from project settings and deployed a clean API environment.
+Storage credentials were preserved. The operator confirmed resetting the old owner
+password privately, and post-reset API/Storage checks passed. The integration
+recreated owner variables during reset; those entries were removed again. Recheck
+for this reinjection after resource resets/syncs and before future deployments.
+Do not restore the owner fallback. Historical exports are not current maintenance
+credentials; broader API-key retirement remains separate. Frontend, PAD and Redis
+were unchanged.
 The October 17 integration uses PyJWT with the existing HMAC token format and
 requires an explicit HS256, HS384, or HS512 configuration (HS256 remains the default).
 Apply `20261016000100_auth_sessions.sql` before the API release; preserve the
@@ -46,10 +54,10 @@ The Vite config loads only the `VITE_` prefix for development proxy configuratio
 
 | Names | Current purpose and handling |
 | --- | --- |
-| `DATABASE_URL`, `POSTGRES_URL` | Backend connection. A nonempty `DATABASE_URL` wins; `POSTGRES_URL` is the integration fallback. Shared database configuration is also used by migrations. |
+| `DATABASE_URL`, `POSTGRES_URL` | Backend connection. Production uses the restricted Sensitive `DATABASE_URL`; the legacy `POSTGRES_URL` fallback remains in source but was removed from the deployed environment. Migrations need a separately supplied maintenance connection. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Backend Storage connection. The key may be a legacy service-role JWT or a new secret key; keep it server-side under the name the application reads. |
 | `SUPABASE_SECRET_KEY` | Not read as a fallback by the current application. Do not rename/substitute credentials without verifying the affected consumer. |
-| `POSTGRES_URL_NON_POOLING`, `POSTGRES_PRISMA_URL`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_DATABASE` | Not individually read by current application tools. Integration or external maintenance consumers may still need them; verify before removing. Prisma is not configured in this repository. |
+| `POSTGRES_URL_NON_POOLING`, `POSTGRES_PRISMA_URL`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_DATABASE` | Removed from API Production on October 25; no current application consumer. Historical/manual maintenance tools need separate credentials. Prisma is not configured in this repository. |
 | `SUPABASE_JWT_SECRET` | Not the application's signing secret. Rotation can affect legacy Supabase keys and external consumers. |
 | `JWT_SECRET_KEY` | Application signing secret. The launcher and ASGI startup share known-default and minimum-length checks; those checks do not measure entropy. Generate a random value. |
 | `LIBRARIAN_AUTH_CODE`, `ENTRY_STATION_PIN` | Server-only registration and kiosk configuration; preserve the managed PIN precedence described below. |
@@ -166,12 +174,14 @@ setup, avoiding a dlib compiler build. The API runs in `sin1` with a 60-second
 maximum request duration. Keep local uploads, logs, databases and secrets excluded
 using `backend/.vercelignore`.
 
-Connect the Supabase marketplace resource to this project for **Production**.
-The application accepts the integration's `POSTGRES_URL`, or an explicit
-`DATABASE_URL` using the Supabase transaction pooler (port 6543):
+The existing Supabase marketplace connection supplies the required backend Storage
+configuration. Connecting or resetting that resource can also inject owner database
+credentials; apply the [retirement checks](OWNER_CREDENTIAL_RETIREMENT.md) before
+deployment. Production uses a separately managed Sensitive `DATABASE_URL` for the
+verified restricted login through the transaction pooler (port 6543):
 
 ```text
-postgresql+psycopg://postgres.PROJECT_REF:URL_ENCODED_PASSWORD@POOLER_HOST:6543/postgres?sslmode=require
+postgresql+psycopg://rpl_api_runtime.PROJECT_REF:URL_ENCODED_PASSWORD@POOLER_HOST:6543/postgres?sslmode=require
 ```
 
 Copy the actual host from Supabase's Connect panel; do not guess it. The application

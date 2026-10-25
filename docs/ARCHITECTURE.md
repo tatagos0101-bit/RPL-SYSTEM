@@ -70,19 +70,26 @@ Some comments still mention earlier hosting choices. Files in the repository do
 not establish which revision, environment variables, policies, or models are live.
 Production persistence must not depend on the host filesystem.
 
-October 20 local member-management changes add explicit face/account deletion
+The October 21 member-management release added explicit face/account deletion
 and camera capture feedback. Account deletion retains deidentified historical
 foreign keys and requires the additive `users.deleted_at` column; it is not a
 hard cascade delete. See [policy, storage failure behavior and release
-requirements](MEMBER_MANAGEMENT.md). These changes are not live.
-The October 19 [runtime-role audit](RUNTIME_ROLE_REHEARSAL.md) confirmed that the
-API connection owns the deployed tables and bypasses RLS. Browser-role table access
-remains revoked. A later permissions-only operation prepared the restricted group,
-14-table grants/policies and disabled `rpl_api_runtime` candidate. The API connection
-is unchanged. October 20's protected Preview passed real TLS pooler login and all
-14-table permission checks; the candidate was disabled again afterward. Cloud API
-workflow acceptance and production cutover remain pending.
-The same report includes the local rehearsal using deployed API source.
+requirements](MEMBER_MANAGEMENT.md) and the [release record](REPAIR_RELEASE_2026-10-21.md).
+The October 19 [runtime-role audit](RUNTIME_ROLE_REHEARSAL.md) found an owner-capable
+API connection. On October 25, production switched to `rpl_api_runtime`, inheriting
+only the restricted `rpl_app_runtime` group. All 16 application tables have the
+required CRUD/sequence permissions and runtime RLS policies; browser-role access
+remains revoked. Actual encrypted pooler, full-API synthetic workflow and Storage
+checks passed before promotion of unchanged main application source. The runtime
+login stays enabled; `AUTO_MIGRATE=false` is preserved. Diagnostic deployments were
+removed and public API/website-rewrite smoke checks passed.
+Production `DATABASE_URL` selects this restricted connection. The subsequent
+[owner-credential cleanup](OWNER_CREDENTIAL_RETIREMENT.md) removed all `POSTGRES_*`
+variables from API Production and released a clean runtime environment. Storage
+credentials remain required. The operator confirmed the old owner-password reset;
+post-reset API/Storage checks passed. Vercel recreated owner variables during that
+reset; they were removed again. Check future integration syncs for reinjection before
+deployment. Historical credential exports are no longer the maintenance setup.
 
 Environment names and defaults live in [config.py](../backend/config.py) and the
 [backend](../backend/.env.example) / [frontend](../frontend/.env.example) examples.

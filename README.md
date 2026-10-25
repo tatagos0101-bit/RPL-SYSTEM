@@ -12,8 +12,10 @@ FastAPI backend run on Vercel; library records and uploads are stored in Supabas
 
 See [deployment instructions](docs/DEPLOYMENT.md) for Supabase setup, Vercel
 projects, environment variables, migrations, and initial administrator access.
-The `fixing-the-issue` repairs are local branch changes until separately released;
-see the [repair ledger](docs/REPAIR_LEDGER.md) and [rollout checklist](docs/REPAIR_ROLLOUT.md).
+The 12 confirmed `fixing-the-issue` repairs were released on October 21; see the
+[release record](docs/REPAIR_RELEASE_2026-10-21.md). The
+[implementation status](docs/IMPLEMENTATION_STATUS.md) distinguishes completed
+releases from remaining security and feature work.
 
 ## Features
 

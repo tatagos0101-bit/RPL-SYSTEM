@@ -1,4 +1,4 @@
-# Implementation status — October 21, 2026
+# Implementation status — October 25, 2026
 
 This reconciles the numbered lists without treating code completion, staging
 acceptance and production release as the same milestone. It is not a new
@@ -12,10 +12,10 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
   in that specific set.** The October 21 release completed the restored-database
   rehearsal, migration, main merge and production rollout; see
   [release evidence](REPAIR_RELEASE_2026-10-21.md).
-- **2/15 security follow-ups completed within their defined scope; 13 remain open.**
-  Excluding the user's deferred PAD work gives **12 open non-PAD security items**.
+- **3/15 security follow-ups completed within their defined scope; 12 remain open.**
+  Excluding the user's deferred PAD work gives **11 open non-PAD security items**.
   An open item can contain completed code or staging tests; this count does not
-  mean 13 new vulnerabilities or 13 unstarted implementations.
+  mean 12 new vulnerabilities or 12 unstarted implementations.
 - The historical reference to **17 feature/policy/release follow-ups** does not
   contain the complete numbered list in the available repository records. Do not
   add 17 to the counts above: there are overlapping security/policy/release topics.
@@ -29,7 +29,7 @@ and [database-role rehearsal](RUNTIME_ROLE_REHEARSAL.md).
 | 2 | Face capture/replay limits | Open; agree threat model and acceptance scope. |
 | 3 | Shared rate limiting | Code/staging/two-station pacing tested; production service/workload acceptance and activation pending. |
 | 4 | Trusted client address | Completed scoped validation: two network sources, spoof resistance and actual-project rewrite routing; no change to trusting arbitrary headers. |
-| 5 | Restricted database account | Both 14/16-table local rehearsals and actual encrypted Supabase pooler/14-table permission checks passed. Cloud API workflow acceptance and live switch pending; candidate disabled between tests. |
+| 5 | Restricted database account | Completed scoped rollout: restricted runtime active, old owner variables removed, operator-confirmed provider password reset, post-reset cloud/API/Storage checks passed. Integration can recreate owner variables on future resets; recheck before deployment. |
 | 6 | Frontend database/storage credentials | Completed frontend disconnect, variable removal and guarded build release. Historical credential retirement belongs to item 7. |
 | 7 | Credential handling | API Sensitive conversion, consumer-aware rotation and old credential retirement pending. |
 | 8 | Biometric consent | Product policy and implementation pending. |
@@ -51,30 +51,36 @@ Camera QR decoding and atomic multi-book circulation are also absent; they requi
 explicit product scope rather than being incidental fixes. See the architecture
 and repair rollout documents for behavior and limitations.
 
-## Separate pending runtime-role work
+## Restricted runtime and owner-password retirement completed
 
-Proceed with security item 5's cloud API workflow acceptance using deployed
-baseline application code before changing the production connection. Real pooler
-acceptance is complete: after the user corrected the URI username and supplied the
-matching password privately in Supabase, the protected Preview connected as the
-expected restricted login over TLS and passed every role/14-table verifier check.
-The password and connection URI were never returned in tool output or chat.
+October 25: the operator saved a Production-only Sensitive `DATABASE_URL` privately.
+Guarded enablement and the protected full-API candidate passed actual restricted
+pooler identity/TLS and all 16-table checks, synthetic login/access/circulation/
+reservation workflows, and real Storage upload/signing/privacy/cleanup checks.
+Synthetic database rows were rolled back, generated objects deleted, and the
+diagnostic deployment removed. The local operational suite passed 76 tests, plus
+disposable PostgreSQL success and injected-permission-failure rollback checks.
 
-The candidate URI remains a Preview-only Vercel Secret with no branch restriction.
-The temporary Preview was removed and the candidate returned to NOLOGIN; enable it
-only for the next controlled acceptance. The live API still uses its prior owner
-connection. No patron rows, application startup/migration, or Storage operations
-were exercised by the read-only checker. The cloud application/Storage acceptance,
-reviewed production switch, owner-credential retirement and recovery gates remain.
-This progress does not close item 5 or reduce the open-item count yet. See the
-[rehearsal report](RUNTIME_ROLE_REHEARSAL.md) for exact evidence and limitations.
+Clean API deployment `dpl_5m5XgzvhJfnf6NoHZDctWp7HXCHM` is live, using unchanged
+main application source `03525120ad49e862ec84dfc70fc518fa34d0333f`. API and website
+rewrite health/access smoke checks passed. Frontend deployment
+`dpl_HUYUMetQZr5tYVRiJ4CtqMqjZzbN`, PAD and Redis were unchanged. The runtime login
+remains enabled; automatic migrations remain disabled. Preview credentials were
+preserved and no credential values were returned.
 
-A fresh Vercel metadata-only check confirmed both public targets remain READY:
-API `dpl_FpN6P2p7Aq8f1NMnc1ym8xQciM7E` at `8975023`, frontend
-`dpl_Ewjj59uW2f1xc8zJw9pkgbj5va93` at `c18c05b`. API project Production still
-has no `DATABASE_URL` override or shared-rate-limit URI; the frontend has zero
-Production variables. Values were not fetched. This is deployment/configuration
-metadata evidence, not a new database privilege or authenticated workflow check.
+A subsequent [owner-credential cleanup](OWNER_CREDENTIAL_RETIREMENT.md) removed all
+seven `POSTGRES_*` variables and promoted clean API `dpl_3NwB7oo7JWNqLs9tW6UQ5yzETckn`
+on the same main revision. Protected cloud API/Storage acceptance and both public
+health/access paths passed again; the frontend is unchanged. The operator then
+confirmed resetting the old owner password privately. Integration-recreated owner
+variables were removed again and post-reset cloud/API/Storage checks passed. The local
+backup helper now requests separate maintenance credentials rather than reading an
+old Vercel export. Item 5 is complete within that scope; broader API-key/credential
+handling remains item 7. Provider-reset completion is operator-confirmed, not an
+independent old-password rejection test. Check for integration reinjection after
+future resets/syncs. No application source change was needed for those operational
+releases. The completed test tools and records are included in the
+[October 25 repository handoff](COMPLETED_WORK_HANDOFF_2026-10-25.md).
 
 ## October 21 release request
 
@@ -87,5 +93,6 @@ and disposable PostgreSQL checks pass. The initial missing-backup gate was resol
 with an encrypted local application-database backup and restored migration
 rehearsal, including a fresh maintenance-window backup. Live migration, PR #1 merge
 and both deployments completed. See [release evidence and backup limitations](REPAIR_RELEASE_2026-10-21.md).
-PAD, Redis activation, restricted-runtime cutover and other pending implementations
-remain unchanged; their open-item counts are not reduced by this repair release.
+At that October 21 release, PAD, Redis activation, restricted-runtime cutover and
+other pending implementations remained unchanged. The October 25 runtime update
+above supersedes that historical cutover status.
