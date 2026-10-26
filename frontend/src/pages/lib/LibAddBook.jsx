@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import * as XLSX from 'xlsx';
 import {
   PlusSquare, Upload, FileText, CheckCircle2, AlertCircle,
   X, RefreshCw, Search, List, ImagePlus,
 } from 'lucide-react';
 import { addBook, bulkUpload, uploadBookCover, getInventoryWrite } from '../../api/librarian';
 import { getCategories } from '../../api/books';
+import { extractISBNsFromFile, normalizeISBN, isISBN } from '../../api/isbnFiles';
 import { errorMessage, matchCategory, readJournal, saveJournal, reconcileWrite, isDefiniteRejection, sha256 } from '../../api/inventoryWrites';
 
 // ── Shared ISBN fetcher ────────────────────────────────────────────────────────
@@ -64,24 +64,6 @@ async function fetchBookByISBN(isbn) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// ── Extract ISBNs from an uploaded file ───────────────────────────────────────
-async function extractISBNsFromFile(file) {
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-  if (rows.length === 0) return [];
-
-  const headers = rows[0].map((h) => String(h).toLowerCase().trim());
-  const isbnCol = headers.findIndex((h) => h.includes('isbn'));
-  const colIdx = isbnCol >= 0 ? isbnCol : 0;
-
-  return rows
-    .slice(isbnCol >= 0 ? 1 : 0) // skip header row only if we found an isbn column
-    .map((row) => String(row[colIdx] || '').replace(/[-\s]/g, '').trim())
-    .filter((v) => /^\d{10}(\d{3})?$/.test(v)); // valid ISBN-10 or ISBN-13
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 export default function LibAddBook() {
   const [mode, setMode] = useState('manual'); // 'manual' | 'isbn-bulk' | 'upload'
@@ -118,6 +100,7 @@ export default function LibAddBook() {
   const [bulkResults, setBulkResults]   = useState(() => { try { return readJournal().rows || []; } catch { return []; } }); // { isbn, status, data? }
   const [bulkProgress, setBulkProgress] = useState(null); // { done, total }
   const [bulkRunning, setBulkRunning]   = useState(false);
+  const [bulkLookupError, setBulkLookupError] = useState('');
   const [selected, setSelected]         = useState(new Set());
   const [bulkCopies, setBulkCopies]     = useState('1');
   const [importing, setImporting]       = useState(false);
@@ -170,17 +153,17 @@ export default function LibAddBook() {
   };
 
   const handleIsbnLookup = async () => {
-    const cleanIsbn = isbnInput.trim().replace(/[-\s]/g, '');
+    const cleanIsbn = normalizeISBN(isbnInput);
     if (!cleanIsbn) return;
-    if (!/^\d{10}(\d{3})?$/.test(cleanIsbn)) {
-      setLookupError('Invalid ISBN — must be 10 or 13 digits.');
+    if (!isISBN(cleanIsbn)) {
+      setLookupError('Enter an ISBN-10 (which may end in X) or a 13-digit ISBN.');
       return;
     }
     setLookingUp(true);
     setLookupError('');
     setLookupSuccess(false);
     try {
-      const data = await fetchBookByISBN(isbnInput.trim());
+      const data = await fetchBookByISBN(cleanIsbn);
       const { matched, isNew } = matchCategory(data.category, categories);
       setForm((prev) => ({
         ...prev,
@@ -293,14 +276,17 @@ export default function LibAddBook() {
   };
 
   const startBulkLookup = async () => {
+    if (bulkRunning) return;
     if (importing || bulkResults.some(row => row.requestId && !row.imported && !row.skipped)) { setFormError('Resolve the pending import rows before starting another lookup.'); return; }
     let isbns = [];
+    setBulkLookupError('');
 
     if (bulkFile) {
       try {
         isbns = await extractISBNsFromFile(bulkFile);
       } catch {
-        isbns = [];
+        setBulkLookupError('Could not read this file. Choose a readable .csv, .xlsx, or .xls file and try again.');
+        return;
       }
     }
 
@@ -308,12 +294,15 @@ export default function LibAddBook() {
     if (bulkText.trim()) {
       const pasted = bulkText
         .split(/[\n,;]+/)
-        .map((s) => s.replace(/[-\s]/g, '').trim())
-        .filter((v) => /^\d{10}(\d{3})?$/.test(v));
+        .map(normalizeISBN)
+        .filter(isISBN);
       isbns = [...new Set([...isbns, ...pasted])];
     }
 
-    if (isbns.length === 0) return;
+    if (isbns.length === 0) {
+      setBulkLookupError('No usable ISBNs found. Put ISBN-10 or ISBN-13 values in an ISBN column (or the first column). Store ISBNs as text in Excel to preserve leading zeroes.');
+      return;
+    }
 
     setBulkRunning(true);
     setBulkResults([]);
@@ -784,6 +773,7 @@ export default function LibAddBook() {
               </div>
 
               {/* Progress bar */}
+              {bulkLookupError && <p role="alert" className="text-sm text-danger">{bulkLookupError}</p>}
               {bulkRunning && bulkProgress && (
                 <div className="w-full bg-subtle rounded-full h-2 overflow-hidden">
                   <div

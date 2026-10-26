@@ -52,7 +52,9 @@ export default function RequireRole({ allowedRoles }) {
           clearStoredAuth();
           setState({ status: 'signed-out', role: null, path: location.pathname, attempt });
         } else {
-          setState({ status: 'unavailable', path: location.pathname, attempt });
+          setState(previous => previous.status === 'ready' && previous.path === location.pathname
+            ? { ...previous, verificationError: true }
+            : { status: 'unavailable', path: location.pathname, attempt });
         }
       });
 
@@ -84,7 +86,10 @@ export default function RequireRole({ allowedRoles }) {
   // A new path must not use the previous page's password-change requirement.
   // Rendering a loading gate immediately prevents the redirect back to the form
   // before the new profile request can confirm that the password was saved.
-  if (state.path !== location.pathname || state.attempt !== attempt) {
+  // Focus/visibility checks must not unmount the already verified page and lose
+  // its inputs, file selections, or in-progress work. Initial/navigation checks
+  // still wait for verification; a revoked session still redirects below.
+  if (state.path !== location.pathname) {
     return <LoadingGate />;
   }
 
@@ -132,5 +137,17 @@ export default function RequireRole({ allowedRoles }) {
     return <Navigate to={homeForRole(state.role)} replace state={location.state} />;
   }
 
-  return <Outlet key={`${state.userId}:${state.role}`} />;
+  return (
+    <>
+      {state.verificationError && (
+        <div role="alert" className="bg-warning-soft px-4 py-2 text-sm text-ink">
+          Account verification is temporarily unavailable. Your work is still here.{' '}
+          <button type="button" className="underline font-semibold" onClick={() => setAttempt(value => value + 1)}>
+            Retry account verification
+          </button>
+        </div>
+      )}
+      <Outlet key={`${state.userId}:${state.role}`} />
+    </>
+  );
 }
