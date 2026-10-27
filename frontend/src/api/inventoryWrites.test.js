@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { errorMessage, matchCategory, readJournal, saveJournal, reconcileWrite, isDefiniteRejection } from './inventoryWrites.js';
+import { errorMessage, matchCategory, readJournal, saveJournal, reconcileWrite, isDefiniteRejection, removeISBNResults } from './inventoryWrites.js';
 
 test('ISBN category is a string for exact, partial and suggested categories', () => {
   for (const raw of ['history', 'Philippine History', 'New genre', '']) {
@@ -44,4 +44,31 @@ test('only a confirmed missing receipt permits a retry with the original request
   const response = await reconcileWrite('original-id', async () => { throw { response: { status: 404 } }; },
     async id => ({ data: { id } }));
   assert.equal(response.data.id, 'original-id');
+});
+
+test('removing ISBN results persists the remaining rows and preserves other recovery slots', () => {
+  const data = new Map([['userId', '1']]);
+  const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };
+  const rows = [{ isbn: 'one', imported: true, requestId: 'saved' }, { isbn: 'two', status: 'not_found' }];
+  saveJournal('manual', { id: 'manual-pending' }, storage);
+  saveJournal('rows', rows, storage);
+  assert.deepEqual(removeISBNResults(rows, new Set(['one']), storage), [rows[1]]);
+  assert.deepEqual(readJournal(storage).rows, [rows[1]]);
+  assert.deepEqual(readJournal(storage).manual, { id: 'manual-pending' });
+  assert.deepEqual(removeISBNResults([rows[1]], new Set(['two']), storage), []);
+  assert.deepEqual(readJournal(storage).rows, []);
+});
+
+test('unknown ISBN write outcomes cannot be discarded, while other rows can be removed', () => {
+  const data = new Map([['userId', '1']]);
+  const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };
+  const pending = { isbn: 'pending', requestId: 'retry-original', payload: { title: 'Test' } };
+  const rows = [pending, { isbn: 'rejected', importError: 'Invalid year' }];
+  saveJournal('rows', rows, storage);
+  assert.throws(() => removeISBNResults(rows, new Set(['pending', 'rejected']), storage), /Resolve/);
+  assert.deepEqual(readJournal(storage).rows, rows);
+  assert.deepEqual(removeISBNResults(rows, new Set(['rejected']), storage), [pending]);
+  assert.deepEqual(readJournal(storage).rows, [pending]);
+  storage.setItem = () => { throw new Error('Storage full'); };
+  assert.throws(() => removeISBNResults([{ isbn: 'saved', imported: true }], new Set(['saved']), storage), /Storage full/);
 });

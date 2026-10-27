@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   PlusSquare, Upload, FileText, CheckCircle2, AlertCircle,
-  X, RefreshCw, Search, List, ImagePlus,
+  X, RefreshCw, Search, List, ImagePlus, Trash2,
 } from 'lucide-react';
 import { addBook, bulkUpload, uploadBookCover, getInventoryWrite } from '../../api/librarian';
 import { getCategories } from '../../api/books';
 import { extractISBNsFromFile, normalizeISBN, isISBN } from '../../api/isbnFiles';
-import { errorMessage, matchCategory, readJournal, saveJournal, reconcileWrite, isDefiniteRejection, sha256 } from '../../api/inventoryWrites';
+import { errorMessage, matchCategory, readJournal, saveJournal, reconcileWrite, isDefiniteRejection, sha256, isUnconfirmedISBNRow, removeISBNResults } from '../../api/inventoryWrites';
 
 // ── Shared ISBN fetcher ────────────────────────────────────────────────────────
 async function fetchBookByISBN(isbn) {
@@ -106,6 +106,7 @@ export default function LibAddBook() {
   const [importing, setImporting]       = useState(false);
   const [importSummary, setImportSummary] = useState(null);
   const bulkAbortRef = useRef(false);
+  const bulkTextRef = useRef(null);
 
   // ── Upload (full book data) state ──────────────────────────────────────────
   const [dragging, setDragging]       = useState(false);
@@ -263,14 +264,14 @@ export default function LibAddBook() {
   // ── Bulk ISBN handlers ─────────────────────────────────────────────────────
   const handleBulkDrop = async (e) => {
     e.preventDefault();
-    if (importing || bulkResults.some(row => row.requestId && !row.imported && !row.skipped)) return;
+    if (bulkRunning || importing || bulkResults.some(isUnconfirmedISBNRow)) return;
     setBulkDragging(false);
     const dropped = e.dataTransfer.files[0];
     if (dropped) { setBulkFile(dropped); setBulkResults([]); setImportSummary(null); }
   };
 
   const handleBulkFileChange = (e) => {
-    if (importing || bulkResults.some(row => row.requestId && !row.imported && !row.skipped)) return;
+    if (bulkRunning || importing || bulkResults.some(isUnconfirmedISBNRow)) return;
     const f = e.target.files[0];
     if (f) { setBulkFile(f); setBulkResults([]); setImportSummary(null); }
   };
@@ -335,6 +336,7 @@ export default function LibAddBook() {
   };
 
   const toggleSelect = (isbn) => {
+    if (bulkRunning || importing) return;
     setSelected((prev) => {
       const next = new Set(prev);
       next.has(isbn) ? next.delete(isbn) : next.add(isbn);
@@ -343,16 +345,38 @@ export default function LibAddBook() {
   };
 
   const toggleAll = () => {
-    const found = bulkResults.filter((r) => r.status === 'found' && !r.imported && !r.skipped).map((r) => r.isbn);
-    if (found.every((isbn) => selected.has(isbn))) {
+    if (bulkRunning || importing) return;
+    const all = bulkResults.map(row => row.isbn);
+    if (all.every((isbn) => selected.has(isbn))) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(found));
+      setSelected(new Set(all));
     }
   };
 
+  const clearBulkResults = (isbns, done = false) => {
+    if (bulkRunning || importing) return;
+    try {
+      const remaining = removeISBNResults(bulkResults, isbns);
+      setBulkResults(remaining);
+      setSelected(previous => new Set([...previous].filter(isbn => !isbns.has(isbn))));
+      setImportSummary(null);
+      setFormError('');
+      if (done || remaining.length === 0) {
+        setBulkFile(null);
+        setBulkText('');
+        setBulkCopies('1');
+        setBulkProgress(null);
+        setBulkLookupError('');
+        setBulkDragging(false);
+        bulkTextRef.current?.focus({ preventScroll: true });
+        bulkTextRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } catch (error) { setFormError(errorMessage(error)); }
+  };
+
   const handleBulkImport = async () => {
-    if (importing) return;
+    if (bulkRunning || importing) return;
     const toImport = bulkResults.filter((r) => r.status === 'found' && !r.imported && !r.skipped && selected.has(r.isbn));
     if (toImport.length === 0) return;
     setImporting(true);
@@ -449,6 +473,10 @@ export default function LibAddBook() {
   const foundCount    = bulkResults.filter((r) => r.status === 'found').length;
   const notFoundCount = bulkResults.filter((r) => r.status === 'not_found').length;
   const canLookup = (bulkFile || bulkText.trim()) && !bulkResults.some(row => row.requestId && !row.imported && !row.skipped);
+  const bulkBusy = bulkRunning || importing;
+  const hasUnconfirmedRows = bulkResults.some(isUnconfirmedISBNRow);
+  const selectedHasUnconfirmedRows = bulkResults.some(row => selected.has(row.isbn) && isUnconfirmedISBNRow(row));
+  const selectedImportCount = bulkResults.filter(row => selected.has(row.isbn) && row.status === 'found' && !row.imported && !row.skipped).length;
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
@@ -745,6 +773,7 @@ export default function LibAddBook() {
                 <p className="text-sm font-semibold tracking-normal text-muted mb-1">Option 2 — Paste ISBNs</p>
                 <p className="text-sm text-muted mb-3">One ISBN per line (or comma-separated). Dashes and spaces are ignored.</p>
                 <textarea
+                  ref={bulkTextRef}
                   value={bulkText}
                   onChange={(e) => setBulkText(e.target.value)}
                   rows={5}
@@ -786,7 +815,7 @@ export default function LibAddBook() {
 
             {/* Results */}
             {bulkResults.length > 0 && (
-              <div className="bg-panel border border-line rounded-xl p-8 shadow-sm space-y-5">
+              <div className="bg-panel border border-line rounded-xl p-4 sm:p-8 shadow-sm space-y-5">
 
                 {/* Summary bar */}
                 <div className="flex flex-wrap items-center gap-3">
@@ -801,14 +830,19 @@ export default function LibAddBook() {
                       {notFoundCount} not found
                     </span>
                   )}
-                  {foundCount > 0 && (
-                    <button onClick={toggleAll}
-                      className="ml-auto text-sm font-semibold tracking-normal text-link hover:underline">
-                      {bulkResults.filter((r) => r.status === 'found').every((r) => selected.has(r.isbn))
-                        ? 'Deselect All' : 'Select All'}
-                    </button>
-                  )}
+                  <button onClick={toggleAll} disabled={bulkBusy}
+                    className="ml-auto text-sm font-semibold tracking-normal text-link hover:underline disabled:opacity-40">
+                    {bulkResults.every((r) => selected.has(r.isbn))
+                      ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <button type="button" onClick={() => clearBulkResults(selected)}
+                    disabled={bulkBusy || !selected.size || selectedHasUnconfirmedRows}
+                    className="flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-danger disabled:opacity-40">
+                    <Trash2 size={14} /> Delete selected ({selected.size})
+                  </button>
                 </div>
+                <p className="text-sm text-muted">Delete removes lookup results from this list. Books already added to the catalog stay saved.</p>
+                {hasUnconfirmedRows && <p role="status" className="text-sm text-warning">Some import outcomes are unconfirmed. Select those rows and retry adding them before using Delete or Done to clear them.</p>}
 
                 {/* Result rows */}
                 <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
@@ -823,12 +857,8 @@ export default function LibAddBook() {
                       }`}
                     >
                       {/* Checkbox */}
-                      {row.status === 'found' && !row.imported && !row.skipped ? (
-                        <input type="checkbox" disabled={importing} checked={selected.has(row.isbn)} onChange={() => toggleSelect(row.isbn)}
-                          className="w-4 h-4 rounded accent-blue-600 flex-shrink-0 cursor-pointer" />
-                      ) : (
-                        <div className="w-4 h-4 flex-shrink-0" />
-                      )}
+                      <input type="checkbox" aria-label={`Select ISBN ${row.isbn}`} disabled={bulkBusy} checked={selected.has(row.isbn)} onChange={() => toggleSelect(row.isbn)}
+                        className="w-4 h-4 rounded accent-blue-600 flex-shrink-0 cursor-pointer" />
 
                       {/* Cover */}
                       {row.status === 'found' && row.data?.cover_url ? (
@@ -859,7 +889,7 @@ export default function LibAddBook() {
                         ) : (
                           <p className="text-sm font-bold text-danger">Not found</p>
                         )}
-                        <p className="text-sm font-sans text-muted mt-0.5">{row.isbn}</p>
+                        <p className="text-sm font-sans text-muted mt-0.5 break-all">{row.isbn}</p>
                         {row.imported && <p className="text-sm text-success">Imported — book #{row.bookId}</p>}
                         {row.importError && (
                           <p className="text-sm font-bold text-danger mt-0.5">{row.importError}</p>
@@ -867,11 +897,19 @@ export default function LibAddBook() {
                       </div>
 
                       {/* Status icon */}
-                      {row.importError
-                        ? <AlertCircle size={15} className="text-danger flex-shrink-0" />
-                        : row.status === 'found'
-                          ? <CheckCircle2 size={15} className="text-success flex-shrink-0" />
-                          : <AlertCircle size={15} className="text-danger flex-shrink-0" />}
+                      <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                        {row.importError
+                          ? <AlertCircle size={15} className="text-danger flex-shrink-0" />
+                          : row.status === 'found'
+                            ? <CheckCircle2 size={15} className="text-success flex-shrink-0" />
+                            : <AlertCircle size={15} className="text-danger flex-shrink-0" />}
+                        <button type="button" aria-label={`Delete ISBN ${row.isbn} from results`}
+                          onClick={() => clearBulkResults(new Set([row.isbn]))}
+                          disabled={bulkBusy || isUnconfirmedISBNRow(row)}
+                          className="rounded-lg p-2 text-danger hover:bg-danger-soft disabled:opacity-40">
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -902,7 +940,7 @@ export default function LibAddBook() {
                         )}
                       </div>
                     )}
-                    <div className="flex gap-3 items-center">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
                       <div className="flex-shrink-0">
                         <label className="block text-sm font-semibold tracking-normal text-muted mb-1">Copies each</label>
                         <input aria-label="Copies each" type="number" min="1" value={bulkCopies} onChange={(e) => setBulkCopies(e.target.value)}
@@ -910,15 +948,23 @@ export default function LibAddBook() {
                       </div>
                       <button
                         onClick={handleBulkImport}
-                        disabled={importing || selected.size === 0}
+                        disabled={bulkBusy || selectedImportCount === 0}
                         className="flex-1 py-3 bg-action hover:bg-action-hover disabled:opacity-50 text-white rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-2"
                       >
                         {importing ? <RefreshCw size={14} className="animate-spin" /> : <PlusSquare size={14} />}
-                        {importing ? 'Adding to catalog…' : `Add ${selected.size} Selected Book${selected.size !== 1 ? 's' : ''} to Catalog`}
+                        {importing ? 'Adding to catalog…' : `Add ${selectedImportCount} Selected Book${selectedImportCount !== 1 ? 's' : ''} to Catalog`}
                       </button>
                     </div>
                   </div>
                 )}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+                  <p className="text-sm text-muted">Done clears this batch and prepares the next ISBN lookup.</p>
+                  <button type="button" disabled={bulkBusy || hasUnconfirmedRows}
+                    onClick={() => clearBulkResults(new Set(bulkResults.map(row => row.isbn)), true)}
+                    className="rounded-lg bg-action px-5 py-3 text-sm font-semibold text-white hover:bg-action-hover disabled:opacity-40">
+                    Done
+                  </button>
+                </div>
               </div>
             )}
           </div>

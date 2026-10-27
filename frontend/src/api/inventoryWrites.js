@@ -34,6 +34,18 @@ export function saveJournal(slot, value, storage = localStorage) {
   storage.setItem(journalKey(storage), JSON.stringify(journal));
 }
 
+export const isUnconfirmedISBNRow = row => Boolean(row.requestId && !row.imported && !row.skipped);
+
+export function removeISBNResults(rows, isbns, storage = localStorage) {
+  if (rows.some(row => isbns.has(row.isbn) && isUnconfirmedISBNRow(row))) {
+    throw new Error('Resolve the unconfirmed imports before clearing their results. Select those rows and retry adding them to check the saved outcome.');
+  }
+  const remaining = rows.filter(row => !isbns.has(row.isbn));
+  // Persist first so a storage failure cannot hide recovery data from the UI.
+  saveJournal('rows', remaining, storage);
+  return remaining;
+}
+
 export async function reconcileWrite(requestId, lookup, send) {
   try {
     const response = await lookup(requestId);
