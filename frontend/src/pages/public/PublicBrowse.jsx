@@ -24,7 +24,7 @@ const PublicBrowse = () => {
   const [animKey, setAnimKey] = useState(0);
   const touchStartX = useRef(null);
 
-  const listing = useServerPage('/api/books', { search: searchQuery, category: activeCategory === 'All' ? '' : activeCategory });
+  const listing = useServerPage('/api/books', { search: searchQuery, category: activeCategory === 'All' ? '' : activeCategory }, null, 100);
   const { items: books, loading } = listing;
   const filtered = books;
 
@@ -151,6 +151,7 @@ const PublicBrowse = () => {
             )}
           </>
         )}
+        <PageControls {...listing} />
       </div>
 
       {/* ── BOOK DETAIL MODAL ── */}

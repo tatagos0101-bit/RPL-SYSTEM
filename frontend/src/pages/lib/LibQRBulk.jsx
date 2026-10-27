@@ -10,7 +10,7 @@ export default function LibQRBulk() {
   const [selected, setSelected] = useState(new Set());
   const [downloading, setDownloading] = useState(null);
 
-  const listing = useServerPage('/api/inventory/book-copies', { search }, '/api/inventory/book-copies/count');
+  const listing = useServerPage('/api/inventory/book-copies', { search }, '/api/inventory/book-copies/count', 100);
   const { items: filtered, loading } = listing;
   const [downloadError, setDownloadError] = useState('');
   const [exportProgress, setExportProgress] = useState('');
@@ -180,6 +180,7 @@ export default function LibQRBulk() {
             )}
           </div>
         )}
+        <PageControls {...listing} />
       </div>
     </div>
   );

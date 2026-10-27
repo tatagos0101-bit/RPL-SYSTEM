@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import client from './client';
 
-export default function useServerPage(path, filters = {}, countPath = null) {
+export default function useServerPage(path, filters = {}, countPath = null, pageSize = 20) {
   const key = JSON.stringify(filters);
   const [pagination, setPagination] = useState({ key, page: 0 });
   const page = pagination.key === key ? pagination.page : 0;
@@ -17,12 +17,12 @@ export default function useServerPage(path, filters = {}, countPath = null) {
       try {
         const params = JSON.parse(key);
         const [rows, counts] = await Promise.all([
-          client.get(path, { params: { ...params, skip: page * 20, limit: 20 } }),
+          client.get(path, { params: { ...params, skip: page * pageSize, limit: pageSize } }),
           countPath ? client.get(countPath, { params }) : Promise.resolve(null),
         ]);
         if (!cancelled) {
           const total = counts?.data.total ?? rows.data.total;
-          const lastPage = Math.max(0, Math.ceil(total / 20) - 1);
+          const lastPage = Math.max(0, Math.ceil(total / pageSize) - 1);
           if (page > lastPage) {
             setPagination({ key, page: lastPage });
           } else {
@@ -35,6 +35,6 @@ export default function useServerPage(path, filters = {}, countPath = null) {
       }
     }, 200);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [path, countPath, key, page, version]);
-  return { ...state, page, setPage, setItems, reload };
+  }, [path, countPath, key, page, pageSize, version]);
+  return { ...state, page, pageSize, setPage, setItems, reload };
 }
