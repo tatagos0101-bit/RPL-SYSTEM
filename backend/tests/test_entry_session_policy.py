@@ -102,3 +102,21 @@ def test_scan_two_minutes_after_time_out_starts_new_visit(db_session):
     assert log.time_out is None
     assert db_session.query(EntryLog).filter(EntryLog.user_id == user.id).count() == 2
 
+
+
+def test_distinct_encounters_close_short_visit_and_preserve_completed_times(db_session):
+    user = _member(db_session)
+    start = datetime(2026, 7, 1, 8, 0, 0)
+    first, action = record_entry_scan(db_session, user, seen_at=start, distinct_encounter=True)
+    assert action == "time_in"
+    end = start + timedelta(seconds=12)
+    closed, action = record_entry_scan(db_session, user, seen_at=end, distinct_encounter=True)
+    assert action == "time_out"
+    assert closed.id == first.id
+    assert closed.accessed_at == start
+    assert closed.time_out == end
+    next_visit, action = record_entry_scan(db_session, user, seen_at=end + timedelta(seconds=10), distinct_encounter=True)
+    assert action == "time_in"
+    assert next_visit.id != closed.id
+    assert closed.time_out == end
+    assert db_session.query(EntryLog).count() == 2

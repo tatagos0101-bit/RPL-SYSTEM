@@ -63,8 +63,9 @@ def test_rotation_rejects_old_and_environment_pins_before_face_processing(client
     assert scan_logs(client, REPLACEMENT).status_code == 200
     assert not client.cookies.get("rpl_auth")
     # The new PIN reaches the existing token-free kiosk processing path.
-    def process(request, response, image, db, issue_token):
+    def process(request, response, image, db, issue_token, present_user_ids=None):
         assert issue_token is False
+        assert present_user_ids is None
         return {"matched": False, "message": "no_face"}
     monkeypatch.setattr("routers.auth.process_entry_face", process)
     response = client.post("/api/kiosk/face", json={

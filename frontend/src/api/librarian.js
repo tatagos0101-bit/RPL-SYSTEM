@@ -132,3 +132,14 @@ export const getMemberReservations = (userId) =>
 
 export const getMemberActiveLoans = (userId) =>
   client.get(`/api/librarian/member/${userId}/active-loans`);
+
+
+export const suggestBookCategory = (labels) =>
+  client.post('/api/inventory/category-suggestion', {
+    labels: labels.filter((label) => typeof label === 'string').slice(0, 100).map((label) => label.slice(0, 1000)),
+  });
+
+export const getCategoryReview = (skip = 0) => client.get('/api/inventory/category-review', { params: { skip, limit: 100 } });
+export const getCategoryMasters = () => client.get('/api/inventory/category-masters');
+export const resolveCategoryReview = (rawLabel, masterCategory) =>
+  client.post('/api/inventory/category-review/resolve', { raw_api_label: rawLabel, master_category: masterCategory });

@@ -31,6 +31,7 @@ HEADER_MAP = {
     "author":     "author",
     "category":   "category",
     "genre":      "category",
+    "category/genre": "category",
     "year":       "year",
     "isbn":       "isbn",
     "copies":     "copies_total",
@@ -107,7 +108,7 @@ def parse_excel(file_bytes: bytes) -> list[dict]:
         books.append({
             "title":            title,
             "author":           author,
-            "category":         cell(row, "category", max_length=100) or "General",
+            "category":         cell(row, "category", max_length=1000) or "General",
             "year":             year,
             "isbn":             isbn,
             "copies_total":     copies,

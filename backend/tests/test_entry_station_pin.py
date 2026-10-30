@@ -153,6 +153,24 @@ def test_kiosk_face_returns_multiple_faces_and_logs_recognized_members(client, d
     assert {log.user_id for log in logs} == {ana.id, ben.id}
     assert all(log.time_out is None for log in logs)
 
+    # Current kiosk sends the IDs still visible: repeated frames must not toggle.
+    payload = {
+        "station_pin": "1234",
+        "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD",
+        "present_user_ids": [ana.id, ben.id],
+    }
+    repeated = client.post("/api/kiosk/face", json=payload)
+    assert repeated.status_code == 200
+    assert all(face["session_action"] == "seen_in_frame" for face in repeated.json()["faces"] if face["matched"])
+    payload["present_user_ids"] = []
+    exited = client.post("/api/kiosk/face", json=payload)
+    assert exited.status_code == 200
+    assert all(face["session_action"] == "time_out" for face in exited.json()["faces"] if face["matched"])
+    assert exited.json().get("token") is None
+    db_session.expire_all()
+    assert all(log.time_out is not None for log in logs)
+
+
 
 def test_kiosk_face_attempts_recognition_even_when_liveness_says_too_far(client, db_session, monkeypatch):
     import services.face_service as face_service

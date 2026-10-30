@@ -1,8 +1,9 @@
 """Additive schema upgrades compiled for the database's actual SQL dialect."""
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, false, inspect, text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, false, true, inspect, text
 from sqlalchemy.schema import CreateColumn
 
 ADDITIONS = {
+    "books": [("category_override", String(80), None), ("raw_api_label", String(1000), None), ("is_hidden", Boolean, true())],
     "entry_logs": [("time_out", DateTime(timezone=True), None)],
     "notifications": [("user_id", Integer, None)],
     "users": [

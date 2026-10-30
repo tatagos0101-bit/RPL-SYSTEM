@@ -4,8 +4,9 @@ import {
   PlusSquare, Upload, FileText, CheckCircle2, AlertCircle,
   X, RefreshCw, Search, List, ImagePlus,
 } from 'lucide-react';
-import { addBook, bulkUpload, uploadBookCover } from '../../api/librarian';
+import { addBook, bulkUpload, uploadBookCover, suggestBookCategory } from '../../api/librarian';
 import { getCategories } from '../../api/books';
+import CategoryReview from '../../components/CategoryReview';
 
 // ── Shared ISBN fetcher ────────────────────────────────────────────────────────
 async function fetchBookByISBN(isbn) {
@@ -17,15 +18,8 @@ async function fetchBookByISBN(isbn) {
       const info = gbData.items[0].volumeInfo;
       const thumbnail = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || '';
 
-      // Try every category segment Google Books returns to find the best label
-      let category = '';
-      if (info.categories?.length) {
-        const segments = info.categories.flatMap((c) =>
-          c.split(/[/&]/).map((s) => s.trim()).filter(Boolean)
-        );
-        // Prefer a segment that looks like a genre (longer, not all-caps abbreviation)
-        category = segments.find((s) => s.length > 3) || segments[0] || '';
-      }
+      const suggestion = await suggestBookCategory(info.categories || []);
+      const category = suggestion.data.raw_api_label;
 
       return {
         title:     info.title || '',
@@ -46,9 +40,9 @@ async function fetchBookByISBN(isbn) {
     if (olData[key]) {
       const info = olData[key];
       const cover = info.cover?.large || info.cover?.medium || info.cover?.small || '';
-      // Open Library subjects can be verbose — take the shortest clean one
-      const subjects = (info.subjects || []).map((s) => s.name || s).filter(Boolean);
-      const category = subjects.sort((a, b) => a.length - b.length)[0] || '';
+      const subjects = (info.subjects || []).map((subject) => subject.name || subject).filter(Boolean);
+      const suggestion = await suggestBookCategory(subjects);
+      const category = suggestion.data.raw_api_label;
       return {
         title:     info.title || '',
         author:    info.authors ? info.authors.map((a) => a.name).join(', ') : '',
@@ -66,8 +60,6 @@ function matchCategory(raw, categories) {
   if (!raw) return { matched: '', isNew: false };
   const exact   = categories.find((c) => c.toLowerCase() === raw.toLowerCase());
   if (exact) return { matched: exact, isNew: false };
-  const partial = categories.find((c) => raw.toLowerCase().includes(c.toLowerCase()));
-  if (partial) return { matched: partial, isNew: false };
   return { matched: raw, isNew: true };
 }
 
@@ -212,7 +204,7 @@ export default function LibAddBook() {
     if (!a) return setFormError('Author is required.');
     if (a.length > 200) return setFormError('Author must be at most 200 characters.');
     if (!c) return setFormError('Category is required.');
-    if (c.length > 100) return setFormError('Category must be at most 100 characters.');
+    if (c.length > 1000) return setFormError('Category must be at most 1000 characters.');
     if (form.year) {
       const yr = parseInt(form.year);
       if (isNaN(yr) || yr < 1000 || yr > 2200) return setFormError('Year must be between 1000 and 2200.');
@@ -310,7 +302,7 @@ export default function LibAddBook() {
       const isbn = isbns[i];
       try {
         const data = await fetchBookByISBN(isbn);
-        results.push({ isbn, status: 'found', data: { ...data, category: matchCategory(data.category, categories) } });
+        results.push({ isbn, status: 'found', data: { ...data, category: data.category } });
       } catch {
         results.push({ isbn, status: 'not_found', data: null });
       }
@@ -354,7 +346,7 @@ export default function LibAddBook() {
         await addBook({
           title:          (row.data.title  || 'Unknown Title').slice(0, 255),
           author:         (row.data.author || 'Unknown Author').slice(0, 180),
-          category:       (row.data.category || categories[0] || 'General').slice(0, 80),
+          category:       (row.data.category || 'General').slice(0, 1000),
           year:           row.data.year ? parseInt(row.data.year) : null,
           isbn:           row.isbn,
           copies_total:   parseInt(bulkCopies) || 1,
@@ -435,6 +427,8 @@ export default function LibAddBook() {
             Add a single book, bulk-search by ISBN, or import via file upload.
           </p>
         </div>
+
+        <CategoryReview />
 
         {/* Mode Toggle */}
         <div className="animate-fade-in-up delay-100 flex flex-wrap gap-1 bg-panel border border-line p-1.5 rounded-xl mb-7 w-fit shadow-sm">
@@ -554,12 +548,12 @@ export default function LibAddBook() {
                           onChange={handleFormChange}
                           placeholder="Type a new category…"
                           required
-                          maxLength={100}
+                          maxLength={1000}
                           className="w-full bg-subtle border border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted"
                         />
                         {form.category && (
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold tracking-normal text-success">
-                            New
+                            Review
                           </span>
                         )}
                       </div>

@@ -20,11 +20,14 @@ def record_entry_scan(
     user: User,
     *,
     seen_at: datetime | None = None,
+    distinct_encounter: bool = False,
 ) -> tuple[EntryLog, str]:
     """
     Record one recognized entrance-station sighting.
 
-    Rules:
+    Updated kiosk clients supply distinct encounters after presence debouncing.
+    Each encounter toggles in/out; completed timestamps are immutable.
+    Legacy clients and login retain the following timed rules:
     - First scan creates time_in.
     - Repeated scan before 5 minutes keeps the member inside.
     - Scan after 5 minutes sets time_out.
@@ -32,6 +35,9 @@ def record_entry_scan(
     - Scan 2+ minutes after time_out starts a new visit.
     """
     seen_at = _naive_ph(seen_at or now_ph())
+
+    # Serialize attendance changes for a member on PostgreSQL.
+    db.query(User).filter(User.id == user.id).with_for_update().first()
 
     latest = (
         db.query(EntryLog)
@@ -55,7 +61,7 @@ def record_entry_scan(
 
     if latest.time_out is None:
         age_seconds = (seen_at - _naive_ph(latest.accessed_at)).total_seconds()
-        if age_seconds < ENTRY_MIN_VISIT_SECONDS:
+        if not distinct_encounter and age_seconds < ENTRY_MIN_VISIT_SECONDS:
             return latest, "still_inside"
 
         latest.time_out = seen_at
@@ -63,7 +69,7 @@ def record_entry_scan(
         return latest, "time_out"
 
     gap_seconds = (seen_at - _naive_ph(latest.time_out)).total_seconds()
-    if gap_seconds < ENTRY_REENTRY_GAP_SECONDS:
+    if not distinct_encounter and gap_seconds < ENTRY_REENTRY_GAP_SECONDS:
         latest.time_out = seen_at
         db.flush()
         return latest, "time_out_updated"
