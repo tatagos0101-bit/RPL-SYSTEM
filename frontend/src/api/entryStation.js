@@ -19,9 +19,9 @@ export const getEntryStationLogs = (stationPin, limit = 30) =>
     headers: { 'X-Entry-Station-Pin': stationPin },
   });
 
-export const entryStationFaceAuth = (imageBase64, stationPin) =>
+export const entryStationFaceAuth = (imageBase64, stationPin, presentUserIds = []) =>
   client.post(
     '/api/kiosk/face',
-    { image: imageBase64, station_pin: stationPin },
+    { image: imageBase64, station_pin: stationPin, present_user_ids: presentUserIds },
     { timeout: 30000 },
   );

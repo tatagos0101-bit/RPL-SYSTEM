@@ -419,6 +419,7 @@ def process_entry_face(
     db: Session,
     issue_token: bool = True,
     expected_role: Optional[str] = None,
+    present_user_ids: list[int] | None = None,
 ) -> FaceAuthResponse:
     """
     Entrance-station face processing.
@@ -538,10 +539,13 @@ def process_entry_face(
 
         if issue_token:
             session_action = 'authenticated'
-        elif matched_user.id in recorded_user_ids:
+        elif matched_user.id in recorded_user_ids or matched_user.id in (present_user_ids or []):
             session_action = "seen_in_frame"
         else:
-            _, session_action = record_entry_scan(db, matched_user, seen_at=now)
+            _, session_action = record_entry_scan(
+                db, matched_user, seen_at=now,
+                distinct_encounter=not issue_token and present_user_ids is not None,
+            )
             recorded_user_ids.add(matched_user.id)
 
         member_id = matched_user.member_id or f"RPL-{matched_user.id:05d}"

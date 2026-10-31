@@ -31,6 +31,7 @@ HEADER_MAP = {
     "author":     "author",
     "category":   "category",
     "genre":      "category",
+    "category/genre": "category",
     "year":       "year",
     "isbn":       "isbn",
     "copies":     "copies_total",

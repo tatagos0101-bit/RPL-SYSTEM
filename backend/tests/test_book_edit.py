@@ -33,9 +33,10 @@ def test_edit_changes_metadata_and_can_clear_optional_fields(client,db_session,i
     })
     assert response.status_code==200
     data=response.json()
-    assert (data["title"],data["author"],data["category"])==("Updated title","Updated author","Science")
+    assert (data["title"],data["author"],data["category"])==("Updated title","Updated author","General")
     assert all(data[field] is None for field in ("year","isbn","location_shelf","cover_url"))
     db_session.expire_all()
+    assert db_session.get(Book,book.id).raw_api_label == "Science"
     assert [(c.id,c.qr_code) for c in db_session.get(Book,book.id).copies]==qr_ids
 
 
@@ -99,7 +100,7 @@ def test_members_cannot_edit_and_available_counts_cannot_be_forged(client,invent
     assert client.put(f"/api/inventory/books/{book.id}",headers=headers,json={"title":None}).status_code==422
 
 
-@pytest.mark.parametrize("field,limit",[("title",255),("author",180),("category",80),("location_shelf",80)])
+@pytest.mark.parametrize("field,limit",[("title",255),("author",180),("category",1000),("location_shelf",80)])
 def test_edit_lengths_match_postgres_columns(client,inventory,field,limit):
     book,member,headers=inventory
     assert client.put(f"/api/inventory/books/{book.id}",headers=headers,json={field:"X"*(limit+1)}).status_code==422

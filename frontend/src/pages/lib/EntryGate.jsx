@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getStoredAuth, homeForRole } from '../../api/authRoutes';
-import { parseApiDateTime } from '../../api/dateTime';
+import { attendanceElapsed, attendanceTimestamp, updatePresence } from '../../api/entryAttendance';
 import { faceBoxToStyle, summarizeFaceResults } from '../../api/entryFaceOverlay';
 import {
   ENTRY_SCAN_INTERVAL_MS, ENTRY_LOG_MIN_INTERVAL_MS, entryStationRetryDelay,
@@ -40,6 +40,7 @@ const EntryGate = () => {
     const { isLoggedIn, role } = getStoredAuth();
     navigate(isLoggedIn ? homeForRole(role) : '/', { replace: true });
   };
+  const presenceRef = useRef({});
   const webcamRef    = useRef(null);
   const pollRef      = useRef(null);       // setInterval handle
   const isPendingRef = useRef(false);      // true while a face-scan request is in flight
@@ -141,8 +142,10 @@ const EntryGate = () => {
     isPendingRef.current = true;
     nextAllowedRef.current = startedAt + POLL_INTERVAL;
     try {
-      const { data } = await entryStationFaceAuth(frame, stationPin);
+      const { data } = await entryStationFaceAuth(frame, stationPin, Object.keys(presenceRef.current).map(Number));
       setScanError(false);
+
+      if (data.message === 'no_face') presenceRef.current = updatePresence(presenceRef.current, []);
 
       if (isQuietWalkThroughMessage(data.message)) {
         unknownStreakRef.current = 0;
@@ -162,6 +165,7 @@ const EntryGate = () => {
 
       const ts = Date.now();
       const faces = summarizeFaceResults(data);
+      if (faces.length) presenceRef.current = updatePresence(presenceRef.current, faces);
 
       if (faces.length > 0) {
         unknownStreakRef.current = 0;
@@ -266,10 +270,6 @@ const EntryGate = () => {
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
-  const toLocalDate = (str) => parseApiDateTime(str);
-  const fmtTime = (iso) =>
-    toLocalDate(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
   const isInside = (log) => Boolean(log.is_inside);
 
   const fmtDate = (d) =>
@@ -525,7 +525,7 @@ const EntryGate = () => {
           </div>
 
           {/* Column headers */}
-          <div className="grid grid-cols-[1fr_80px_80px] px-5 py-2 border-b border-line shrink-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] px-5 py-2 border-b border-line shrink-0">
             <span className="text-sm font-semibold tracking-normal text-muted">Member</span>
             <span className="text-sm font-semibold tracking-normal text-muted flex items-center gap-1">
               <LogIn size={8} /> In
@@ -550,7 +550,7 @@ const EntryGate = () => {
               recentEntries.map((log) => (
                 <div
                   key={log.id}
-                  className={`grid grid-cols-[1fr_80px_80px] items-center px-5 py-2.5 border-b border-line hover:bg-panel transition-colors ${
+                  className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-center px-5 py-2.5 border-b border-line hover:bg-panel transition-colors ${
                     !log.granted ? 'opacity-40' : ''
                   }`}
                 >
@@ -568,17 +568,17 @@ const EntryGate = () => {
 
                   {/* Time In */}
                   <span className="text-sm font-semibold tabular-nums text-link leading-tight">
-                    {fmtTime(log.accessed_at)}
+                    {isInside(log) ? 'Inside' : attendanceTimestamp(log.accessed_at)}
                   </span>
 
                   {/* Time Out */}
                   {!isInside(log) && log.time_out ? (
                     <span className="text-sm font-semibold tabular-nums text-warning leading-tight">
-                      {fmtTime(log.time_out)}
+                      {attendanceTimestamp(log.time_out)}
                     </span>
                   ) : isInside(log) ? (
                     <span className="text-sm font-semibold text-muted tracking-normal leading-tight">
-                      Inside
+                      {attendanceElapsed(log.accessed_at, now.getTime())}
                     </span>
                   ) : (
                     <span className="text-sm font-semibold text-ink tracking-normal leading-tight">
@@ -593,7 +593,7 @@ const EntryGate = () => {
           {/* Footer */}
           <div className="px-5 py-3 border-t border-line shrink-0">
             <p className="text-sm font-semibold tracking-normal text-ink">
-              Auto-refreshes every {LOG_REFRESH_MS / 1000}s · Time In = first scan · Time Out = last scan
+              Auto-refreshes every {LOG_REFRESH_MS / 1000}s · First appearance = In · Return appearance = Out · Philippine time
             </p>
           </div>
         </div>

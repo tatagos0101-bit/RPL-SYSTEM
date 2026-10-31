@@ -3,10 +3,11 @@ import {
   PlusSquare, Upload, FileText, CheckCircle2, AlertCircle,
   X, RefreshCw, Search, List, ImagePlus, Trash2,
 } from 'lucide-react';
-import { addBook, bulkUpload, uploadBookCover, getInventoryWrite } from '../../api/librarian';
+import { addBook, bulkUpload, uploadBookCover, getInventoryWrite, suggestBookCategory } from '../../api/librarian';
 import { getCategories } from '../../api/books';
+import CategoryReview from '../../components/CategoryReview';
 import { extractISBNsFromFile, normalizeISBN, isISBN } from '../../api/isbnFiles';
-import { errorMessage, matchCategory, readJournal, saveJournal, reconcileWrite, isDefiniteRejection, sha256, isUnconfirmedISBNRow, removeISBNResults } from '../../api/inventoryWrites';
+import { errorMessage, readJournal, saveJournal, reconcileWrite, isDefiniteRejection, sha256, isUnconfirmedISBNRow, removeISBNResults } from '../../api/inventoryWrites';
 
 // ── Shared ISBN fetcher ────────────────────────────────────────────────────────
 async function fetchBookByISBN(isbn) {
@@ -18,15 +19,8 @@ async function fetchBookByISBN(isbn) {
       const info = gbData.items[0].volumeInfo;
       const thumbnail = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || '';
 
-      // Try every category segment Google Books returns to find the best label
-      let category = '';
-      if (info.categories?.length) {
-        const segments = info.categories.flatMap((c) =>
-          c.split(/[/&]/).map((s) => s.trim()).filter(Boolean)
-        );
-        // Prefer a segment that looks like a genre (longer, not all-caps abbreviation)
-        category = segments.find((s) => s.length > 3) || segments[0] || '';
-      }
+      const suggestion = await suggestBookCategory(info.categories || []);
+      const category = suggestion.data.raw_api_label;
 
       return {
         title:     info.title || '',
@@ -47,9 +41,9 @@ async function fetchBookByISBN(isbn) {
     if (olData[key]) {
       const info = olData[key];
       const cover = info.cover?.large || info.cover?.medium || info.cover?.small || '';
-      // Open Library subjects can be verbose — take the shortest clean one
-      const subjects = (info.subjects || []).map((s) => s.name || s).filter(Boolean);
-      const category = subjects.sort((a, b) => a.length - b.length)[0] || '';
+      const subjects = (info.subjects || []).map((subject) => subject.name || subject).filter(Boolean);
+      const suggestion = await suggestBookCategory(subjects);
+      const category = suggestion.data.raw_api_label;
       return {
         title:     info.title || '',
         author:    info.authors ? info.authors.map((a) => a.name).join(', ') : '',
@@ -165,7 +159,7 @@ export default function LibAddBook() {
     setLookupSuccess(false);
     try {
       const data = await fetchBookByISBN(cleanIsbn);
-      const { matched, isNew } = matchCategory(data.category, categories);
+      const { matched, isNew } = { matched: data.category, isNew: !categories.includes(data.category) };
       setForm((prev) => ({
         ...prev,
         isbn:      isbnInput.trim(),
@@ -227,7 +221,7 @@ export default function LibAddBook() {
     if (!a) return setFormError('Author is required.');
     if (a.length > 180) return setFormError('Author must be at most 180 characters.');
     if (!c) return setFormError('Category is required.');
-    if (c.length > 80) return setFormError('Category must be at most 80 characters.');
+    if (c.length > 1000) return setFormError('Category must be at most 1000 characters.');
     if (form.year) {
       const yr = parseInt(form.year);
       if (isNaN(yr) || yr < 1000 || yr > 2200) return setFormError('Year must be between 1000 and 2200.');
@@ -318,7 +312,7 @@ export default function LibAddBook() {
       const isbn = isbns[i];
       try {
         const data = await fetchBookByISBN(isbn);
-        results.push({ isbn, status: 'found', data: { ...data, category: matchCategory(data.category, categories).matched } });
+        results.push({ isbn, status: 'found', data: { ...data, category: data.category } });
       } catch {
         results.push({ isbn, status: 'not_found', data: null });
       }
@@ -393,7 +387,7 @@ export default function LibAddBook() {
         row.payload ||= {
           title: (row.data.title || 'Unknown Title').slice(0, 255),
           author: (row.data.author || 'Unknown Author').slice(0, 180),
-          category: (row.data.category || categories[0] || 'General').slice(0, 80),
+          category: (row.data.category || 'General').slice(0, 1000),
           year: row.data.year ? parseInt(row.data.year) : null,
           isbn: row.isbn, copies_total: parseInt(bulkCopies) || 1,
           cover_url: row.data.cover_url ? row.data.cover_url.slice(0, 500) : null,
@@ -501,6 +495,8 @@ export default function LibAddBook() {
             Add a single book, bulk-search by ISBN, or import via file upload.
           </p>
         </div>
+
+        <CategoryReview />
 
         {/* Mode Toggle */}
         <div className="animate-fade-in-up delay-100 flex flex-wrap gap-1 bg-panel border border-line p-1.5 rounded-xl mb-7 w-fit shadow-sm">
@@ -631,12 +627,12 @@ export default function LibAddBook() {
                           onChange={handleFormChange}
                           placeholder="Type a new category…"
                           required
-                          maxLength={80}
+                          maxLength={1000}
                           className="w-full bg-subtle border border-line rounded-lg px-4 py-3.5 text-base font-medium outline-none focus:ring-2 focus:ring-line text-ink placeholder:text-muted"
                         />
                         {form.category && (
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold tracking-normal text-success">
-                            New
+                            Review
                           </span>
                         )}
                       </div>

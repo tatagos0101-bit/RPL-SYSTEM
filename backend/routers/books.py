@@ -65,6 +65,7 @@ def list_books(
 def get_categories(request: Request, db: Session = Depends(get_db)):
     rows = (
         db.query(Book.category, func.count(Book.id).label("count"))
+        .filter((Book.is_hidden == False) | (Book.category == "General"))
         .group_by(Book.category)
         .order_by(desc("count"))
         .all()

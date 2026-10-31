@@ -15,6 +15,7 @@ from io import BytesIO
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
+from pydantic import BaseModel, Field
 
 from database import get_db
 from dependencies import require_librarian
@@ -25,6 +26,7 @@ from models.transaction import Transaction
 from models.reservation import Reservation
 from services.reservation_policy import sync_expired_reservations, promote_next_pending_reservation
 from schemas.book import BookCreate, BookUpdate, BookOut, BookCopyLabelOut, BulkUploadResponse, InventoryStats
+from services.category_service import assign_category, category_write_lock, reconcile_categories, MASTER_KEYWORDS, mapped_parent
 from services.qr_service import make_qr_code, generate_qr_png, generate_bulk_pdf
 from services.book_copy_service import copy_label_payload, ensure_book_copies, get_copy_or_404, resize_book_copies
 from services.storage_service import save_upload, delete_upload
@@ -86,6 +88,7 @@ def add_book(
     _:    User    = Depends(require_librarian),
     request_id: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
+    category_write_lock(db)
     digest = fingerprint(body.model_dump(mode="json"))
     saved = find_write(db, _.id, request_id, "create-book", digest)
     if saved:
@@ -98,12 +101,14 @@ def add_book(
         **body.model_dump(),
         copies_available=body.copies_total,
     )
+    assign_category(book, body.category)
     db.add(book)
     db.flush()   # get the auto-increment ID before commit
 
     book.qr_code = make_qr_code(book.id)
     ensure_book_copies(db, book.id, commit=False)
     db.flush()
+    reconcile_categories(db)
     remember_write(db, _.id, request_id, "create-book", digest,
                    BookOut.model_validate(book).model_dump(mode="json"))
     db.commit()
@@ -129,6 +134,7 @@ def update_book(
     db:      Session = Depends(get_db),
     _:       User    = Depends(require_librarian),
 ):
+    category_write_lock(db)
     book = db.query(Book).filter(Book.id == book_id).with_for_update().first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -149,9 +155,14 @@ def update_book(
     promote_next_pending_reservation(db, book_id)
     if "copies_available" in changes and changes["copies_available"] != book.copies_available:
         raise HTTPException(422, "Available copies are calculated from physical copies and active loans.")
+    category_changed = "category" in changes and changes["category"] != book.category
     for field, value in changes.items():
-        if field not in {"copies_total", "copies_available"}:
+        if field not in {"copies_total", "copies_available", "category"}:
             setattr(book, field, value)
+
+    if category_changed:
+        assign_category(book, changes["category"])
+        reconcile_categories(db)
 
     try:
         db.commit()
@@ -171,6 +182,7 @@ def delete_book(
     db:      Session = Depends(get_db),
     _:       User    = Depends(require_librarian),
 ):
+    category_write_lock(db)
     book = db.query(Book).filter(Book.id == book_id).with_for_update().first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -178,6 +190,7 @@ def delete_book(
             or db.query(Reservation.id).filter(Reservation.book_id == book_id).first()):
         raise HTTPException(409, 'Titles with loan or reservation history cannot be deleted.')
     db.delete(book)
+    reconcile_categories(db)
     db.commit()
 
 
@@ -264,6 +277,7 @@ async def bulk_upload(
     except Exception:
         raise HTTPException(status_code=422, detail="Unable to read this workbook. Check its format and column headers.") from None
 
+    category_write_lock(db)
     added   = 0
     skipped = 0
     errors  = []
@@ -279,6 +293,7 @@ async def bulk_upload(
 
             with db.begin_nested():
                 book = Book(**validated, copies_available=validated["copies_total"])
+                assign_category(book, validated["category"])
                 db.add(book)
                 db.flush()
                 book.qr_code = make_qr_code(book.id)
@@ -289,6 +304,7 @@ async def bulk_upload(
             errors.append(f"Row {i}: Unable to import. Check the values and required fields.")
             continue
 
+    reconcile_categories(db)
     result = BulkUploadResponse(added=added, skipped=skipped, errors=errors,
         message=f"{added} books imported, {skipped} skipped (duplicate ISBN), {len(errors)} errors")
     remember_write(db, _.id, request_id, "import-workbook", content_sha256, result.model_dump())
@@ -426,3 +442,62 @@ def bulk_qr_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": "attachment; filename=qr-codes.pdf"},
     )
+
+
+@router.get("/category-review")
+def category_review(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_librarian),
+):
+    rows = (db.query(Book.raw_api_label, func.count(Book.id).label("book_count"))
+            .filter(Book.is_hidden == True, Book.raw_api_label.isnot(None))
+            .group_by(Book.raw_api_label).order_by(Book.raw_api_label)
+            .offset(skip).limit(limit).all())
+    return [{"raw_api_label": row.raw_api_label, "book_count": row.book_count,
+             "is_hidden": True} for row in rows]
+
+
+@router.get("/category-masters")
+def category_masters(_: User = Depends(require_librarian)):
+    return ["General", *MASTER_KEYWORDS]
+
+
+class CategorySuggestionRequest(BaseModel):
+    labels: list[Annotated[str, Field(max_length=1000)]] = Field(max_length=100)
+
+
+@router.post("/category-suggestion")
+def category_suggestion(body: CategorySuggestionRequest, _: User = Depends(require_librarian)):
+    labels = [label.strip() for label in body.labels if label.strip()]
+    # Prefer a specific mapped label over a generic Fiction/General tag.
+    raw = next((label for label in labels if mapped_parent(label) not in (None, "General")),
+               next((label for label in labels if mapped_parent(label) is None), "General"))
+    parent = mapped_parent(raw)
+    return {"raw_api_label": raw, "mapped_category": parent or "General", "is_hidden": parent is None}
+
+
+class CategoryReviewResolution(BaseModel):
+    raw_api_label: str = Field(min_length=1, max_length=1000)
+    master_category: str = Field(max_length=80)
+
+
+@router.post("/category-review/resolve")
+def resolve_category_review(
+    body: CategoryReviewResolution,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_librarian),
+):
+    if body.master_category not in {"General", *MASTER_KEYWORDS}:
+        raise HTTPException(422, "Choose an existing master category.")
+    category_write_lock(db)
+    # Python equality keeps exact-label semantics even on case-insensitive DB collations.
+    books = [book for book in db.query(Book).filter(Book.is_hidden == True).all()
+             if book.raw_api_label == body.raw_api_label]
+    for book in books:
+        book.category_override = body.master_category
+        book.category = body.master_category
+        book.is_hidden = False
+    db.commit()
+    return {"updated": len(books)}

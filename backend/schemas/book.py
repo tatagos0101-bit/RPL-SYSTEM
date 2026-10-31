@@ -43,8 +43,8 @@ class BookBase(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Category cannot be empty")
-        if len(v) > 80:
-            raise ValueError("Category must be at most 80 characters")
+        if len(v) > 1000:
+            raise ValueError("Category must be at most 1000 characters")
         return v
 
     @field_validator("year")
@@ -150,8 +150,8 @@ class BookUpdate(BaseModel):
         v = v.strip()
         if not v:
             raise ValueError("Category cannot be empty")
-        if len(v) > 80:
-            raise ValueError("Category must be at most 80 characters")
+        if len(v) > 1000:
+            raise ValueError("Category must be at most 1000 characters")
         return v
 
     @field_validator("year")

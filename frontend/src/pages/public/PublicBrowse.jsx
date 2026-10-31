@@ -75,7 +75,7 @@ const PublicBrowse = () => {
         </div>
 
         {/* Filters + Search (sticky) */}
-        <div className="flex flex-col lg:flex-row gap-4 mb-12 sticky top-[var(--rpl-header-height)] z-30 bg-panel py-4 -mx-6 md:-mx-12 px-6 md:px-12 border-b border-line">
+        <div className="flex flex-col gap-4 mb-12 sticky top-[var(--rpl-header-height)] z-30 bg-panel py-4 -mx-6 md:-mx-12 px-6 md:px-12 border-b border-line">
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             {categories.map((cat) => (
               <button
@@ -92,14 +92,14 @@ const PublicBrowse = () => {
             ))}
           </div>
 
-          <div className="relative flex-1 group">
+          <div className="relative w-full min-w-0 group">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-ink group-focus-within:text-link transition-colors" size={18} />
             <input
               type="text"
               aria-label="Search by title or author" placeholder="Search by title or author"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-subtle border border-line rounded-lg py-3.5 pl-14 pr-12 outline-none focus:ring-2 focus:ring-line transition-all font-medium text-muted placeholder:text-ink"
+              className="w-full bg-subtle border border-line rounded-lg py-3.5 pl-14 pr-12 outline-none focus:ring-2 focus:ring-line transition-all font-medium text-ink placeholder:text-muted"
             />
             {searchQuery && (
               <button aria-label="Close"

@@ -4,6 +4,7 @@ Entrance station endpoints.
 The entrance station can run without a librarian web session, but it must be
 unlocked with the station PIN before logs or camera scans are available.
 """
+from pydantic import Field
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/api/kiosk", tags=["Entrance Station"])
 
 class EntryStationFaceRequest(FaceAuthRequest):
     station_pin: str
+    present_user_ids: list[int] | None = Field(default=None, max_length=50)
 
 
 def require_station_pin_header(
@@ -41,7 +43,10 @@ def kiosk_face(
     verify_station_pin(db, body.station_pin)
     from routers.auth import process_entry_face
 
-    return process_entry_face(request, response, body.image, db, issue_token=False)
+    return process_entry_face(
+        request, response, body.image, db, issue_token=False,
+        present_user_ids=body.present_user_ids,
+    )
 
 
 @router.get("/entry-logs", response_model=list[EntryLogOut])

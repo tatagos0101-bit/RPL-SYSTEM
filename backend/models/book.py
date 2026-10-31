@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, true
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -11,6 +11,9 @@ class Book(Base):
     title             = Column(String(255), nullable=False, index=True)
     author            = Column(String(180), nullable=False)
     category          = Column(String(80), nullable=False, index=True)
+    category_override = Column(String(80), nullable=True)
+    raw_api_label     = Column(String(1000), nullable=True)
+    is_hidden         = Column(Boolean, nullable=False, default=True, server_default=true())
     year              = Column(Integer, nullable=True)
     isbn              = Column(String(20), nullable=True, unique=True)
     copies_total      = Column(Integer, nullable=False, default=1)

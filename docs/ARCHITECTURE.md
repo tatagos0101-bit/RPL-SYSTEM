@@ -241,14 +241,19 @@ biometrics. Spoof branches may store raw images in `security_alerts.snapshot_b64
 No explicit biometric consent, retention/purge workflow, or complete security-alert
 management UI was found. Do not infer these from design documents or invent policy.
 
-[Attendance policy](../backend/services/entry_session_policy.py) defaults to first
-scan = time-in, repeats before five minutes = still inside, later scan = time-out,
-and scans within two minutes of time-out = update the same session. A later scan
-starts another visit. These intervals are configurable. Unrecognized/suspended
+[Attendance policy](../backend/services/entry_session_policy.py): current kiosk clients
+send IDs still present in the camera. Continuous sightings do not toggle attendance;
+two successful frames without that member re-arm the next appearance. The first
+appearance records entry, the next records exit, and another starts a new visit.
+The UI shows Inside/elapsed time while open and full Philippine timestamps after exit.
+Presence tracking is browser-local, not durable idempotency: reloads, lost responses,
+and multiple stations require care and physical-camera acceptance. PostgreSQL member
+row locking serializes writes but does not deduplicate separate encounter requests.
+Legacy station clients omitting presence information retain configurable
+five-minute minimum visits and two-minute exit-update windows. Unrecognized/suspended
 matches are denied without exposing the suspended identity. Website face login only
-authenticates; station scans record attendance. Member locks serialize overlapping
-scans. New timestamps are aware Philippine time; legacy naive values are interpreted
-as Philippine time without shifting historical rows.
+authenticates; station scans record attendance. New timestamps are timezone-aware
+Philippine time; legacy naive values are interpreted as Philippine time.
 
 ## Catalog, QR codes, circulation, and reservations
 
@@ -432,3 +437,9 @@ acceptance for biometric changes. Mocked detections and small reference sets are
 not accuracy/security certification; pending PAD tests are not part of this release.
 Keep real patron data out of all fixtures and test artifacts. Report the actual
 checks, limitations, and skipped work instead of copying historical pass counts.
+
+
+## Category mapping
+
+See [category normalization and migration](CATEGORY_MAPPING.md) for the authoritative
+mapper, hidden-label threshold, librarian review, and additive book metadata columns.
