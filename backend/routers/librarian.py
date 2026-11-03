@@ -242,6 +242,9 @@ def due_books(
         dl    = _days_left(tx.due_date)
         fine  = _calc_fine(tx.due_date)
         result.append(DueBookOut(
+            copy_id = tx.copy_id,
+            copy_number = tx.copy.copy_number if tx.copy else None,
+            copy_qr = tx.copy.qr_code if tx.copy else None,
             transaction_id = tx.id,
             user_id        = tx.user_id,
             book_id        = tx.book_id,

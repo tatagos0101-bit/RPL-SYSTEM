@@ -5,22 +5,26 @@ Borrow flow  (librarian calls after face + QR scan):
   POST /api/transactions/borrow  { user_id, book_id }
   → validates member + book → creates transaction → decrements copies_available
 
-Return flow  (librarian calls after face + QR scan):
-  POST /api/transactions/return  { user_id, book_id }
-  → finds active loan → calculates fine → closes transaction → restores copies_available
+Return flow (librarian reviews a QR-resolved exact loan):
+  POST /api/transactions/return  { user_id, book_id, copy_id, transaction_id }
+  → revalidates active loan → calculates fine → closes transaction → restores copies_available
   → if reservation is waiting for this book → marks it as "ready"
 """
 from datetime import datetime, timedelta
 from decimal import Decimal
+from uuid import UUID
+from typing import Annotated
 
-from timezone_utils import PH_TZ, now_ph
+from timezone_utils import PH_TZ, as_ph, now_ph
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from config import LOAN_DAYS, FINE_PER_DAY
 from services.list_queries import transaction_query
+from services.inventory_writes import fingerprint, find_write, remember_write
+from services.book_copy_service import normalize_scan_code
 from database import get_db
 from dependencies import get_current_user, require_librarian, require_member
 from services.borrowing_capacity import borrowing_capacity, assert_slots, free_title_capacity
@@ -75,6 +79,10 @@ def _days_left(due_date: datetime) -> int:
 
 def _enrich(tx: Transaction) -> TransactionOut:
     out = TransactionOut.model_validate(tx)
+    for field in ("borrow_date", "due_date", "return_date"):
+        value = getattr(out, field)
+        if value is not None:
+            setattr(out, field, as_ph(value))
     if tx.user:
         out.member_name = tx.user.name
         out.member_id   = tx.user.member_id or f"RPL-{tx.user.id:05d}"
@@ -100,7 +108,12 @@ def borrow_book(
     body: BorrowRequest,
     db:   Session = Depends(get_db),
     _:    User    = Depends(require_librarian),
+    request_id: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
+    digest = fingerprint(body.model_dump())
+    saved = find_write(db, _.id, request_id, "borrow", digest) if request_id else None
+    if saved:
+        return saved.result
     # Hold member -> book locks until the loan and inventory commit together.
     # The book lock also serializes circulation with inventory edits.
     member = (db.query(User).filter(User.id == body.user_id)
@@ -180,9 +193,12 @@ def borrow_book(
     if reservation:
         reservation.status = "fulfilled"
 
+    db.flush()
+    result = _enrich(tx).model_dump(mode="json")
+    if request_id:
+        remember_write(db, _.id, request_id, "borrow", digest, result)
     db.commit()
-    db.refresh(tx)
-    return _enrich(tx)
+    return result
 
 
 # ── Return ────────────────────────────────────────────────────────────────────
@@ -192,7 +208,14 @@ def return_book(
     body: ReturnRequest,
     db:   Session = Depends(get_db),
     _:    User    = Depends(require_librarian),
+    request_id: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
+    if request_id and body.transaction_id is None:
+        raise HTTPException(422, "An exact transaction_id is required for a retry-safe return.")
+    digest = fingerprint(body.model_dump())
+    saved = find_write(db, _.id, request_id, "return", digest) if request_id else None
+    if saved:
+        return saved.result
     db.query(User).filter(User.id == body.user_id).with_for_update(key_share=True).first()
     book = (db.query(Book).filter(Book.id == body.book_id)
             .populate_existing().with_for_update().first())
@@ -207,6 +230,7 @@ def return_book(
             Transaction.status.in_(["active", "overdue"]),
         )
         .filter(Transaction.copy_id == body.copy_id if body.copy_id is not None else True)
+        .filter(Transaction.id == body.transaction_id if body.transaction_id is not None else True)
         .populate_existing().with_for_update()
         .first()
     )
@@ -229,9 +253,58 @@ def return_book(
     if tx.copy:
         tx.copy.status = "available"
 
+    db.flush()
+    result = _enrich(tx).model_dump(mode="json")
+    if request_id:
+        remember_write(db, _.id, request_id, "return", digest, result)
     db.commit()
-    db.refresh(tx)
-    return _enrich(tx)
+    return result
+
+
+# Scanning is read-only: never materialize legacy copies or update loan status here.
+@router.get("/api/transactions/scan")
+def circulation_scan(code: str = Query(..., min_length=1, max_length=60),
+                     mode: str = Query(..., pattern="^(borrow|return)$"),
+                     db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    normalized = normalize_scan_code(code)
+    copy = db.query(BookCopy).filter(BookCopy.qr_code == normalized).first()
+    book = db.get(Book, copy.book_id) if copy else db.query(Book).filter(Book.qr_code == normalized).first()
+    if not book:
+        raise HTTPException(404, "Library QR not found. ISBN barcodes are not copy identifiers.")
+    candidates = []
+    if mode == "return":
+        query = db.query(Transaction).filter(Transaction.book_id == book.id,
+                                            Transaction.status.in_(["active", "overdue"]))
+        if copy:
+            query = query.filter(Transaction.copy_id == copy.id)
+        for loan in query.order_by(Transaction.id).all():
+            row = _enrich(loan).model_dump(mode="json")
+            candidates.append(dict(row, transaction_id=loan.id, title=book.title,
+                                   estimated_fine=str(_calc_fine(loan.due_date))))
+        if not candidates:
+            raise HTTPException(404, "No active loan for this QR code.")
+    else:
+        copies = [copy] if copy else db.query(BookCopy).filter(
+            BookCopy.book_id == book.id, BookCopy.status != "retired").order_by(BookCopy.copy_number).all()
+        active_copy_ids = {row[0] for row in db.query(Transaction.copy_id).filter(
+            Transaction.book_id == book.id, Transaction.status.in_(["active", "overdue"])).all()}
+        for physical in copies:
+            candidates.append(dict(book_id=book.id, title=book.title, copy_id=physical.id,
+                copy_number=physical.copy_number, copy_qr=physical.qr_code,
+                available=physical.status == "available" and physical.id not in active_copy_ids,
+                copy_status=physical.status, due_date=(_now() + timedelta(days=LOAN_DAYS)).isoformat()))
+        if not candidates:
+            raise HTTPException(409, "This title needs physical-copy setup in inventory before scanning.")
+    return dict(qr_type="copy" if copy else "book", candidates=candidates)
+
+
+@router.get("/api/transactions/write-requests/{request_id}")
+def circulation_write_status(request_id: UUID, db: Session = Depends(get_db),
+                             current_user: User = Depends(require_librarian)):
+    saved = find_write(db, current_user.id, request_id)
+    if not saved or saved.operation not in ("borrow", "return"):
+        raise HTTPException(404, "No committed circulation outcome found; this is not proof of failure.")
+    return dict(operation=saved.operation, result=saved.result)
 
 
 # ── Transaction history (librarian) ──────────────────────────────────────────

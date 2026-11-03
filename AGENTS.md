@@ -65,7 +65,7 @@ The README recommends Python 3.12 and Node.js 22.12 or newer. Commands require i
   browser-role table access. SQLite tests alone cannot validate PostgreSQL migration behavior.
 - Review transaction boundaries and helper commits before changing inventory, loans, or reservations.
   Circulation holds member/book locks through commit; helpers in that transaction must not commit.
-  Preserve concurrent PostgreSQL coverage. This is not a general request-idempotency guarantee.
+  Preserve concurrent PostgreSQL coverage and atomic circulation receipts in `inventory_writes`.
 
 ## Authentication and authorization
 
@@ -108,14 +108,17 @@ The README recommends Python 3.12 and Node.js 22.12 or newer. Commands require i
 
 ## QR, circulation, attendance, and reservations
 
-- Preserve physical-copy scans and legacy book QR compatibility. The current UI accepts typed or
-  scanner-entered text; a webcam used for faces is not a camera QR decoder.
+- Preserve physical-copy identity and explicit legacy-copy/loan selection. Circulation accepts camera QR,
+  USB Enter-terminated scans and manual entry through one read-only lookup; scans never commit loans.
 - Enforce copy/book association, availability, duplicate-loan and overdue checks on the server.
   A return updates the original loan; preserve `borrow_date`, `copy_id`, and historical counts.
 - Maintain reservation queue/expiry/promotion behavior and attendance session timing via shared services.
   Reservations are not a guaranteed exclusive physical-copy allocation.
-- Multi-book submissions make independent requests and may partially succeed. Review repeated scans,
-  retries, concurrent circulation, and partial failures; do not imply an atomic batch or offline queue.
+- Multi-book submissions are sequential independent requests. Preserve exact return transaction IDs,
+  librarian-scoped idempotency receipts, account-scoped recovery IDs and stopping on unknown outcomes.
+  Retry with the original key; never infer success from a matching loan or replay automatically.
+- Release QR/face camera tracks on close, step/camera switches and page hiding. Keep the decoder bundled
+  and lazy-loaded; no QR frame uploads. See [QR circulation and acceptance](docs/QR_CIRCULATION.md).
 
 ## Uploads, condition photos, and offline behavior
 

@@ -53,19 +53,7 @@ export const notifyMember = (transactionId) =>
 export const getTransactions = (params = {}) =>
   client.get('/api/transactions', { params });
 
-export const borrowBook = (userId, bookId, copyId = null) =>
-  client.post('/api/transactions/borrow', {
-    user_id: userId,
-    book_id: bookId,
-    ...(copyId ? { copy_id: copyId } : {}),
-  });
-
-export const returnBook = (userId, bookId, copyId = null) =>
-  client.post('/api/transactions/return', {
-    user_id: userId,
-    book_id: bookId,
-    ...(copyId ? { copy_id: copyId } : {}),
-  });
+// Circulation writes use circulation.js with a persisted Idempotency-Key.
 
 // Inventory
 export const getInventoryStats = () =>

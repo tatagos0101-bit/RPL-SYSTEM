@@ -11,6 +11,7 @@ class BorrowRequest(BaseModel):
 
 
 class ReturnRequest(BaseModel):
+    transaction_id: Optional[int] = None
     user_id: int
     book_id: int
     copy_id: Optional[int] = None

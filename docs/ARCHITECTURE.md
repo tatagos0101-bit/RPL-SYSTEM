@@ -265,9 +265,13 @@ the schema do not imply a complete damage/loss-management workflow.
 
 Copy codes have the form `RPL-BOOK-00007-C002`; legacy title QR codes remain accepted.
 [Catalog scan routes](../backend/routers/books.py) normalize and resolve codes.
-[Borrow/return UI](../frontend/src/pages/lib/LibBorrowReturn.jsx) accepts keyboard or
-scanner-entered text, identifies members by face lookup or supervised manual ID,
-and submits copy-aware requests. No camera QR decoder was found.
+[Borrow/return UI](../frontend/src/pages/lib/LibBorrowReturn.jsx) uses a shared
+[circulation dialog](../frontend/src/components/CirculationDialog.jsx) for camera QR,
+USB Enter-terminated input and manual entry. Borrowing identifies a member through
+existing face lookup or supervised manual ID; returns start with QR lookup and may
+include different borrowers. Scanning is read-only and legacy ambiguity requires
+explicit copy/loan selection. Review precedes all submissions. See [QR circulation](QR_CIRCULATION.md)
+for the locally implemented October 31, 2026 changes, recovery and acceptance limits.
 
 [Transaction routes](../backend/routers/transactions.py) require librarian access.
 Borrowing rejects suspended members, overdue loans, unavailable/mismatched copies,
@@ -299,8 +303,13 @@ overdue/expiry updates, loan changes, and inventory changes in one transaction.
 Duplicate checks run after the locks; competing returns re-read the active loan.
 Disposable PostgreSQL tests cover the same copy, the same member/title, independent
 copies, and duplicate returns. Borrow/return carts still send independent requests;
-successful items remain visible, unknown outcomes require ledger reconciliation,
-and unattempted items are identified. Reservation batches are atomic and persist a
+successful items remain visible and unattempted items are identified. Keyed writes
+lock the librarian before member/book locks and save a payload fingerprint and
+response receipt in the existing `inventory_writes` table with the loan commit.
+Returns submit an exact transaction ID, preventing delayed requests from closing
+newer loans. Unknown outcomes stop the batch and require receipt checking or an
+explicit retry with the original key. Only account-scoped recovery IDs persist in
+the browser; there is no automatic replay. Reservation batches are atomic and persist a
 confirmation ID locally before submission, allowing safe retries after reload.
 These are separate workflows; neither is an offline transaction queue.
 

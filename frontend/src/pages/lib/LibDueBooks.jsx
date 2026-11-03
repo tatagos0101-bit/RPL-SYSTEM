@@ -1,7 +1,8 @@
+import CirculationDialog from '../../components/CirculationDialog';
 import FineContent from '../../components/FineContent';
 import { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, Clock, Search, Bell, CheckCircle2, RefreshCw, BookOpen, List } from 'lucide-react';
-import { getDueBooks, returnBook } from '../../api/librarian';
+import { getDueBooks } from '../../api/librarian';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
@@ -56,11 +57,8 @@ export default function LibDueBooks() {
     fetchBooks(f);
   };
 
-  const handleReturn = (b) => {
-    returnBook(b.user_id, b.book_id)
-      .then(() => { fetchBooks(filter); fetchLoans(); })
-      .catch(() => setOperationError('Return could not be confirmed. Check loan history before retrying.'));
-  };
+  const [returnLoan, setReturnLoan] = useState(null);
+  const handleReturn = b => setReturnLoan(b);
 
   const filteredDue = books.filter((b) =>
     (b.member_name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -74,6 +72,8 @@ export default function LibDueBooks() {
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
+      {returnLoan && <CirculationDialog initialReturn={returnLoan} onClose={() => setReturnLoan(null)}
+        onCommit={() => { fetchBooks(filter); fetchLoans(); }} />}
       {operationError && <p role="alert" className="p-4 text-danger">{operationError} <button className="underline" onClick={() => { fetchBooks(filter); fetchLoans(); }}>Retry loading</button></p>}
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8">
 

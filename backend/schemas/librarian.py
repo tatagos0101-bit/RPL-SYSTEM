@@ -25,6 +25,9 @@ class BorrowTrendPoint(BaseModel):
 
 
 class DueBookOut(BaseModel):
+    copy_id: Optional[int] = None
+    copy_number: Optional[int] = None
+    copy_qr: Optional[str] = None
     transaction_id: int
     user_id:        int
     book_id:        int
