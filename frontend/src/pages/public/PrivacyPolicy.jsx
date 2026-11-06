@@ -12,12 +12,18 @@ export default function PrivacyPolicy() {
           <p className="text-sm font-semibold text-link">Rizal Provincial Library</p>
           <h1 className="rpl-title mt-2">Data Privacy</h1>
           <p className="mt-4 leading-7 text-muted">Learn how this library system handles personal information and facial recognition, and where to ask for assistance.</p>
-          <p className="mt-4 rounded-lg bg-subtle p-4 text-sm leading-6 text-muted">Information notice · Updated November 5, 2026. The library’s formal lawful basis, retention schedule, responsible organization and designated privacy contact still require confirmation. This page does not record consent or claim privacy certification.</p>
+          <p className="mt-4 rounded-lg bg-subtle p-4 text-sm leading-6 text-muted">Information notice · Updated November 6, 2026. Please read how your information is used before registering, borrowing or using facial recognition. The library’s formal lawful basis, retention schedule, responsible organization and designated privacy contact still require confirmation.</p>
         </header>
         <div className="space-y-8 pt-8 text-base leading-7">
+          <section aria-labelledby="privacy-services">
+            <h2 id="privacy-services" className="rpl-section-title mb-3">Information required for library services</h2>
+            <p>The library requires member information to register borrowers and maintain borrowing and return records. Visitors must also record their visit in the library’s manual logbook. These records support identification, attendance and the administration of library services.</p>
+            <p className="mt-3">When you submit information to register, sign in, borrow or use other library services, the library collects, stores and uses the information needed for those activities, as described in this notice. Staff can explain which details are required for the service you request.</p>
+            <p className="mt-3">Browsing this website does not enroll your face or create a library account. Visiting the website or signing the visitor logbook is not blanket consent to collect or use facial data. Where consent is relied on, it must be obtained separately for the specific processing; this notice does not record it.</p>
+          </section>
           <section aria-labelledby="privacy-information">
             <h2 id="privacy-information" className="rpl-section-title mb-3">Information the system handles</h2>
-            <p>Account information includes your name, library member ID, contact details where supplied, location, account status and a hashed password. The system also handles identification documents supplied during registration, optional profile photos, borrowing and reservation records, attendance, and book interactions used for recommendations.</p>
+            <p>Account information includes your name, library member ID, contact details where supplied, location, account status and a hashed password used to verify sign-in. Passwords are not stored as readable text. The system also handles identification documents supplied during registration, optional profile photos, borrowing and reservation records, attendance, and book interactions used for recommendations.</p>
           </section>
           <section aria-labelledby="privacy-face">
             <h2 id="privacy-face" className="rpl-section-title mb-3">Facial recognition and camera images</h2>
