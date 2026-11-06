@@ -1,6 +1,7 @@
 # Privacy information and encrypted biometric storage
 
-This change is a local implementation, not evidence of production rollout or legal
+Production rollout and its verification are recorded in the
+[November 6 release record](RELEASE_2026-11-06.md); deployment does not establish legal
 approval. `/privacy-policy` explains actual processing and unresolved policy items.
 The landing copyright row and entrance station link to it. The station shows its
 notice before camera access, requires an operator start, and pauses when hidden.
@@ -60,7 +61,7 @@ paste keys into chat, or generate values in shared terminal transcripts. Store a
 recoverable key copy separately from the database, with restricted access. Losing
 the keys makes encrypted data unrecoverable. Do not request a key from the browser.
 
-## Approved rollout procedure (not performed by this change)
+## Rollout procedure
 
 1. Obtain approval for the target, maintenance window, migration and deployment.
    Confirm the library's responsible organization, lawful processing basis,
