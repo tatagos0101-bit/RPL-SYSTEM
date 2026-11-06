@@ -3,6 +3,8 @@ import { X } from 'lucide-react';
 import QrScanner from './QrScanner';
 import CirculationMember from './CirculationMember';
 import BorrowingCapacity from './BorrowingCapacity';
+import FineContent from './FineContent';
+import { SHOW_FINES } from '../api/fineVisibility';
 import useBorrowingCapacity from '../api/useBorrowingCapacity';
 import { lookupCirculation, circulationStatus, sendCirculation } from '../api/circulation';
 import { clearCirculation, normalizeLibraryCode, readCirculation, saveCirculation, submitCirculation } from '../api/circulationRecovery';
@@ -165,9 +167,9 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
               {mode === 'return' && <p>{row.member_name} · {row.member_id} · Loan #{row.transaction_id}</p>}
               <p>Due (Philippine time): {formatTime(row.due_date)}</p>
               {mode === 'borrow' ? <p>Available when scanned; rechecked at confirmation.</p>
-                : <p>{row.estimated_fine !== undefined ? `Estimated fine: ₱${row.estimated_fine} — finalized by the server on return.` : 'The server calculates the final fine at confirmation.'}</p>}
+                : <FineContent><p>{row.estimated_fine !== undefined ? `Estimated fine: ₱${row.estimated_fine} — finalized by the server on return.` : 'The server calculates the final fine at confirmation.'}</p></FineContent>}
               {row.outcome ? <p role="status" className={row.outcome.status === 'confirmed' ? 'text-success' : 'text-danger'}>
-                {row.outcome.status === 'confirmed' ? `Confirmed · Transaction ${row.outcome.data.id}${mode === 'return' ? ` · Final fine ₱${row.outcome.data.fine_amount} · Returned ${formatTime(row.outcome.data.return_date)}` : ` · Due ${formatTime(row.outcome.data.due_date)}`}` : row.outcome.error}
+                {row.outcome.status === 'confirmed' ? `Confirmed · Transaction ${row.outcome.data.id}${mode === 'return' ? `${SHOW_FINES ? ` · Final fine ₱${row.outcome.data.fine_amount}` : ''} · Returned ${formatTime(row.outcome.data.return_date)}` : ` · Due ${formatTime(row.outcome.data.due_date)}`}` : row.outcome.error}
               </p> : <><p className="text-muted">Not submitted</p><button disabled={processing} onClick={() => setRows(previous => previous.filter(item => itemKey(item) !== itemKey(row)))} className="underline">Remove</button></>}
             </article>)}
           </section>

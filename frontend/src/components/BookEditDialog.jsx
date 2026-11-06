@@ -1,3 +1,5 @@
+import AcquisitionFields from './AcquisitionFields';
+import { emptyAcquisition, acquisitionPayload } from '../api/acquisitions';
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Pencil, RefreshCw, X } from 'lucide-react';
 import { updateBook } from '../api/librarian';
@@ -17,6 +19,8 @@ export default function BookEditDialog({ book, categories, onClose, onSaved }) {
   const dialog = useRef(null);
   const pending = useRef(false);
   const [form, setForm] = useState(() => Object.fromEntries(fields.map(({ name }) => [name, book[name] ?? ''])));
+  const [acquisition, setAcquisition] = useState(emptyAcquisition);
+  const addingCopies = Number(form.copies_total) > Number(book.copies_total);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -41,6 +45,7 @@ export default function BookEditDialog({ book, categories, onClose, onSaved }) {
     setSaving(true);
     setError('');
     try {
+      if (addingCopies && acquisitionPayload(acquisition)) payload.new_copy_acquisition = acquisitionPayload(acquisition);
       const { data } = await updateBook(book.id, payload);
       onSaved(data);
     } catch (failure) {
@@ -80,6 +85,7 @@ export default function BookEditDialog({ book, categories, onClose, onSaved }) {
             </label>
           ))}
         </div>
+        {addingCopies && <AcquisitionFields value={acquisition} onChange={setAcquisition} disabled={saving} description="Applies only to the additional copies. Existing and retired copies retain their recorded sources." />}
         <datalist id="edit-book-categories">{categories.filter((category) => category !== 'All').map((category) => <option key={category} value={category} />)}</datalist>
         <p className="mt-4 text-sm leading-5 text-muted">
           Available copies are calculated automatically. Copies on loan cannot be removed;

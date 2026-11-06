@@ -14,6 +14,16 @@ Authentication remains in FastAPI. Supabase Auth is not used by this application
 Database passwords and Supabase secret/service-role keys belong only in server
 environment variables. Never put them in a `VITE_*` variable or commit `.env` files.
 
+## Reporting release prerequisite (not deployed)
+
+The [reporting center](REPORTING_CENTER.md) adds `copy_acquisitions` and reporting
+indexes. After separate approval, an owner must run the scoped
+`backend/migrate_reporting.py` against the authorized target before releasing its
+API/frontend. This upgrade does not backfill inventory or acquisitions. Runtime
+RLS/grants include the new table; browser roles remain revoked. Keep the restricted
+runtime connection and `AUTO_MIGRATE=false`. No environment/dependency changes are
+required. Local PostgreSQL validation does not establish deployed readiness.
+
 ## Environment security and change boundaries
 
 For the session migration, Redis preparation, restricted database role, and the

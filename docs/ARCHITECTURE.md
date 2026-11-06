@@ -106,7 +106,7 @@ its independent database/Storage configuration and owns authorization.
 ## Persistence and migrations
 
 The [models](../backend/models) and [initial SQL](../supabase/migrations/20261010000100_library_schema.sql)
-describe 16 application tables after the session, recommendation and repair upgrades
+describe 17 application tables after the session, recommendation, repair and reporting upgrades
 (the applied initial SQL is intentionally unchanged):
 
 | Tables | Relationship and meaning |
@@ -115,6 +115,7 @@ describe 16 application tables after the session, recommendation and repair upgr
 | `auth_sessions` | Expiring server-side login sessions, linked to users and bound to their current password hash via an HMAC digest. No raw JWTs are stored. |
 | `book_interactions` | Private member/book favorite and recent-view state, preserved by the security integration. |
 | `books`, `book_copies` | A title has physical copies. Copy QR codes are unique; `(book_id, copy_number)` is unique. Status includes available, borrowed, damaged, lost, and retired. Titles also keep aggregate counts and legacy QR codes. |
+| `copy_acquisitions` | Optional one-to-one metadata for existing physical copies: source, verified acquisition date, donor/supplier, cost/currency/reference and recording staff. No legacy acquisition backfill. |
 | `transactions` | One loan links user, book, and optionally a physical copy for legacy compatibility. Returning changes that same row rather than adding a separate circulation event. |
 | `reservations`, `notifications` | Reservations link members to titles with queue/status/expiry information. Notifications may target a user; null user IDs denote librarian notifications. |
 | `reservation_confirmations` | Member/request ID primary key, canonical payload fingerprint and resulting reservation IDs for atomic confirmation retries. Private backend-only access. |
@@ -421,13 +422,23 @@ fine sums are not a payment ledger. Denied entries are excluded from member visi
 statistics, activity and goals. Borrowed stock counts active/overdue loans rather
 than total stock minus available stock. Report date bounds are validated first.
 
-[Frontend report helpers](../frontend/src/api/reports.js) filter/paginate records,
-escape CSV formula prefixes and print HTML, and build exports. The report UI offers
-CSV, printable records, and monthly PDFs; it does not establish national reporting
-compliance. Paginated exports throw a visible error when the safety cap is reached;
-they never return a truncated result as a complete export. Member, catalog, inventory
-and transaction screens use server search/pagination and independent totals. Dashboard
-sections load independently and expose failed sections with retry. Overdue reminders
+The [reporting center](REPORTING_CENTER.md) replaces dashboard polling and browser-wide
+report retrieval with librarian-only `/api/reporting` aggregates, contextual filters,
+stable server pagination, native SVG charts, acquisition metadata and PDF/XLSX/CSV/print
+exports. Shared safe projections and signed dataset fingerprints reject stale previews;
+PostgreSQL reads use a read-only REPEATABLE READ snapshot. The old report helpers and
+monthly URL and patron transcript contract remain. The monthly PDF now includes
+monochrome categorized summaries and full details using the same read-only projections;
+it separates period activity from current snapshots and rejects oversized downloads.
+The separate NLP preparation category is removed. Add Book, ISBN/workbook imports, additional-copy
+entry and admin inventory use the same per-copy acquisition records as Reports;
+source counts/filters are librarian-only and public catalog contracts are unchanged.
+Acquisition metadata requires the separate
+additive reporting migration before deployment; production has not been migrated by
+this work. Programs/activities and detailed staff qualifications are explicitly excluded.
+
+Member, catalog, inventory and transaction screens retain their existing server
+search/pagination and independent totals. Overdue reminders
 explicitly report delivery unavailable until a provider exists. Shared native dialogs
 provide focus containment/Escape/restoration, and an application error boundary offers
 recovery for rendering failures. Use [backend](../backend/timezone_utils.py)

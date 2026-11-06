@@ -53,13 +53,14 @@ def test_transcript_and_monthly_report_keep_returned_borrow_history(client, retu
     from services import report_service
     original = report_service.build_monthly_report
     captured = {}
-    def report(month_label, stats, top_books, top_members):
-        captured.update(stats=stats, books=top_books, members=top_members)
-        return original(month_label, stats, top_books, top_members)
+    def report(data):
+        captured.update(report=data)
+        return original(data)
     monkeypatch.setattr(report_service, "build_monthly_report", report)
     now = now_ph()
     response = client.get("/api/reports/monthly", headers=staff_headers, params={"month": now.month, "year": now.year})
     assert response.status_code == 200
-    assert captured["stats"]["borrows"] == captured["stats"]["returns"] == 1
-    assert captured["books"][0]["title"] == borrowed.title
-    assert captured["members"][0]["member_id"] == member.member_id
+    circulation = next(section for section in captured['report']['sections'] if section['category']=='circulation')['datasets'][0]
+    assert circulation['summary']['borrows'] == circulation['summary']['returns'] == 1
+    assert circulation['rows'][0]['title'] == borrowed.title
+    assert circulation['rows'][0]['member_id'] == member.member_id

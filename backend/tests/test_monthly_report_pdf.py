@@ -53,47 +53,23 @@ def login(client, email, password="Password1"):
     return response.json()["access_token"]
 
 
-def test_monthly_report_service_uses_clear_report_card_sections():
-    pdf = build_monthly_report(
-        "July 2026",
-        {
-            "borrows": 18,
-            "returns": 14,
-            "active_members": 9,
-            "new_members": 3,
-            "overdue": 2,
-            "fines": 45.5,
-            "visits": 42,
-            "denied_visits": 4,
-            "book_titles": 120,
-            "total_copies": 300,
-            "available_copies": 210,
-            "borrowed_copies": 90,
-        },
-        [
-            {"title": "Noli Me Tangere", "author": "Jose Rizal", "category": "Novel", "borrows": 7},
-            ("El Filibusterismo", "Jose Rizal", "Novel", 4),
-        ],
-        [
-            {"member_id": "RPL-00001", "name": "Ana Reyes", "borrows": 5},
-            ("RPL-00002", "Ben Cruz", 3),
-        ],
-    )
-
+def test_monthly_report_service_uses_monochrome_categorized_sections():
+    report = {'month':'July 2026', 'start':'2026-07-01', 'end':'2026-07-31', 'as_of':'2026-08-01T00:00:00+08:00',
+        'sections':[{'title': title, 'scope':'Selected month', 'notes':[], 'datasets':[
+            {'title':'Monthly activity', 'total':2, 'summary':{'matching_records':2}, 'breakdowns':[],
+             'columns':[{'key':'id','label':'ID'},{'key':'title','label':'Title'}],
+             'rows':[{'id':1,'title':'Synthetic <record> & safe text'}, {'id':2,'title':'Last record'}]}]}
+            for title in ['Library usage','Circulation','Patrons','Collection','Acquisitions','Inventory']]}
+    pdf = build_monthly_report(report)
     text = pdf_text(pdf)
-
-    assert "Monthly Library Report Card" in text
-    assert "What this report is for" in text
-    assert "What happened this month" in text
-    assert "Visitor Summary" in text
-    assert "Book Collection" in text
-    assert "Monthly Visitors" in text
-    assert "Total Copies" in text
-    assert "9 active member" in text
-    assert "Top Borrowed Books" in text
-    assert "Most Active Members" in text
-    assert "El Filibusterismo" in text
-    assert "RPL-00002" in text
+    for title in ['Monthly Library Report','Library usage','Circulation','Patrons','Collection','Acquisitions','Inventory','Last record','Synthetic <record> & safe text']:
+        assert title in text
+    reader = PdfReader(BytesIO(pdf))
+    for page in reader.pages:
+        for operands, operator in page.get_contents().operations:
+            if operator in (b'rg', b'RG'):
+                assert float(operands[0]) == float(operands[1]) == float(operands[2])
+            assert operator not in (b'k',b'K')  # No CMYK color coding.
 
 
 def test_monthly_report_endpoint_includes_visitor_and_collection_counts(client, db_session):
@@ -143,7 +119,38 @@ def test_monthly_report_endpoint_includes_visitor_and_collection_counts(client, 
 
     assert response.status_code == 200
     text = pdf_text(response.content)
-    assert "Monthly Visitors" in text
-    assert "Denied Scans" in text
-    assert "Book Titles" in text
-    assert "Total Copies" in text
+    assert "Library usage" in text
+    assert "Denied entry attempts" in text
+    assert "Collection" in text
+    assert "Declared Copies" in text
+
+    db_session.expire_all()
+    assert db_session.query(Transaction).one().status == 'active'  # PDF reads never synchronize status.
+
+
+def test_monthly_pdf_complete_records_boundaries_and_limits(client, db_session, monkeypatch):
+    from services.monthly_report import monthly_data
+    from services import monthly_report as service
+    staff = create_librarian(db_session)
+    member = create_member(db_session)
+    logs = [EntryLog(user_id=member.id, granted=True, entry_type='manual', accessed_at=datetime(2026,7,1,tzinfo=PH_TZ)+timedelta(minutes=index)) for index in range(105)]
+    logs += [EntryLog(user_id=member.id, granted=True, entry_type='face_scan', accessed_at=datetime(2026,8,1,tzinfo=PH_TZ))]
+    db_session.add_all(logs); db_session.commit()
+    report = monthly_data(db_session,7,2026)
+    visits = report['sections'][0]['datasets'][0]
+    assert visits['total'] == len(visits['rows']) == 105
+    assert visits['summary']['identified_unique_visitors'] == 1
+    assert all(row['entry_method']=='manual' for row in visits['rows'])
+    pdf = build_monthly_report(report)
+    text = pdf_text(pdf)
+    assert '2026-07-01 01:44:00 PHT' in ' '.join(text.split())  # Final row beyond the old 80-row preview.
+    assert not any(row['visited'].startswith('2026-08-01') for row in visits['rows'])
+    token = login(client,staff.email)
+    headers = {'Authorization':f'Bearer {token}'}
+    monkeypatch.setattr(service,'MAX_MONTHLY_ROWS',2)
+    response=client.get('/api/reports/monthly?month=7&year=2026',headers=headers)
+    assert response.status_code==422 and 'No partial PDF' in response.json()['detail']
+    client.cookies.clear()
+    assert client.get('/api/reports/monthly?month=7&year=2026').status_code==401
+    token=login(client,member.email)
+    assert client.get('/api/reports/monthly?month=7&year=2026',headers={'Authorization':f'Bearer {token}'}).status_code==403

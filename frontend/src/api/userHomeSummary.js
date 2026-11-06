@@ -84,7 +84,7 @@ const getPrimaryNotice = ({ overdueCount, dueSoonCount, borrowedNow }) => {
     return {
       kind: 'soon',
       title: 'A due date is coming up',
-      body: 'Return books on time to avoid fines and keep borrowing easy.',
+      body: 'Return books on time to keep borrowing available.',
       actionLabel: 'Review due dates',
       actionHref: '#borrowed-books',
     };

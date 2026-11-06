@@ -1,3 +1,4 @@
+from schemas.acquisition import AcquisitionDetails
 import re
 from pydantic import BaseModel, ConfigDict, Field, field_validator, computed_field
 from typing import Optional
@@ -104,10 +105,11 @@ class BookBase(BaseModel):
 
 
 class BookCreate(BookBase):
-    pass
+    acquisition: AcquisitionDetails | None = None
 
 
 class BookUpdate(BaseModel):
+    new_copy_acquisition: AcquisitionDetails | None = None
     title:            Optional[str]   = None
     author:           Optional[str]   = None
     category:         Optional[str]   = None

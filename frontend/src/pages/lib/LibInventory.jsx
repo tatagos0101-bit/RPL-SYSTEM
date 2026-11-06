@@ -1,3 +1,5 @@
+import BookAcquisitionDialog from '../../components/BookAcquisitionDialog';
+import { acquisitionSources } from '../../api/acquisitions';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -21,12 +23,14 @@ const LibInventory = () => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [uploadingId, setUploadingId] = useState(null);
+  const [acquisitionBook, setAcquisitionBook] = useState(null);
+  const [source, setSource] = useState('');
   const [editingBook, setEditingBook] = useState(null);
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef(null);
   const uploadTargetId = useRef(null);
 
-  const listing = useServerPage('/api/books', { search, category: activeCategory === 'All' ? '' : activeCategory });
+  const listing = useServerPage('/api/inventory/books', { search, source, category: activeCategory === 'All' ? '' : activeCategory });
   const { items: books, setItems: setBooks, loading, reload } = listing;
   const [operationError, setOperationError] = useState('');
   const fetchData = useCallback(() => {
@@ -73,6 +77,7 @@ const LibInventory = () => {
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pt-8 px-6 md:px-12 pb-20 font-sans text-ink transition-colors duration-300">
+      {acquisitionBook && <BookAcquisitionDialog key={acquisitionBook.id} book={acquisitionBook} onClose={() => setAcquisitionBook(null)} onSaved={fetchData} />}
       {editingBook && <BookEditDialog key={editingBook.id} book={editingBook} categories={categories}
         onClose={() => setEditingBook(null)} onSaved={handleSaved} />}
       {/* Hidden file input for cover upload */}
@@ -114,6 +119,7 @@ const LibInventory = () => {
           <StatCard label="Borrowed" val={invStats.borrowed_copies ?? 0} icon={<Clock size={18} />} color="bg-rose-500" />
         </div>
 
+        <label className="mb-4 block max-w-xs"><span className="mb-1 block text-sm font-semibold text-muted">Acquisition source</span><select aria-label="Acquisition source" value={source} onChange={event => setSource(event.target.value)} className="w-full rounded-lg border border-line bg-panel px-3 py-2.5 text-base"><option value="">All sources</option>{Object.entries(acquisitionSources).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
         {/* Filters */}
         <div className="animate-fade-in-up delay-200 flex flex-col lg:flex-row gap-4 mb-8">
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -177,6 +183,7 @@ const LibInventory = () => {
                             <div>
                               <p className="font-bold text-sm text-ink">{book.title}</p>
                               <p className="text-sm text-muted font-medium">{book.author}</p>
+                              <p className="mt-1 text-sm text-muted">{Object.entries(book.acquisition_sources || {}).map(([key, count]) => `${acquisitionSources[key]}: ${count}`).join(' · ') || 'No current physical copies'}</p>
                             </div>
                           </div>
                         </td>
@@ -198,6 +205,7 @@ const LibInventory = () => {
                         <td className="px-8 py-4 text-sm font-sans text-muted">{book.location_shelf || '—'}</td>
                         <td className="px-8 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <button type="button" onClick={() => setAcquisitionBook(book)} aria-label={`Acquisitions for ${book.title}`} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-link">Acquisitions</button>
                             <button type="button" onClick={() => { setSuccess(''); setEditingBook(book); }}
                               aria-label={`Edit ${book.title}`}
                               className="inline-flex items-center gap-1.5 rounded-lg bg-info-soft px-3 py-2 text-sm font-bold text-link hover:bg-info-soft">
