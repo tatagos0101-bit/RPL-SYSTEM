@@ -176,6 +176,7 @@ const LandingPage = () => {
             <p className="text-sm font-semibold tracking-normal text-muted">
               © 2025 Rizal Provincial Library · All Rights Reserved
             </p>
+            <Link to="/privacy-policy" className="text-sm font-semibold text-link underline underline-offset-4">Data Privacy</Link>
           </div>
         </div>
       </footer>

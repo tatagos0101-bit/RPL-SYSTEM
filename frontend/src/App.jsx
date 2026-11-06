@@ -10,6 +10,7 @@ import { legacyLibPathToLibrarian } from './api/authRoutes';
 import './index.css';
 
 const LandingPage = lazy(() => import('./pages/public/LandingPage'));
+const PrivacyPolicy = lazy(() => import('./pages/public/PrivacyPolicy'));
 const PublicBrowse = lazy(() => import('./pages/public/PublicBrowse'));
 const LoginPage = lazy(() => import('./pages/public/LoginPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/public/ForgotPasswordPage'));
@@ -102,6 +103,7 @@ const AppContent = () => {
             </Route>
           </Route>
 
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Suspense></AppErrorBoundary>

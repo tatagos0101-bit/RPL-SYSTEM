@@ -236,10 +236,20 @@ and fail-closed presentation checks. That work and its model assets/tests are
 excluded from this release; physical-camera acceptance remains pending. Passive
 RGB classification would not prove camera origin or prevent every injection attack.
 
-Legacy encodings and embeddings are JSON text, not anonymized or application-encrypted
-biometrics. Spoof branches may store raw images in `security_alerts.snapshot_b64`.
+Legacy encodings and embeddings use JSON in server memory and are not anonymous.
+[Biometric storage](BIOMETRIC_STORAGE.md) adds authenticated AES-256-GCM encryption
+at the ORM boundary for both template formats and `security_alerts.snapshot_b64`.
+The existing TEXT columns remain compatible with staged backfill; production
+requires server keys and transition/strict mode. This is implementation capability,
+not confirmation that existing live rows have been migrated. Spoof branches may
+retain facial snapshots; encryption does not make them anonymous.
 No explicit biometric consent, retention/purge workflow, or complete security-alert
 management UI was found. Do not infer these from design documents or invent policy.
+
+The public `/privacy-policy` information page is linked beside the landing copyright
+and at the entrance station. The station shows its notice before an explicit camera
+start and pauses when hidden. Neither the link nor an operator starting the camera
+records patron consent; shared scanning still processes unidentified faces.
 
 [Attendance policy](../backend/services/entry_session_policy.py): current kiosk clients
 send IDs still present in the camera. Continuous sightings do not toggle attendance;

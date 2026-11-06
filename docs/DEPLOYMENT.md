@@ -357,3 +357,11 @@ Sources: [Supabase SQLAlchemy connections](https://supabase.com/docs/guides/trou
 [Supabase Storage access control](https://supabase.com/docs/guides/storage/security/access-control),
 [Vercel FastAPI](https://vercel.com/docs/frameworks/backend/fastapi),
 [uv dependency metadata](https://docs.astral.sh/uv/concepts/resolution/).
+
+## Biometric encryption rollout
+
+Before deploying the privacy-storage change, follow
+[biometric storage and recovery](BIOMETRIC_STORAGE.md). Production requires a private
+keyring and transition/strict mode; missing configuration blocks startup. Existing
+records require an explicitly approved backfill and verified recovery before strict
+mode. Do not deploy this API change without completing that staged procedure.

@@ -316,6 +316,9 @@ def list_members(
     enrolled_ids = {
         row[0] for row in db.query(FaceEmbedding.user_id).filter(
             FaceEmbedding.user_id.in_(member_ids), FaceEmbedding.is_active.is_(True)).distinct().all()}
+    # Enrollment metadata needs no template decryption or per-member lazy loads.
+    enrolled_ids.update(row[0] for row in db.query(User.id).filter(
+        User.id.in_(member_ids), User.face_encoding.isnot(None), User.face_encoding != '').all())
 
     result = []
     for m in members:
@@ -330,7 +333,7 @@ def list_members(
             phone_verified = bool(m.phone_verified),
             location     = m.location,
             status       = m.status,
-            face_enrolled = bool(m.face_encoding) or m.id in enrolled_ids,
+            face_enrolled = m.id in enrolled_ids,
             active_loans = count.active if count else 0,
             total_loans  = count.total if count else 0,
             joined_at    = m.created_at,

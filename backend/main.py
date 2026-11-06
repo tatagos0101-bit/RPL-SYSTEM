@@ -16,6 +16,7 @@ from fastapi import HTTPException
 from limiter import limiter
 from logger import get_logger
 from middleware.security import SecurityMiddleware
+from services.biometric_crypto import BiometricStorageError, settings as biometric_encryption_settings
 # Import all models to ensure SQLAlchemy relationships are properly initialized
 from models.security_alert import SecurityAlert
 from routers import auth, users, books, inventory, transactions, reservations, librarian, recommendations, reports, kiosk, uploads
@@ -35,6 +36,11 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(BiometricStorageError)
+async def biometric_storage_unavailable(request, exc):
+    return JSONResponse(status_code=503, content={"detail": "Biometric storage is temporarily unavailable. Contact library staff."})
 
 
 @app.exception_handler(RedisError)
@@ -94,6 +100,7 @@ app.include_router(uploads.local_router)
 @app.on_event("startup")
 def startup():
     validate_deployment_config()
+    biometric_encryption_settings()
     if AUTO_MIGRATE:
         from migrate import run as run_migrations
         run_migrations()

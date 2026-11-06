@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Iterable, Optional
 
 import numpy as np
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, undefer
 
 from config import (
     FACE_AUTO_UPGRADE_EMBEDDINGS,
@@ -230,7 +230,7 @@ def find_best_match(
 
     if engine == "dlib":
         if users is None:
-            query = db.query(User).filter(User.face_encoding.isnot(None))
+            query = db.query(User).options(undefer(User.face_encoding)).filter(User.face_encoding.isnot(None))
             if excluded_user_id is not None:
                 query = query.filter(User.id != excluded_user_id)
             users = query.all()
@@ -436,7 +436,7 @@ def legacy_sync_user_embedding(db: Session, user: User) -> None:
 
 def sync_legacy_face_embeddings(db: Session) -> int:
     changed = 0
-    users = db.query(User).filter(User.face_encoding.isnot(None)).all()
+    users = db.query(User).options(undefer(User.face_encoding)).filter(User.face_encoding.isnot(None)).all()
     for user in users:
         before = (
             db.query(FaceEmbedding)

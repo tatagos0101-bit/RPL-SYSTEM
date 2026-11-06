@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from database import Base
+from services.biometric_crypto import BiometricText
 
 
 class FaceEmbedding(Base):
@@ -12,7 +13,7 @@ class FaceEmbedding(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     engine = Column(String(40), nullable=False, index=True)
     dimension = Column(Integer, nullable=False)
-    embedding = Column(Text, nullable=False)
+    embedding = Column(BiometricText("face_embeddings.embedding"), nullable=False)
     quality_score = Column(Float, nullable=True)
     source = Column(String(40), nullable=False, default="enrollment")
     is_active = Column(Boolean, nullable=False, default=True, index=True)

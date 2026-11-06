@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Foreign
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+from services.biometric_crypto import BiometricText
 
 
 class SecurityAlert(Base):
@@ -11,7 +12,7 @@ class SecurityAlert(Base):
     alert_type   = Column(String(32),  nullable=False)   # SPOOF_ENROLL | SPOOF_ENTRY | SPOOF_LOOKUP
     user_id      = Column(Integer, ForeignKey("users.id"), nullable=True)  # account being spoofed (if known)
     ip_address   = Column(String(64),  nullable=True)
-    snapshot_b64 = Column(Text,        nullable=True)    # base64 spoof image for evidence
+    snapshot_b64 = Column(BiometricText("security_alerts.snapshot_b64"), nullable=True)
     created_at   = Column(DateTime(timezone=True), server_default=func.now())
     is_read      = Column(Boolean, nullable=False, default=False)
 

@@ -220,3 +220,9 @@ checks. These results do not verify production deployment or real-camera accurac
   InsightFace requires its separate dependencies and model setup.
 - **Design documents can describe planned work:** files under `docs/superpowers/`
   are specifications/plans, not proof that a feature is implemented.
+## Biometric storage rollout
+
+The privacy-storage implementation requires server-only encryption keys in production.
+Before deploying it, follow [biometric storage, backfill and key recovery](docs/BIOMETRIC_STORAGE.md).
+Existing live data is not encrypted automatically by installing this code; the approved
+rollout uses transition mode, a verified backup and explicit backfill before strict mode.

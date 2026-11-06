@@ -1,7 +1,8 @@
 from sqlalchemy import Boolean, Column, Integer, String, Text, Enum, DateTime
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
 from sqlalchemy.sql import func
 from database import Base
+from services.biometric_crypto import BiometricText
 
 
 class User(Base):
@@ -20,8 +21,8 @@ class User(Base):
     location       = Column(String(120), nullable=True)
     status         = Column(Enum("active", "suspended", name="user_status", native_enum=False, create_constraint=True), nullable=False, default="active")
 
-    # 128-float face encoding stored as JSON array string e.g. "[0.123, -0.456, ...]"
-    face_encoding  = Column(Text, nullable=True)
+    # JSON in server memory; encrypted TEXT at rest when encryption is enabled.
+    face_encoding  = deferred(Column(BiometricText("users.face_encoding"), nullable=True))
 
     # Valid government ID uploaded during librarian-assisted registration
     id_image_url   = Column(String(300), nullable=True)

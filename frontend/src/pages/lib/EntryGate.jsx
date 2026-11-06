@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
+import StationPrivacyNotice from '../../components/StationPrivacyNotice';
 import {
   Shield, XCircle, UserX,
   ArrowLeft, Clock, LogIn, LogOut, Wifi, WifiOff, RefreshCw,
@@ -31,6 +32,8 @@ const UNKNOWN_CONFIRM_FRAMES = 2; // consecutive unknown frames required before 
 const LOG_REFRESH_MS   = 10000;  // ms between attendance log refreshes
 
 const EntryGate = () => {
+  const [cameraStarted, setCameraStarted] = useState(false);
+  const [cameraError, setCameraError] = useState('');
   const navigate = useNavigate();
   const goBack = () => {
     if (window.history.state?.idx > 0) {
@@ -96,6 +99,7 @@ const EntryGate = () => {
         clearStoredEntryStationPin();
         setStationPin('');
         setUnlocked(false);
+        setCameraStarted(false);
         setPinError('Enter the station PIN again.');
       }
       nextLogAllowedRef.current = Date.now() + entryStationRetryDelay(err);
@@ -131,7 +135,7 @@ const EntryGate = () => {
   // isPendingRef prevents concurrent in-flight requests — dlib takes 1-3s
   // so polling must not stack up requests, including after a manual restart.
   const captureAndSend = useCallback(async () => {
-    if (!unlocked || !stationPin) return;
+    if (!unlocked || !stationPin || !cameraStarted || document.hidden) return;
     if (isPendingRef.current) return;  // skip — previous request still running
     const startedAt = Date.now();
     if (startedAt < nextAllowedRef.current) return;
@@ -200,6 +204,7 @@ const EntryGate = () => {
         clearStoredEntryStationPin();
         setStationPin('');
         setUnlocked(false);
+        setCameraStarted(false);
         setPinError('Enter the station PIN again.');
         return;
       }
@@ -218,15 +223,24 @@ const EntryGate = () => {
     } finally {
       isPendingRef.current = false;   // always release lock
     }
-  }, [refreshLogs, showFaceResults, showResult, stationPin, unlocked]);
+  }, [refreshLogs, showFaceResults, showResult, stationPin, unlocked, cameraStarted]);
 
-  // ── Auto-start scanning on mount ───────────────────────────────────────────
+  // Camera start is an operator action, not a patron consent record.
   useEffect(() => {
+    if (!unlocked || !cameraStarted) return;
     cooldownRef.current = {};
     captureAndSend();
     pollRef.current = setInterval(captureAndSend, POLL_TICK_MS);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [captureAndSend]);
+  }, [captureAndSend, unlocked, cameraStarted]);
+
+  useEffect(() => {
+    const pauseWhenHidden = () => {
+      if (document.hidden) setCameraStarted(false);
+    };
+    document.addEventListener('visibilitychange', pauseWhenHidden);
+    return () => document.removeEventListener('visibilitychange', pauseWhenHidden);
+  }, []);
 
   // ── Restart scanner (after error) ─────────────────────────────────────────
   const restartScanner = useCallback(() => {
@@ -316,6 +330,8 @@ const EntryGate = () => {
             {' '}A librarian can set or change this PIN in Settings.
           </p>
 
+          <div className="mt-5"><StationPrivacyNotice /></div>
+
           <div className="mt-7">
             <label htmlFor="station-pin" className="mb-2 block text-sm font-semibold tracking-normal text-muted">
               Station PIN
@@ -347,6 +363,21 @@ const EntryGate = () => {
           </button>
         </form>
       </div>
+    );
+  }
+
+  if (!cameraStarted) {
+    return (
+      <main className="rpl-page min-h-dvh bg-canvas p-4 text-ink sm:p-8">
+        <div className="mx-auto max-w-xl space-y-6 rounded-xl border border-line bg-panel p-6 sm:p-8">
+          <h1 className="rpl-title">Entrance Station</h1>
+          <StationPrivacyNotice />
+          <p className="text-sm leading-6 text-muted">For station staff: make the notice visible to visitors before starting. Starting the camera does not record any patron’s consent. Scanning pauses when this page is hidden.</p>
+          {cameraError && <p role="alert" className="text-sm leading-6 text-danger">{cameraError}</p>}
+          <button type="button" onClick={() => { setCameraError(''); setCameraStarted(true); }} className="w-full rounded-lg bg-action px-5 py-3 font-semibold text-white">Start camera</button>
+          <button type="button" onClick={goBack} className="text-sm font-semibold text-link underline underline-offset-4">Back to library</button>
+        </div>
+      </main>
     );
   }
 
@@ -404,11 +435,21 @@ const EntryGate = () => {
 
           <h1 className="rpl-section-title self-start">Entrance Station</h1>
 
+          <div className="w-full max-w-[580px] shrink-0">
+            <StationPrivacyNotice />
+            <button type="button" onClick={() => setCameraStarted(false)} className="mt-2 text-sm font-semibold text-link underline underline-offset-4">Pause camera</button>
+          </div>
+
           {/* Camera viewport */}
           <div className="relative w-full max-w-[580px] aspect-[4/3] bg-black text-white border border-line rounded-xl overflow-hidden shadow-sm">
 
             <Webcam
               ref={webcamRef}
+              audio={false}
+              onUserMediaError={() => {
+                setCameraError('Camera unavailable. Check camera permissions and close other apps using it, then try again.');
+                setCameraStarted(false);
+              }}
               screenshotFormat="image/jpeg"
               screenshotQuality={0.8}
               videoConstraints={{ width: 640, height: 480, facingMode: 'user' }}
