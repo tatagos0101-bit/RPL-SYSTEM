@@ -21,6 +21,8 @@ from database import get_db
 from dependencies import require_librarian
 from models.book import Book
 from models.book_copy import BookCopy
+from models.copy_acquisition import CopyAcquisition
+from services.acquisitions import record_new_copies
 from models.user import User
 from models.transaction import Transaction
 from models.reservation import Reservation
@@ -79,6 +81,43 @@ def inventory_stats(
     )
 
 
+@router.get("/books")
+def list_inventory_books(search: str = Query("", max_length=200), category: str = Query("", max_length=100),
+                         source: str = Query("", pattern="^(|purchased|donated|other|unknown)$"),
+                         skip: int = Query(0, ge=0), limit: int = Query(20, ge=1, le=200),
+                         db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    query = db.query(Book)
+    if search:
+        query = query.filter(Book.title.ilike(f"%{search}%") | Book.author.ilike(f"%{search}%"))
+    if category:
+        query = query.filter(Book.category.ilike(category))
+    if source:
+        matching = db.query(BookCopy.book_id).outerjoin(CopyAcquisition).filter(BookCopy.status != "retired")
+        matching = matching.filter(CopyAcquisition.source.is_(None) if source == "unknown" else CopyAcquisition.source == source)
+        query = query.filter(Book.id.in_(matching))
+    total = query.count()
+    books = query.order_by(Book.title, Book.id).offset(skip).limit(limit).all()
+    counts = {}
+    if books:
+        for book_id, origin, count in db.query(BookCopy.book_id, CopyAcquisition.source, func.count(BookCopy.id)).outerjoin(CopyAcquisition).filter(
+                BookCopy.book_id.in_([book.id for book in books]), BookCopy.status != "retired").group_by(BookCopy.book_id, CopyAcquisition.source).all():
+            counts.setdefault(book_id, {})[origin or "unknown"] = count
+    return {"total": total, "skip": skip, "limit": limit, "items": [
+        {**BookOut.model_validate(book).model_dump(), "acquisition_sources": counts.get(book.id, {})} for book in books]}
+
+
+@router.get("/books/{book_id}/acquisitions")
+def book_acquisitions(book_id: int, skip: int = Query(0, ge=0), limit: int = Query(25, ge=1, le=100),
+                      db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    if not db.get(Book, book_id):
+        raise HTTPException(404, "Book not found")
+    query = db.query(BookCopy).filter(BookCopy.book_id == book_id)
+    copies = query.options(joinedload(BookCopy.acquisition)).order_by(BookCopy.copy_number, BookCopy.id).offset(skip).limit(limit).all()
+    return {"total": query.count(), "skip": skip, "limit": limit, "items": [
+        {"id": copy.id, "copy_number": copy.copy_number, "qr_code": copy.qr_code, "status": copy.status,
+         "source": copy.acquisition.source if copy.acquisition else None} for copy in copies]}
+
+
 # ── Add single book ───────────────────────────────────────────────────────────
 
 @router.post("/books", response_model=BookOut, status_code=status.HTTP_201_CREATED)
@@ -89,7 +128,7 @@ def add_book(
     request_id: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
     category_write_lock(db)
-    digest = fingerprint(body.model_dump(mode="json"))
+    digest = fingerprint(body.model_dump(mode="json", exclude={"acquisition"} if body.acquisition is None else set()))
     saved = find_write(db, _.id, request_id, "create-book", digest)
     if saved:
         return saved.result
@@ -98,7 +137,7 @@ def add_book(
             raise HTTPException(status_code=400, detail=f"ISBN '{body.isbn}' already exists")
 
     book = Book(
-        **body.model_dump(),
+        **body.model_dump(exclude={"acquisition"}),
         copies_available=body.copies_total,
     )
     assign_category(book, body.category)
@@ -107,6 +146,7 @@ def add_book(
 
     book.qr_code = make_qr_code(book.id)
     ensure_book_copies(db, book.id, commit=False)
+    record_new_copies(db, book.id, body.acquisition, _.id)
     db.flush()
     reconcile_categories(db)
     remember_write(db, _.id, request_id, "create-book", digest,
@@ -140,6 +180,7 @@ def update_book(
         raise HTTPException(status_code=404, detail="Book not found")
 
     changes = body.model_dump(exclude_unset=True)
+    acquisition = changes.pop("new_copy_acquisition", None)
     previous_cover = book.cover_url
     sync_expired_reservations(db, book_id=book_id, commit=False)
     for required in ("title", "author", "category", "copies_total"):
@@ -148,7 +189,14 @@ def update_book(
     if changes.get("isbn") and db.query(Book.id).filter(Book.isbn == changes["isbn"], Book.id != book_id).first():
         raise HTTPException(409, "This ISBN is already assigned to another book.")
 
+    after_number = 0
+    if acquisition is not None:
+        if changes.get("copies_total", book.copies_total) <= book.copies_total:
+            raise HTTPException(422, "Acquisition details here apply only to additional copies. Edit existing copies separately.")
+        ensure_book_copies(db, book.id, commit=False)
+        after_number = db.query(func.max(BookCopy.copy_number)).filter(BookCopy.book_id == book.id).scalar() or 0
     resize_book_copies(db, book, changes.get("copies_total", book.copies_total))
+    record_new_copies(db, book.id, acquisition, _.id, after_number)
     held = db.query(Reservation).filter(Reservation.book_id == book.id, Reservation.status == 'ready').count()
     if book.copies_available < held:
         raise HTTPException(409, 'Cannot reduce available stock below ready reservation holds.')
@@ -286,6 +334,7 @@ async def bulk_upload(
         i = row.pop("_row_number")
         try:
             validated = BookCreate.model_validate(row).model_dump()
+            acquisition = validated.pop("acquisition", None)
             # Skip duplicate ISBNs
             if validated.get("isbn") and db.query(Book).filter(Book.isbn == validated["isbn"]).first():
                 skipped += 1
@@ -298,6 +347,8 @@ async def bulk_upload(
                 db.flush()
                 book.qr_code = make_qr_code(book.id)
                 ensure_book_copies(db, book.id, commit=False)
+                record_new_copies(db, book.id, acquisition, _.id)
+                db.flush()
             added += 1
 
         except Exception:

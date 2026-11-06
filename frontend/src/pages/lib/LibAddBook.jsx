@@ -1,3 +1,5 @@
+import AcquisitionFields from '../../components/AcquisitionFields';
+import { emptyAcquisition, acquisitionPayload } from '../../api/acquisitions';
 import { useState, useEffect, useRef } from 'react';
 import {
   PlusSquare, Upload, FileText, CheckCircle2, AlertCircle,
@@ -68,6 +70,8 @@ export default function LibAddBook() {
     title: '', author: '', category: '', year: '',
     isbn: '', copies: '', location: '', cover_url: '',
   });
+  const [acquisition, setAcquisition] = useState(emptyAcquisition);
+  const [bulkAcquisition, setBulkAcquisition] = useState(emptyAcquisition);
   const [submitting, setSubmitting]   = useState(false);
   const [submitted, setSubmitted]     = useState(false);
   const [formError, setFormError]     = useState('');
@@ -196,6 +200,7 @@ export default function LibAddBook() {
         catch { setCoverRetry({ id: res.data.id, file: coverFile }); }
       }
       setSubmitted(true);
+      setAcquisition(emptyAcquisition());
       setForm({ title: '', author: '', category: '', year: '', isbn: '', copies: '', location: '', cover_url: '' });
       setIsbnInput(''); setLookupSuccess(false); setLookupError(''); setUseCustomCategory(false);
       removeCoverFile();
@@ -244,6 +249,7 @@ export default function LibAddBook() {
     }
 
     submitManual({
+      ...(acquisitionPayload(acquisition) ? { acquisition: acquisitionPayload(acquisition) } : {}),
       title:          t,
       author:         a,
       category:       c,
@@ -390,6 +396,7 @@ export default function LibAddBook() {
           category: (row.data.category || 'General').slice(0, 1000),
           year: row.data.year ? parseInt(row.data.year) : null,
           isbn: row.isbn, copies_total: parseInt(bulkCopies) || 1,
+          ...(acquisitionPayload(bulkAcquisition) ? { acquisition: acquisitionPayload(bulkAcquisition) } : {}),
           cover_url: row.data.cover_url ? row.data.cover_url.slice(0, 500) : null,
         };
         updateRow(row);
@@ -707,6 +714,7 @@ export default function LibAddBook() {
                   </div>
                 </div>
 
+                <AcquisitionFields value={acquisition} onChange={setAcquisition} disabled={submitting || !!pendingManual} />
                 <button type="submit" disabled={submitting || !!pendingManual || !!recoveryError}
                   className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold text-sm tracking-normal transition-all shadow-sm flex items-center justify-center gap-2 mt-2">
                   {submitting ? <RefreshCw size={15} className="animate-spin" /> : <PlusSquare size={15} />}
@@ -936,6 +944,7 @@ export default function LibAddBook() {
                         )}
                       </div>
                     )}
+                    <AcquisitionFields value={bulkAcquisition} onChange={setBulkAcquisition} disabled={bulkBusy || hasUnconfirmedRows} description="Applies to all new copies in the selected ISBN batch. Use separate batches for different sources. Pending retries retain their original details." />
                     <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
                       <div className="flex-shrink-0">
                         <label className="block text-sm font-semibold tracking-normal text-muted mb-1">Copies each</label>
@@ -1038,6 +1047,7 @@ export default function LibAddBook() {
                   </div>
                 ))}
               </div>
+              <p className="mb-4 text-sm text-muted">Optional acquisition columns: Acquisition source (purchased, donated, other, or blank), Acquisition date (YYYY-MM-DD), Donor / supplier, Cost per copy, Currency, Acquisition reference. These apply to each copy in that row. Blank fields remain unknown.</p>
               <button onClick={handleUpload} disabled={(!file && !pendingWorkbook) || uploading || !!recoveryError}
                 className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-2">
                 {uploading ? <RefreshCw size={15} className="animate-spin" /> : <FileText size={15} />}

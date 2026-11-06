@@ -56,9 +56,10 @@ def test_report_borrowed_stock_excludes_unavailable_nonloans(client, db_session,
                                borrow_date=now_ph(), due_date=now_ph() + timedelta(days=14)))
     db_session.commit()
     captured = {}
-    def capture(label, stats, books, members):
-        captured.update(stats)
+    def capture(report):
+        captured.update(report)
         return b"synthetic PDF"
     monkeypatch.setattr(report_service, "build_monthly_report", capture)
     assert client.get("/api/reports/monthly?month=10&year=2026", headers=headers).status_code == 200
-    assert captured["borrowed_copies"] == 1
+    circulation = next(section for section in captured['sections'] if section['category']=='circulation')
+    assert circulation['datasets'][1]['total'] == 1

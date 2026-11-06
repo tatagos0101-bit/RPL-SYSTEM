@@ -26,6 +26,12 @@ def _sanitize(value: str, max_length: int = 500) -> str:
 
 # Map flexible header names → canonical field names
 HEADER_MAP = {
+    "acquisition source": "acquisition_source",
+    "acquisition date": "acquisition_date",
+    "donor / supplier": "acquisition_party",
+    "cost per copy": "acquisition_cost",
+    "currency": "acquisition_currency",
+    "acquisition reference": "acquisition_reference",
     "title":      "title",
     "book title": "title",
     "author":     "author",
@@ -87,6 +93,21 @@ def parse_excel(file_bytes: bytes) -> list[dict]:
         book = {field: cell(row, field) for field in col_map}
         book["category"] = book.get("category") or "General"
         book["copies_total"] = book.get("copies_total") or 1
+        acquisition = {}
+        for column, field in {"source": "source", "date": "acquired_on", "party": "party", "cost": "cost", "currency": "currency", "reference": "reference"}.items():
+            value = book.pop(f"acquisition_{column}", None)
+            if field == "source" and value:
+                value = {"bought": "purchased", "unknown": None}.get(value.lower(), value.lower())
+            if field == "currency" and value:
+                value = value.upper()
+            if field == "acquired_on" and value and " " in value:
+                value = value.split(" ")[0]  # Excel date cells include midnight.
+            if field == "cost":
+                index = col_map.get("acquisition_cost")
+                value = row[index] if index is not None and index < len(row) else None
+            acquisition[field] = value or None if field != "cost" else value
+        if any(value is not None for value in acquisition.values()):
+            book["acquisition"] = acquisition
         book["_row_number"] = row_number
         books.append(book)
     wb.close()
