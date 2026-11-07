@@ -1,87 +1,57 @@
 # Category normalization
 
-The authoritative implementation is `backend/services/category_service.py`. ISBN
-lookups ask the librarian-only suggestion endpoint to choose a full provider label.
-Single saves, book edits, Excel imports, and the migration backfill use the same
-mapper before committing. No external metadata label is automatically trusted as
-a public category.
+The November 7, 2026 working tree uses the categories from
+[Open Library’s Browse the stacks](https://openlibrary.org/): Crime, Drama,
+Fantasy, Horror, Mystery, Romance, Sci-Fi, Thriller, Kids, History and Biography.
+Featured is a collection rather than a genre. General remains the library fallback.
+This copies the browse vocabulary, not Open Library’s complete subject hierarchy
+or its internal classification algorithm. No catalog data was scraped.
 
-## Sequence and storage
+## Mapping and review
 
-1. Keep the original selected label in `books.raw_api_label` (up to 1000 characters).
-2. Normalize case, punctuation/separators, and generic tags for matching. Preserve
-   the compound `science fiction`. Match YA as a whole word, not inside royalty.
-3. Match the ordered matrix: Sci-Fi & Fantasy, Mystery & Thriller,
-   Biography & Memoir, Business & Economics, Children & YA. First matching parent
-   wins; e.g. juvenile fantasy maps to Sci-Fi & Fantasy. Master names round-trip.
-4. `books.category` remains the public display string (80 characters) to preserve
-   existing filters/recommendations/report contracts. Unmatched books display
-   General with `books.is_hidden=true`; the book itself remains publicly visible.
-5. Count unreviewed book/title records with the **exact trimmed raw label**, not copies or
-   normalized variants. At 11 titles, publish that label (`is_hidden=false`). At
-   10 or fewer after edits/deletions, hide it again. Counts are recalculated in the
-   write transaction. PostgreSQL category writes use one transaction advisory lock.
-6. Labels longer than 80 characters use a truncated display plus a stable hash
-   suffix when published. The full raw label remains intact for review/counting.
-7. `books.category_override` preserves librarian mapping to an existing master.
-   Reconciliation keeps the override and the raw label. A subsequent category edit
-   resets that override and reprocesses the new input. Unchanged display values
-   during unrelated book edits do not erase the raw metadata.
+The source of truth is `backend/services/category_service.py`. ISBN suggestions,
+book saves, Excel imports and backfills use the same matrix. Preserve the selected
+provider subject in `books.raw_api_label`; keep the public string in `books.category`.
 
-Standalone General/Fiction/Nonfiction and empty Excel categories become General;
-they are not pending new genres. Romance and Regency are deliberately not guessed
-into another master: they remain pending unless the threshold or librarian mapping
-resolves them. Expand the matrix only with an agreed taxonomy and regression tests.
+Normalize case, punctuation and generic tags while protecting science fiction.
+Match whole keywords/phrases, including whole-word YA. Canonical names round-trip.
+With one category per title, audience (Kids) takes priority, followed by specific
+genres in the documented matrix order; juvenile fantasy becomes Kids. Librarians
+can override suggestions using any fixed master. This is deterministic matching,
+not semantic understanding or an assertion of Open Library’s own assignment rules.
 
-The public category endpoint emits the mapped categories plus General. ISBN bulk
-preview keeps a string rather than the former match-result object. Provider label
-arrays are inspected in order, preferring a specific match over generic tags.
+Unmatched subjects stay General with `is_hidden=true` for librarian review; the
+book remains visible. **Book counts no longer publish arbitrary categories.** This
+replaces the former 11-title promotion rule, which could recreate category bloat.
+Romance now maps directly; an ambiguous label such as Regency England stays in review.
 
-## Librarian review
+`category_override` preserves valid fixed-master librarian decisions. Legacy
+combined/removed overrides are retained as provenance but no longer published;
+reconciliation maps their original raw subject or sends it to review. An explicit
+new category edit clears the override. Unrelated title edits preserve raw metadata.
 
-The Add Book screen has a **Librarian category review** panel with pagination.
-It loads `GET /api/inventory/category-review` and existing master options from
-`GET /api/inventory/category-masters`. Mapping calls
-`POST /api/inventory/category-review/resolve` with `raw_api_label` and
-`master_category`. Only a librarian can access these endpoints. Resolution maps
-all currently pending books with that exact label to an existing master; it cannot
-publish an arbitrary new label below the threshold.
+The Add Book review panel uses librarian-only `/api/inventory/category-review`,
+`/category-masters`, `/category-review/resolve` and `/category-suggestion` endpoints.
+Only existing masters can resolve a subject. Browser suggestions are rechecked on
+write. PostgreSQL category writes use a transaction advisory lock. No new tables,
+public database access or background network classification are introduced.
 
-`POST /api/inventory/category-suggestion` accepts a bounded `labels` array and
-returns the chosen raw label, mapped display, and pending flag without writing.
-The write paths revalidate the category; browser suggestions are not authoritative.
+## Existing data and rollout
 
-## Migration and verification
+Existing production labels do not change merely by editing code. Apply the updated
+[specific category backfill](../supabase/operations/category_normalization.sql)
+in one authorized transaction after backup and an isolated rehearsal. It keeps raw
+labels and leaves book IDs, physical copies, QR identities, loans and reservations
+intact. Repeated application is idempotent. The SQL mirrors the application matrix;
+`test_otp_postgres.py` checks parity on PostgreSQL with synthetic subjects.
 
-Three additive book columns are registered in `services/schema_migrations.py`.
-`python migrate.py` from `backend/` adds them and backfills existing categories.
-This is a database mutation and also runs the repository's existing backfills:
-use an isolated database first, take an appropriate backup, and obtain explicit
-production authorization. Do not run application code against the old schema.
-Keep production AUTO_MIGRATE=false. No initial migration was regenerated, new table
-was introduced, RLS grant changed, or live database updated by this task.
+`python migrate.py` from `backend/` also reconciles categories but runs other
+existing backfills. Do not use it as a read-only check or execute it on production
+without approval. Keep `AUTO_MIGRATE=false`; do not regenerate initial migrations.
+Coordinate the API rollout/backfill so an older writer cannot republish labels.
+No live backfill was performed during this implementation.
 
-Backfill stores each legacy category once before mapping; repeats are idempotent.
-Existing book IDs, QR identities, inventory counts, reservations, and loans are not
-changed by category reconciliation. Preserve a pre-migration backup for rollback;
-the old application cannot safely share category writes with the new version.
-
-Tests: `test_category_service.py`, `test_book_edit.py`, and `test_copy_qr_policy.py`
-cover keywords, exact-label thresholds, copied inventory, authorized review,
-provider suggestions, workbook headers, and repeatable SQLite upgrades/backfill.
-SQLite does not prove PostgreSQL advisory-lock behavior or live cloud permissions.
-The reconciliation currently scans book records on category writes, suitable for
-this library's modest catalog; profile before scaling to large concurrent imports.
-
-## Optional future relational model
-
-A larger catalog can replace the compatibility string with
-`master_categories(id, name)` and `category_labels(id, raw_label, normalized_label,
-mapped_category_id, is_hidden, reviewed_by, reviewed_at)`, with a book-to-label
-foreign key. Keep exact raw-label counts and review authorization server-side.
-That redesign, extra tables, and new access policies are intentionally not included.
-
-Production release can apply `supabase/operations/category_normalization.sql` as an
-atomic category-only migration instead of rerunning unrelated backfills. The SQL
-uses the same ordered keyword matrix and keeps original labels in raw_api_label.
-It was rehearsed twice against temporary PostgreSQL records before release.
+`test_category_service.py` covers canonical names, sanitization, unknown labels
+at/above the old threshold, original-label preservation, permission checks,
+review, imports and repeatability. The current reconciliation scans titles during
+category writes; profile before expanding to large concurrent imports.

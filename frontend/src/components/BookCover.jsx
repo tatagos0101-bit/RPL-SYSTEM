@@ -10,12 +10,12 @@ import { assetUrl } from '../api/urls';
  * API URL so they work in production where no dev-server proxy exists.
  */
 const BookCover = ({ src, alt = '', className = 'w-full h-full object-cover', iconSize = 14 }) => {
-  const [failed, setFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState(null);
 
   // Resolve backend-relative paths to an absolute URL
   const resolvedSrc = assetUrl(src);
 
-  if (!resolvedSrc || failed) {
+  if (!resolvedSrc || failedSrc === resolvedSrc) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <BookOpen size={iconSize} className="text-slate-400" />
@@ -28,7 +28,9 @@ const BookCover = ({ src, alt = '', className = 'w-full h-full object-cover', ic
       src={resolvedSrc}
       alt={alt}
       className={className}
-      onError={() => setFailed(true)}
+      loading="lazy"
+      decoding="async"
+      onError={() => setFailedSrc(resolvedSrc)}
     />
   );
 };

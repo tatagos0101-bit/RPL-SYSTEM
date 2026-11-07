@@ -23,6 +23,12 @@ def repair_preflight(conn):
         raise RuntimeError('Repair migration aborted: ' + '; '.join(problems) + '. No records were rewritten.')
 
 ADDITIONS = {
+    "password_reset_codes": [
+        ("purpose", String(20), text("'reset'")),
+        ("context_hash", String(128), None),
+        ("attempts", Integer, text("0")),
+        ("delivered_at", DateTime(timezone=True), None),
+    ],
     "books": [("category_override", String(80), None), ("raw_api_label", String(1000), None), ("is_hidden", Boolean, true())],
     "entry_logs": [("time_out", DateTime(timezone=True), None)],
     "notifications": [("user_id", Integer, None)],
@@ -71,7 +77,7 @@ def upgrade_schema(conn, metadata) -> None:
     for table in metadata.sorted_tables:
         name = conn.dialect.identifier_preparer.quote(table.name)
         conn.execute(text(f"ALTER TABLE public.{name} ENABLE ROW LEVEL SECURITY"))
-        if table.name in ("auth_sessions", "reservation_confirmations", "inventory_writes", "copy_acquisitions"):
+        if table.name in ("auth_sessions", "password_reset_codes", "reservation_confirmations", "inventory_writes", "copy_acquisitions"):
             conn.execute(text(f"REVOKE ALL ON TABLE public.{name} FROM PUBLIC"))
         for role in sorted(roles):
             conn.execute(text(f"REVOKE ALL ON TABLE public.{name} FROM {role}"))

@@ -76,7 +76,7 @@ def test_verified_email_member_can_reset_password_with_code(client, db_session):
     assert new_login.json()["must_change_password"] is False
 
 
-def test_verified_phone_member_can_request_sms_reset_code(client, db_session):
+def test_verified_phone_cannot_request_sms_or_automatic_reset(client, db_session):
     member = create_member(
         db_session,
         email="phone-member@example.test",
@@ -90,11 +90,10 @@ def test_verified_phone_member_can_request_sms_reset_code(client, db_session):
         json={"identifier": member.member_id, "channel": "sms"},
     )
 
-    assert requested.status_code == 200
-    body = requested.json()
-    assert body["success"] is True
-    assert body["delivery_channel"] == "sms"
-    assert body["debug_code"]
+    assert requested.status_code == 422
+    automatic = client.post("/api/auth/password-reset/request", json={"identifier": member.member_id})
+    assert automatic.json()["requires_librarian_help"] is True
+    assert not automatic.json().get("debug_code")
 
 
 def test_member_without_verified_contact_is_directed_to_librarian(client, db_session):

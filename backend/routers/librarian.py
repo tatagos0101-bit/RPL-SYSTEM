@@ -577,6 +577,8 @@ def librarian_enroll_face(
         )
 
     face = detected_faces[0]
+    from services.liveness_service import require_live_enrollment
+    require_live_enrollment(body.image, detected_faces)
     duplicate = face_engine_service.find_duplicate_for_enrollment(db, face, user_id)
     if duplicate is not None:
         raise HTTPException(

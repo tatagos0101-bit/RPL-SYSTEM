@@ -20,7 +20,8 @@ test('rejects server settings, public-prefixed variants and integration namespac
     'POSTGRES_USER', 'POSTGRES_HOST', 'POSTGRES_DATABASE', 'POSTGRES_PRISMA_URL',
     'SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_ANON_KEY', 'SUPABASE_SECRET_KEY',
     'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_JWT_SECRET', 'DATABASE_URL', 'JWT_SECRET_KEY',
-    'LIBRARIAN_AUTH_CODE', 'ENTRY_STATION_PIN', 'RATE_LIMIT_STORAGE_URI', 'RATE_LIMIT_REQUIRE_SHARED']) {
+    'LIBRARIAN_AUTH_CODE', 'ENTRY_STATION_PIN', 'RATE_LIMIT_STORAGE_URI', 'RATE_LIMIT_REQUIRE_SHARED',
+    'OTP_SMTP_HOST', 'OTP_SMTP_PASSWORD', 'OTP_TWILIO_AUTH_TOKEN', 'OTP_TWILIO_MESSAGING_SERVICE_SID']) {
     for (const prefix of ['', 'VITE_', 'NEXT_PUBLIC_']) {
       assert.deepEqual(serverEnvironmentNames({ [prefix + name]: 'synthetic-value' }), [prefix + name])
     }

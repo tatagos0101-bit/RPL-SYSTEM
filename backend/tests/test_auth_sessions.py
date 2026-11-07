@@ -134,14 +134,21 @@ def test_recovery_revokes_sessions_and_all_outstanding_reset_codes(client, db_se
     member = account(db_session)
     old = login(client, member)
     from services.password_reset import create_password_reset_code
-    first, _ = create_password_reset_code(db_session, member, "email")
-    second, _ = create_password_reset_code(db_session, member, "email")
+    from models.password_reset import PasswordResetCode
+    first, older = create_password_reset_code(db_session, member, "email")
+    older.delivered_at = now_ph()
+    db_session.commit()
+    second, challenge = create_password_reset_code(db_session, member, "email")
+    challenge.delivered_at = now_ph()
+    db_session.commit()
     assert client.post("/api/auth/password-reset/confirm", json={
-        "identifier": member.email, "code": first, "new_password": "ChangedPassword2",
+        "identifier": member.email, "code": second, "new_password": "ChangedPassword2",
     }).status_code == 200
     assert client.get("/api/user/profile", headers=bearer(old)).status_code == 401
+    db_session.expire_all()
+    assert db_session.query(PasswordResetCode).filter(PasswordResetCode.used_at.is_(None)).count() == 0
     assert client.post("/api/auth/password-reset/confirm", json={
-        "identifier": member.email, "code": second, "new_password": "AnotherPassword3",
+        "identifier": member.email, "code": first, "new_password": "AnotherPassword3",
     }).status_code == 400
 
 
@@ -198,6 +205,7 @@ def test_wrong_portal_face_login_preserves_current_cookie(client, db_session, mo
     db_session.commit()
     login(client, member)
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _: ("ok", 1))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(face_engine_service, "detect_faces", lambda *a, **kw: [{"engine": "dlib", "encoding": [0.1]}])
     response = client.post("/api/auth/face", json={"image": "synthetic", "expected_role": "member"})
     assert response.status_code == 403

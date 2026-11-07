@@ -81,14 +81,16 @@ The README recommends Python 3.12 and Node.js 22.12 or newer. Commands require i
 - Session JWTs require an active `auth_sessions` row bound to the current password hash.
   Preserve logout revocation and revocation of every old session on password changes/resets.
   A successful password change replaces the current browser cookie; pre-upgrade tokens require login.
-- Enforce `must_change_password` through the backend dependency. Only profile retrieval,
+- Enforce `must_change_password` through the backend dependency. Only profile/session retrieval,
   password change, and logout are allowed authenticated operations until completion.
 - Contact details are unverified when entered during registration; do not treat presence as ownership.
   Preserve existing verification data unless a separate correction/backfill is approved.
 - Redis rate-limit support uses `RATE_LIMIT_STORAGE_URI` and `RATE_LIMIT_REQUIRE_SHARED`.
   Configured Redis failures must reject limited requests, never fall back silently to local memory.
 - Keep recovery errors non-enumerating and reset codes out of non-test responses/logs.
-  Email/SMS recovery delivery is not integrated; librarian-assisted resets are the operational path.
+  Email-only Resend SMTP delivery requires private server configuration and delivery acceptance; see
+  [contact verification](docs/CONTACT_VERIFICATION.md). Keep single-use, purpose/contact-bound
+  codes, account send/attempt limits and librarian-assisted recovery.
 - Verify anonymous, wrong-role, suspended, and cross-owner access when changing protected behavior.
 
 ## Facial recognition and biometric privacy
@@ -97,13 +99,13 @@ The README recommends Python 3.12 and Node.js 22.12 or newer. Commands require i
   Preserve legacy encoding compatibility, matching thresholds/margins, and enrollment deduplication.
 - Never print, commit, or copy real patron images, embeddings, IDs, or spoof snapshots into
   fixtures, documentation, screenshots, summaries, or external services. Use synthetic test data.
-- Spoof alerts can retain raw snapshots; embeddings are stored as JSON text. Do not describe them
-  as anonymous data or claim that application-level encryption, consent, or retention controls exist.
-- When adding PAD, fail closed for failed/uncertain/unavailable checks before recognition/access/enrollment.
+- Spoof alerts can retain facial snapshots. Preserve biometric encryption and key handling;
+  encryption does not anonymize biometrics or establish consent/retention controls.
+- Fail closed for failed/uncertain/unavailable PAD checks before recognition/access/enrollment.
   Preserve password and supervised manual-ID alternatives; do not lower thresholds to make a demo pass.
-- Main currently uses brightness/texture heuristics; static photos can pass. MiniFASNet PAD work
-  inspected on October 14, 2026 remains separate, uncommitted work with hardware acceptance pending.
-  Require model provenance and camera acceptance before releasing it; mocks do not certify security.
+- MiniFASNet PAD is integrated in the November 7 working tree. Preserve checksummed model assets
+  and [acceptance limits](backend/assets/anti_spoof/README.md). Live/phone trials are user-reported;
+  printed-photo testing was waived by the operator on November 7, 2026; it was not performed. Do not infer deployment or certification from code/tests.
 - Any consent, deletion, or retention change needs explicit product policy; do not invent durations.
 
 ## QR, circulation, attendance, and reservations

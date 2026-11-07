@@ -19,7 +19,7 @@ def test_keyword_matrix(parent, keyword):
 
 def test_sanitization_compounds_and_short_keyword():
     assert sanitize_label("Romance -- Fiction: / General.") == "romance"
-    assert mapped_parent("Science Fiction / General") == "Sci-Fi & Fantasy"
+    assert mapped_parent("Science Fiction / General") == "Sci-Fi"
     assert mapped_parent("royalty") is None
     assert mapped_parent("Regency England -- Fiction") is None
     assert mapped_parent("Nonfiction") == "General"
@@ -34,14 +34,14 @@ def make_book(db, label, number):
     return book
 
 
-def test_threshold_exact_labels_deletion_and_idempotence(db_session):
+def test_unknown_labels_never_promote_by_count(db_session):
     books = [make_book(db_session, "Regency England -- Fiction", i) for i in range(10)]
     make_book(db_session, "regency england -- fiction", 11)
     reconcile_categories(db_session)
     assert all(book.is_hidden and book.category == "General" for book in books)
     eleventh = make_book(db_session, "Regency England -- Fiction", 12)
     reconcile_categories(db_session)
-    assert all(not book.is_hidden and book.category == "Regency England -- Fiction" for book in books)
+    assert all(book.is_hidden and book.category == "General" for book in books)
     assert reconcile_categories(db_session) == 0
     db_session.delete(eleventh)
     reconcile_categories(db_session)
@@ -55,8 +55,7 @@ def test_long_raw_labels_preserved_without_display_collision(db_session):
             make_book(db_session, label, i)
     reconcile_categories(db_session)
     books = db_session.query(Book).all()
-    assert all(len(book.category) == 80 for book in books)
-    assert len({book.category for book in books}) == 2
+    assert all(book.is_hidden and book.category == "General" for book in books)
     assert {book.raw_api_label for book in books} == set(labels)
 
 
@@ -82,7 +81,7 @@ def staff_headers(db):
 
 def test_api_write_public_categories_review_and_permissions(client, db_session):
     headers = staff_headers(db_session)
-    payload = {"title": "Test book", "author": "Test Author", "category": "Romance -- Fiction", "copies_total": 1}
+    payload = {"title": "Test book", "author": "Test Author", "category": "Unmapped subject -- Fiction", "copies_total": 1}
     response = client.post("/api/inventory/books", json=payload, headers=headers)
     assert response.status_code == 201
     assert response.json()["category"] == "General"
@@ -94,18 +93,18 @@ def test_api_write_public_categories_review_and_permissions(client, db_session):
     member_headers = {"Authorization": "Bearer " + _make_token(member.id)}
     assert client.get("/api/inventory/category-review", headers=member_headers).status_code == 403
     queue = client.get("/api/inventory/category-review", headers=headers).json()
-    assert queue == [{"raw_api_label": "Romance -- Fiction", "book_count": 1, "is_hidden": True}]
+    assert queue == [{"raw_api_label": "Unmapped subject -- Fiction", "book_count": 1, "is_hidden": True}]
     assert client.get("/api/books/categories").json() == [{"category": "General", "count": 1}]
     # Saving another field with the displayed General category must retain original metadata.
     assert client.put(f"/api/inventory/books/{book_id}", json={"title": "Edited", "category": "General"}, headers=headers).status_code == 200
-    resolution = {"raw_api_label": "Romance -- Fiction", "master_category": "Children & YA"}
+    resolution = {"raw_api_label": "Unmapped subject -- Fiction", "master_category": "Kids"}
     assert client.post("/api/inventory/category-review/resolve", json=resolution, headers=member_headers).status_code == 403
     assert client.post("/api/inventory/category-review/resolve", json=resolution, headers=headers).json()["updated"] == 1
     db_session.expire_all()
     book = db_session.get(Book, book_id)
-    assert book.raw_api_label == "Romance -- Fiction"
+    assert book.raw_api_label == "Unmapped subject -- Fiction"
     reconcile_categories(db_session)
-    assert book.category == "Children & YA" and not book.is_hidden
+    assert book.category == "Kids" and not book.is_hidden
     assert client.post("/api/inventory/category-review/resolve", json={**resolution, "master_category": "New category"}, headers=headers).status_code == 422
 
 
@@ -114,7 +113,7 @@ def test_suggestion_checks_all_provider_labels(client, db_session):
     response = client.post("/api/inventory/category-suggestion", headers=headers,
                            json={"labels": ["Fiction", "Miscellaneous", "Science Fiction / Space Opera"]})
     assert response.status_code == 200
-    assert response.json()["mapped_category"] == "Sci-Fi & Fantasy"
+    assert response.json()["mapped_category"] == "Sci-Fi"
     assert response.json()["raw_api_label"] == "Science Fiction / Space Opera"
 
 
@@ -137,5 +136,5 @@ def test_additive_upgrade_and_backfill_repeatability(db_session):
         assert reconcile_categories(db) == 0
         book = db.query(Book).one()
         assert book.raw_api_label == "Cyberpunk / Fiction"
-        assert book.category == "Sci-Fi & Fantasy"
+        assert book.category == "Sci-Fi"
     engine.dispose()

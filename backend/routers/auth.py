@@ -7,7 +7,7 @@ import random
 import string
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from services.passwords import hash_password, verify_password, needs_legacy_replacement
 from services.email_identity import find_email_user, email_matches, normalize_email
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ from sqlalchemy import or_, and_
 
 from config import LIBRARIAN_AUTH_CODE, ENVIRONMENT
 from database import get_db
-from dependencies import get_current_user, get_locked_current_user, require_librarian, oauth2_scheme
+from dependencies import get_current_user, get_session_user, get_locked_current_user, require_librarian, oauth2_scheme
 from limiter import limiter
 from logger import security_logger
 from middleware.security import _client_ip
@@ -27,7 +27,7 @@ from services.auth_sessions import create_session_token, revoke_token_session, r
 from services.password_reset import (
     RESET_CODE_MINUTES,
     choose_reset_channel,
-    create_password_reset_code,
+    issue_code, consume_code, deliver_recovery,
     find_user_by_identifier,
     verify_password_reset_code,
     expire_unused_reset_codes_for_user,
@@ -38,9 +38,18 @@ from schemas.auth import (
     PasswordResetConfirmRequest, PasswordResetConfirmResponse,
     FaceAuthRequest, FaceAuthResponse,
     FaceLookupResponse, EnrollFaceRequest,
+    ContactCodeRequest, ContactCodeConfirm,
 )
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
+
+
+@router.get("/session")
+def session_status(response: Response, user: User = Depends(get_session_user)):
+    """Fresh access check without avatar signing or biometric reads."""
+    response.headers["Cache-Control"] = "no-store"
+    return {"id": user.id, "name": user.name, "role": user.role,
+            "must_change_password": bool(user.must_change_password)}
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -164,15 +173,20 @@ def signup(request: Request, response: Response, body: SignupRequest, db: Sessio
 def request_password_reset(
     request: Request,
     body: PasswordResetRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     if ENVIRONMENT != "test":
-        # Delivery is not configured yet. Give every identifier the same response;
-        # never disclose account existence, recovery contacts, or reset codes.
+        from services.otp_delivery import configured
+        available = configured("email")
+        if available:
+            background_tasks.add_task(deliver_recovery, body.identifier, body.channel)
         return PasswordResetRequestResponse(
             success=True,
-            message="Please visit the librarian to reset your password.",
-            requires_librarian_help=True,
+            message=("If the account has a verified email, a code will be sent to it. "
+                     "It expires in 15 minutes. If it does not arrive, contact the librarian." if available else
+                     "Please visit the librarian to reset your password."),
+            requires_librarian_help=not available,
         )
     user = find_user_by_identifier(db, body.identifier)
     if not user:
@@ -185,11 +199,11 @@ def request_password_reset(
     if not channel:
         return PasswordResetRequestResponse(
             success=False,
-            message="No verified email or phone is available. Please visit the librarian for password reset.",
+            message="No verified email is available. Please visit the librarian for password reset.",
             requires_librarian_help=True,
         )
 
-    code, _ = create_password_reset_code(db, user, channel)
+    code = issue_code(db, user, channel, "reset", test_delivery=True)
     response_body = PasswordResetRequestResponse(
         success=True,
         message=f"Reset code prepared for {channel}. It expires in {RESET_CODE_MINUTES} minutes.",
@@ -214,6 +228,26 @@ def confirm_password_reset(
     expire_unused_reset_codes_for_user(db, user.id)
     db.commit()
     return PasswordResetConfirmResponse(success=True, message="Password has been reset.")
+
+
+@router.post("/contact-verification/request")
+@limiter.limit("5/minute")
+def request_contact_code(request: Request, body: ContactCodeRequest,
+                         user: User = Depends(get_locked_current_user), db: Session = Depends(get_db)):
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(400, "Current password is incorrect.")
+    issue_code(db, user, body.channel, "verify")
+    return {"success": True, "message": "Code sent. It expires in 15 minutes."}
+
+
+@router.post("/contact-verification/confirm")
+@limiter.limit("10/minute")
+def confirm_contact_code(request: Request, body: ContactCodeConfirm,
+                         user: User = Depends(get_locked_current_user), db: Session = Depends(get_db)):
+    user = consume_code(db, user, body.code, "verify", body.channel)
+    user.email_verified = True
+    db.commit()
+    return {"success": True, "message": "Contact verified."}
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -322,7 +356,9 @@ def _legacy_process_entry_face(
             db.commit()
             
         return FaceAuthResponse(matched=False, message="Spoofing Detected")
-    # hint == "ok" → proceed
+    if hint != "ok":
+        from services.liveness_service import liveness_failure_message
+        return FaceAuthResponse(matched=False, message=liveness_failure_message(hint))
 
     try:
         live_encoding = encode_face(image)
@@ -439,7 +475,7 @@ def process_entry_face(
     hint, real_prob = check_liveness(image)
     if hint == "too_dark":
         return FaceAuthResponse(matched=False, message="too_dark")
-    if hint == "too_far" and issue_token:
+    if hint == "too_far":
         return FaceAuthResponse(matched=False, message="too_far")
     if hint == "retry":
         return FaceAuthResponse(matched=False, message="no_face")
@@ -466,6 +502,9 @@ def process_entry_face(
         return FaceAuthResponse(matched=False, message="Spoofing Detected")
 
     try:
+        from services.liveness_service import liveness_failure_message
+        if hint != "ok":
+            return FaceAuthResponse(matched=False, message=liveness_failure_message(hint))
         max_faces = 2 if issue_token else ENTRY_MAX_FACES_PER_FRAME
         detected_faces = face_engine_service.detect_faces(image, max_faces=max_faces)
     except RuntimeError as e:
@@ -476,6 +515,11 @@ def process_entry_face(
 
     if issue_token and len(detected_faces) > 1:
         return FaceAuthResponse(matched=False, message="multiple_faces")
+
+    from services.anti_spoof_service import check_detected_faces_liveness
+    hint, _live_score = check_detected_faces_liveness(image, detected_faces)
+    if hint != "ok":
+        return FaceAuthResponse(matched=False, message=liveness_failure_message(hint))
 
     now = now_ph()
     faces = []
@@ -636,8 +680,10 @@ def face_lookup(
             snapshot_b64=body.image,
         ))
         db.commit()
-        return FaceLookupResponse(matched=False, message="not_recognized")
-    # hint == "ok" → proceed
+        return FaceLookupResponse(matched=False, message="Spoofing Detected")
+    from services.liveness_service import liveness_failure_message
+    if hint != "ok":
+        return FaceLookupResponse(matched=False, message=liveness_failure_message(hint))
 
     try:
         detected_faces = face_engine_service.detect_faces(body.image, max_faces=2)
@@ -648,6 +694,11 @@ def face_lookup(
         return FaceLookupResponse(matched=False, message="no_face")
     if len(detected_faces) > 1:
         return FaceLookupResponse(matched=False, message="multiple_faces")
+
+    from services.anti_spoof_service import check_detected_faces_liveness
+    hint, _live_score = check_detected_faces_liveness(body.image, detected_faces)
+    if hint != "ok":
+        return FaceLookupResponse(matched=False, message=liveness_failure_message(hint))
 
     face = detected_faces[0]
     match = face_engine_service.find_match_for_face(db, face, purpose="login")
@@ -715,7 +766,10 @@ def enroll_face(
             status_code=422,
             detail="Could not verify a live face. Please use your device's front camera directly.",
         )
-    # hint == "ok" → proceed
+    if hint != "ok":
+        from services.liveness_service import liveness_failure_message
+        liveness_failure_message(hint)
+        raise HTTPException(422, "Could not verify a live face. Use the camera directly, without a photo or screen.")
 
     try:
         detected_faces = face_engine_service.detect_faces(body.image, max_faces=2)
@@ -726,6 +780,9 @@ def enroll_face(
         raise HTTPException(status_code=422, detail="No face detected in the image. Please try again with better lighting.")
     if len(detected_faces) > 1:
         raise HTTPException(status_code=422, detail="Multiple faces detected. Please enroll only one face.")
+
+    from services.liveness_service import require_live_enrollment
+    require_live_enrollment(body.image, detected_faces)
 
     face = detected_faces[0]
     duplicate = face_engine_service.find_duplicate_for_enrollment(db, face, current_user.id)

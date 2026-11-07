@@ -85,14 +85,14 @@ class TokenResponse(BaseModel):
 
 class PasswordResetRequest(BaseModel):
     identifier: str
-    channel: Optional[Literal["email", "sms"]] = None
+    channel: Optional[Literal["email"]] = None
 
     @field_validator("identifier")
     @classmethod
     def validate_identifier(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError("Email, phone, or Member ID is required")
+            raise ValueError("Email or RPL Member ID is required")
         if len(v) > 180:
             raise ValueError("Identifier is too long")
         return v
@@ -116,7 +116,9 @@ class PasswordResetConfirmRequest(BaseModel):
     def validate_identifier(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError("Email, phone, or Member ID is required")
+            raise ValueError("Email or RPL Member ID is required")
+        if len(v) > 180:
+            raise ValueError("Identifier is too long")
         return v
 
     @field_validator("code")
@@ -136,6 +138,16 @@ class PasswordResetConfirmRequest(BaseModel):
 class PasswordResetConfirmResponse(BaseModel):
     success: bool
     message: str
+
+
+class ContactCodeRequest(BaseModel):
+    channel: Literal["email"]
+    password: str = Field(min_length=1, max_length=512)
+
+
+class ContactCodeConfirm(BaseModel):
+    channel: Literal["email"]
+    code: str = Field(pattern=r"^[0-9]{6}$")
 
 
 class FaceAuthRequest(BaseModel):

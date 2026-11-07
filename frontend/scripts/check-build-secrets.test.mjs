@@ -59,6 +59,15 @@ test('fails on a missing build instead of reporting a clean scan', t => {
   assert.throws(() => scanBuild(join(dir, 'missing'), {}))
 })
 
+test('detects OTP provider credentials without returning their values', t => {
+  for (const name of ['OTP_SMTP_PASSWORD', 'VITE_OTP_SMTP_PASSWORD', 'OTP_TWILIO_AUTH_TOKEN']) {
+    const secret = 'synthetic-otp-provider-secret'
+    const result = scanBuild(artifact(t, secret), { [name]: secret })
+    assert.deepEqual(result.findings[0].reasons, [name])
+    assert.ok(!JSON.stringify(result).includes(secret))
+  }
+})
+
 test('CLI fails without printing a supplied credential when build contains it', t => {
   const dir = artifact(t, 'synthetic-cli-secret-value')
   const scriptDir = join(dir, 'scripts')

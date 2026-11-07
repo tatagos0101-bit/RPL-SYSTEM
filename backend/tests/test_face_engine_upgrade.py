@@ -53,6 +53,7 @@ def test_enroll_face_stores_dlib_legacy_and_insightface_embedding(client, db_ses
     user = _member(db_session, dlib_encoding=None)
     token = _token(client, user.email)
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _image: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(
         face_engine_service,
         "detect_faces",
@@ -105,6 +106,7 @@ def test_face_lookup_prefers_insightface_embedding_over_dlib(client, db_session,
     db_session.commit()
 
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _image: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(
         face_engine_service,
         "detect_faces",
@@ -172,6 +174,7 @@ def test_face_lookup_falls_back_to_legacy_dlib_when_insightface_embedding_missin
     user = _member(db_session, name="Legacy Member", member_id="RPL-LEGACY", dlib_encoding=[0.3, 0.3])
 
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _image: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(
         face_engine_service,
         "detect_faces",
@@ -218,6 +221,7 @@ def test_kiosk_face_returns_engine_score_and_quality_for_each_face(client, db_se
     db_session.commit()
 
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _image: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(
         face_engine_service,
         "detect_faces",

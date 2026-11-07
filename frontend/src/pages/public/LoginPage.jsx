@@ -97,6 +97,8 @@ const LoginPage = ({ expectedRole = 'member' }) => {
           } else {
             setFaceMessage('Verifying identity...');
           }
+        } else if (data.message === 'liveness_uncertain') {
+          setFaceMessage('Live face not confirmed. Face the camera directly in even lighting.');
         } else if (['no_face', 'too_dark', 'too_far'].includes(data.message)) {
           // "Do nothing" to spoofConfidence - doesn't reset, doesn't increment
           if (data.message === 'too_dark') setFaceMessage('Too dark. Add more light.');
@@ -117,6 +119,9 @@ const LoginPage = ({ expectedRole = 'member' }) => {
         setFaceMessage('Could not complete sign-in or sign-out. Please retry.');
         if (err.response?.status === 429) {
           nextAllowedRef.current = Date.now() + 3000;
+        } else if (err.response?.status === 503) {
+          nextAllowedRef.current = Date.now() + 5000;
+          setFaceMessage('Face verification is unavailable. Please use password login.');
         }
       }
       finally {

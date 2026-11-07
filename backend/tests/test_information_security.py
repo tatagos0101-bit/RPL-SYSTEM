@@ -95,6 +95,7 @@ def test_suspended_face_match_does_not_disclose_identity_or_issue_token(client, 
     user.face_encoding = "[0.1]"
     db_session.commit()
     monkeypatch.setattr(liveness_service, "check_liveness", lambda image: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(face_engine_service, "detect_faces", lambda *a, **kw: [{"encoding": [0.1]}])
     response = client.post("/api/auth/face", json={"image": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD"})
     assert response.status_code == 200
@@ -108,6 +109,7 @@ def test_suspended_face_match_does_not_disclose_identity_or_issue_token(client, 
 def test_face_runtime_errors_do_not_expose_paths(client, monkeypatch):
     from services import face_engine_service, liveness_service
     monkeypatch.setattr(liveness_service, "check_liveness", lambda image: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     def fail(*a, **kw):
         raise RuntimeError("PRIVATE_INTERNAL_PATH")
     monkeypatch.setattr(face_engine_service, "detect_faces", fail)

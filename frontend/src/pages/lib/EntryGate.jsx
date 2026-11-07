@@ -149,6 +149,15 @@ const EntryGate = () => {
       const { data } = await entryStationFaceAuth(frame, stationPin, Object.keys(presenceRef.current).map(Number));
       setScanError(false);
 
+      if (['Spoofing Detected', 'liveness_uncertain', 'too_far'].includes(data.message)) {
+        unknownStreakRef.current = 0;
+        setFaceResults([]);
+        showResult({ type: 'liveness', data: { message: data.message === 'too_far'
+          ? 'Move closer to the camera.'
+          : 'Use the camera directly, without a photo or screen. Face the camera in even lighting.' } });
+        return;
+      }
+
       if (data.message === 'no_face') presenceRef.current = updatePresence(presenceRef.current, []);
 
       if (isQuietWalkThroughMessage(data.message)) {
@@ -503,6 +512,13 @@ const EntryGate = () => {
                 </div>
               );
             })}
+
+            {scanResult?.type === 'liveness' && (
+              <div role="status" className="absolute inset-0 z-30 bg-panel flex flex-col items-center justify-center gap-3 p-6 text-center">
+                <h2 className="text-xl font-semibold text-ink">Live face not confirmed</h2>
+                <p className="max-w-md text-sm text-muted">{scanResult.data.message}</p>
+              </div>
+            )}
 
             {scanResult?.type === 'not_recognized' && (
               <div className="absolute inset-0 z-30 bg-danger-soft text-danger px-4 text-center flex flex-col items-center justify-center gap-2">

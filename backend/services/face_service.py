@@ -30,10 +30,10 @@ def _decode_base64_image(b64_string: str) -> np.ndarray:
         b64_string = b64_string.split(",", 1)[1]
     img_bytes = base64.b64decode(b64_string)
 
-    from PIL import Image
+    from PIL import Image, ImageOps
     import io
 
-    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(img_bytes))).convert("RGB")
     return np.array(img)
 
 

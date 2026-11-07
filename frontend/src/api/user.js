@@ -7,6 +7,12 @@ export const getProfile = (config) =>
 export const updateProfile = (data) =>
   client.put('/api/user/profile', data);
 
+export const requestContactCode = (channel, password) =>
+  client.post('/api/auth/contact-verification/request', { channel, password });
+
+export const confirmContactCode = (channel, code) =>
+  client.post('/api/auth/contact-verification/confirm', { channel, code });
+
 export const getBiometricStatus = () =>
   client.get('/api/user/biometric-status');
 

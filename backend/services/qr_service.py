@@ -6,6 +6,7 @@ Legacy book QR codes use "RPL-{id:05d}". New physical-copy QR codes use
 services.book_copy_service.
 """
 import io
+from functools import lru_cache
 
 import qrcode
 from qrcode.image.pil import PilImage
@@ -16,6 +17,7 @@ def make_qr_code(book_id: int) -> str:
     return f"RPL-{book_id:05d}"
 
 
+@lru_cache(maxsize=256)
 def generate_qr_png(qr_string: str) -> bytes:
     """
     Generate a QR code PNG for the given string.

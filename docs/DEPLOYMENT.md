@@ -350,18 +350,20 @@ node --test frontend/src/api/*.test.js
 npm run build --prefix frontend
 ```
 
-The existing password-recovery code has no email/SMS delivery provider. Librarian
-password resets work; self-service email/SMS recovery needs a delivery integration
-before it can send real codes. Until then, all public recovery requests give the
-same librarian-help response; reset codes are exposed only in the automated test
-environment. Biometric accuracy still requires on-device camera
-testing with enrolled members; deployment does not establish biometric accuracy.
+Email-only verification and recovery use Resend SMTP; see
+[contact verification and rollout](CONTACT_VERIFICATION.md). Email/Member-ID
+password login remains supported. Phone numbers are editable contact information,
+not authentication or recovery channels. Missing delivery configuration keeps
+librarian-assisted recovery available and never exposes codes outside tests.
+Apply the four-column OTP upgrade before deploying the API, then the frontend.
 
-Feature QA on October 11, 2026 confirmed that the current brightness/texture
-heuristic accepts static face photographs, including through the deployed login
-and simulated webcam flow. Face detection/matching works, but photo/replay
-resistance is not established. Face-only login needs stronger liveness or an
-additional authentication factor before it can be considered secure.
+MiniFASNet PAD replaces the earlier brightness/texture-only heuristic. The earlier
+October 11 photo-acceptance finding describes that superseded implementation.
+Current checks fail closed before matching/enrollment when PAD is unavailable or
+uncertain. Live-face and phone-screen trials are operator-reported; on November 7,
+2026 the operator waived unperformed printed-photo testing and authorized release.
+This is not certification or evidence of resistance to every presentation attack.
+See [model provenance and acceptance limits](../backend/assets/anti_spoof/README.md).
 
 Sources: [Supabase SQLAlchemy connections](https://supabase.com/docs/guides/troubleshooting/using-sqlalchemy-with-supabase-FUqebT),
 [Supabase Storage access control](https://supabase.com/docs/guides/storage/security/access-control),

@@ -1,7 +1,7 @@
 import { isValidNewPassword, passwordPolicyMessage } from '../../api/passwordPolicy';
 import { useState, useEffect, useRef } from 'react';
 import {
-  BadgeCheck, Mail, MapPin, Phone, Shield, BookOpen,
+  BadgeCheck, MapPin, Phone, Shield, BookOpen,
   Calendar, RefreshCw, Check, X, Lock, Eye, EyeOff,
   KeyRound, ChevronDown, ChevronUp, AlertCircle, Camera,
   Edit3, UserCircle2,
@@ -9,6 +9,7 @@ import {
 import { getProfile, getBiometricStatus, updateProfile, changePassword, uploadAvatar } from '../../api/user';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 import UserAvatar from '../../components/UserAvatar';
+import EmailContact from '../../components/EmailContact';
 import { avatarFileError, publishProfileUpdate, PROFILE_UPDATED, PROFILE_REVISION_KEY } from '../../api/profileUpdates';
 
 // Display only a confirmed upload; a failed request keeps the previous photo.
@@ -391,8 +392,8 @@ export default function UserProfile() {
               </div>
 
               <div className="space-y-2">
-                {/* Email — always locked */}
-                <InfoRow icon={<Mail size={13} />} label="Email" value={profile.email} locked />
+                {/* Email */}
+                <EmailContact profile={profile} onUpdated={data => { setProfile(data); publishProfileUpdate(data); }} />
 
                 {/* Phone */}
                 {editing ? (

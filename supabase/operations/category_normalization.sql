@@ -1,4 +1,4 @@
--- Additive category-only release. Original labels are retained for recovery.
+-- Fixed Open Library browse categories (2026-11-07). Original labels are retained.
 -- Run atomically through the migration tool with an authorized maintenance role.
 SET LOCAL lock_timeout = '15s';
 SET LOCAL statement_timeout = '120s';
@@ -9,7 +9,6 @@ ALTER TABLE public.books ADD COLUMN IF NOT EXISTS is_hidden boolean NOT NULL DEF
 UPDATE public.books SET raw_api_label = category WHERE raw_api_label IS NULL;
 WITH raw AS (
  SELECT id, raw_api_label, category_override,
- count(*) FILTER (WHERE category_override IS NULL) OVER (PARTITION BY raw_api_label COLLATE "C") AS label_count,
  replace(lower(normalize(raw_api_label, NFKC)), chr(8217), chr(39)) AS value
  FROM public.books
 ), protected AS (
@@ -23,21 +22,34 @@ WITH raw AS (
 ), normalized AS (
  SELECT *, btrim(regexp_replace(replace(specific, 'sciencefictiontoken', 'science fiction'), E'\\s+', ' ', 'g')) AS clean FROM generic
 ), mapped AS (
- SELECT *, CASE WHEN category_override IS NOT NULL THEN category_override
- WHEN lower(btrim(raw_api_label)) = 'sci-fi & fantasy' THEN 'Sci-Fi & Fantasy' WHEN lower(btrim(raw_api_label)) = 'mystery & thriller' THEN 'Mystery & Thriller' WHEN lower(btrim(raw_api_label)) = 'biography & memoir' THEN 'Biography & Memoir' WHEN lower(btrim(raw_api_label)) = 'business & economics' THEN 'Business & Economics' WHEN lower(btrim(raw_api_label)) = 'children & ya' THEN 'Children & YA'
+ SELECT *, CASE WHEN category_override IN ('General', 'Kids', 'Sci-Fi', 'Fantasy', 'Mystery', 'Thriller', 'Crime', 'Drama', 'Horror', 'Romance', 'Biography', 'History') THEN category_override
+ WHEN lower(btrim(raw_api_label)) = 'kids' THEN 'Kids'
+ WHEN lower(btrim(raw_api_label)) = 'sci-fi' THEN 'Sci-Fi'
+ WHEN lower(btrim(raw_api_label)) = 'fantasy' THEN 'Fantasy'
+ WHEN lower(btrim(raw_api_label)) = 'mystery' THEN 'Mystery'
+ WHEN lower(btrim(raw_api_label)) = 'thriller' THEN 'Thriller'
+ WHEN lower(btrim(raw_api_label)) = 'crime' THEN 'Crime'
+ WHEN lower(btrim(raw_api_label)) = 'drama' THEN 'Drama'
+ WHEN lower(btrim(raw_api_label)) = 'horror' THEN 'Horror'
+ WHEN lower(btrim(raw_api_label)) = 'romance' THEN 'Romance'
+ WHEN lower(btrim(raw_api_label)) = 'biography' THEN 'Biography'
+ WHEN lower(btrim(raw_api_label)) = 'history' THEN 'History'
  WHEN clean = '' THEN 'General'
- WHEN strpos(clean, 'science fiction') > 0 OR strpos(clean, 'sci fi') > 0 OR strpos(clean, 'scifi') > 0 OR strpos(clean, 'fantasy') > 0 OR strpos(clean, 'dystopian') > 0 OR strpos(clean, 'space opera') > 0 OR strpos(clean, 'cyberpunk') > 0 THEN 'Sci-Fi & Fantasy'
- WHEN strpos(clean, 'mystery') > 0 OR strpos(clean, 'thriller') > 0 OR strpos(clean, 'suspense') > 0 OR strpos(clean, 'crime') > 0 OR strpos(clean, 'detective') > 0 OR strpos(clean, 'noir') > 0 THEN 'Mystery & Thriller'
- WHEN strpos(clean, 'biography') > 0 OR strpos(clean, 'autobiography') > 0 OR strpos(clean, 'memoir') > 0 OR strpos(clean, 'letters') > 0 OR strpos(clean, 'diaries') > 0 THEN 'Biography & Memoir'
- WHEN strpos(clean, 'business') > 0 OR strpos(clean, 'economics') > 0 OR strpos(clean, 'finance') > 0 OR strpos(clean, 'management') > 0 OR strpos(clean, 'marketing') > 0 THEN 'Business & Economics'
- WHEN strpos(clean, 'juvenile') > 0 OR strpos(clean, 'young adult') > 0 OR clean ~ E'\\mya\\M' OR strpos(clean, 'children''s') > 0 OR strpos(clean, 'picture book') > 0 THEN 'Children & YA'
+ WHEN clean ~ E'\\m(juvenile|young adult|ya|children|picture book|kids)\\M' THEN 'Kids'
+ WHEN clean ~ E'\\m(science fiction|sci fi|scifi|dystopian|space opera|cyberpunk)\\M' THEN 'Sci-Fi'
+ WHEN clean ~ E'\\m(fantasy|magic|fairy tales)\\M' THEN 'Fantasy'
+ WHEN clean ~ E'\\m(mystery|mysteries|detective|whodunit)\\M' THEN 'Mystery'
+ WHEN clean ~ E'\\m(thriller|suspense|espionage)\\M' THEN 'Thriller'
+ WHEN clean ~ E'\\m(crime|criminal|noir)\\M' THEN 'Crime'
+ WHEN clean ~ E'\\m(drama|plays|theater|theatre)\\M' THEN 'Drama'
+ WHEN clean ~ E'\\m(horror|ghost stories)\\M' THEN 'Horror'
+ WHEN clean ~ E'\\m(romance|romantic|love stories)\\M' THEN 'Romance'
+ WHEN clean ~ E'\\m(biography|biographies|autobiography|memoir|diaries)\\M' THEN 'Biography'
+ WHEN clean ~ E'\\m(history|historical|civilization)\\M' THEN 'History'
  ELSE NULL END AS parent
  FROM normalized
 ), desired AS (
- SELECT id, parent IS NULL AND label_count <= 10 AS hidden,
- coalesce(parent, CASE WHEN label_count <= 10 THEN 'General'
- WHEN char_length(btrim(raw_api_label)) <= 80 THEN btrim(raw_api_label)
- ELSE left(btrim(raw_api_label),67) || ' [' || left(encode(sha256(convert_to(btrim(raw_api_label),'UTF8')),'hex'),10) || ']' END) AS display
+ SELECT id, parent IS NULL AS hidden, coalesce(parent, 'General') AS display
  FROM mapped
 )
 UPDATE public.books AS b SET category = d.display, is_hidden = d.hidden

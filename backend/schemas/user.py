@@ -1,5 +1,5 @@
 import re
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, Literal
 from datetime import datetime
 from services.passwords import validate_new_password
@@ -28,6 +28,8 @@ class UserProfile(BaseModel):
 
 
 class UserProfileUpdate(BaseModel):
+    email: Optional[EmailStr] = Field(default=None, max_length=180)
+    current_password: Optional[str] = Field(default=None, max_length=512)
     name:     Optional[str] = None
     phone:    Optional[str] = None
     location: Optional[str] = None

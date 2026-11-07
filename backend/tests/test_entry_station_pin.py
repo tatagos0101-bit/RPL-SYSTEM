@@ -119,6 +119,7 @@ def test_kiosk_face_returns_multiple_faces_and_logs_recognized_members(client, d
     db_session.commit()
 
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _image: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(
         face_service,
         "detect_face_encodings",
@@ -172,7 +173,7 @@ def test_kiosk_face_returns_multiple_faces_and_logs_recognized_members(client, d
 
 
 
-def test_kiosk_face_attempts_recognition_even_when_liveness_says_too_far(client, db_session, monkeypatch):
+def test_kiosk_face_rejects_too_far_before_recognition(client, db_session, monkeypatch):
     import services.face_service as face_service
     import services.liveness_service as liveness_service
 
@@ -207,10 +208,9 @@ def test_kiosk_face_attempts_recognition_even_when_liveness_says_too_far(client,
 
     assert response.status_code == 200
     body = response.json()
-    assert body["matched"] is True
-    assert body["message"] == "recognized"
-    assert body["faces"][0]["name"] == "Walk In Member"
-    assert body["faces"][0]["face_box"] == {"top": 0.2, "left": 0.3, "width": 0.16, "height": 0.18}
+    assert body["matched"] is False
+    assert body["message"] == "too_far"
+    assert db_session.query(EntryLog).count() == 0
 
 
 def test_face_auth_keeps_too_far_block_for_login(client, monkeypatch):
@@ -240,6 +240,7 @@ def test_face_auth_rejects_multiple_faces(client, monkeypatch):
     import services.liveness_service as liveness_service
 
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _image: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(
         face_service,
         "detect_face_encodings",

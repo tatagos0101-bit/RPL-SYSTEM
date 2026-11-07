@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { getProfile } from '../api/user';
+import { getSession } from '../api/auth';
 import {
   clearStoredAuth,
   getStoredAuth,
@@ -33,7 +33,7 @@ export default function RequireRole({ allowedRoles }) {
     let cancelled = false;
     const controller = new AbortController();
 
-    getProfile({ signal: controller.signal })
+    getSession({ signal: controller.signal })
       .then(({ data }) => {
         if (cancelled) return;
         updateStoredProfile(data);
@@ -85,7 +85,7 @@ export default function RequireRole({ allowedRoles }) {
 
   // A new path must not use the previous page's password-change requirement.
   // Rendering a loading gate immediately prevents the redirect back to the form
-  // before the new profile request can confirm that the password was saved.
+  // before the new session request can confirm that the password was saved.
   // Focus/visibility checks must not unmount the already verified page and lose
   // its inputs, file selections, or in-progress work. Initial/navigation checks
   // still wait for verification; a revoked session still redirects below.

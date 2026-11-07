@@ -1,18 +1,24 @@
 """Deterministic category mapping; no network calls or implicit commits."""
-import hashlib
 import re
 import unicodedata
-from collections import Counter
 
 from sqlalchemy import text
 from models.book import Book
 
 MASTER_KEYWORDS = {
-    "Sci-Fi & Fantasy": ("science fiction", "sci fi", "scifi", "fantasy", "dystopian", "space opera", "cyberpunk"),
-    "Mystery & Thriller": ("mystery", "thriller", "suspense", "crime", "detective", "noir"),
-    "Biography & Memoir": ("biography", "autobiography", "memoir", "letters", "diaries"),
-    "Business & Economics": ("business", "economics", "finance", "management", "marketing"),
-    "Children & YA": ("juvenile", "young adult", "ya", "children's", "picture book"),
+    # Open Library's Browse the stacks (Featured is a collection, not a genre).
+    # A single-category catalog prioritizes audience, then specific genres.
+    "Kids": ("juvenile", "young adult", "ya", "children", "picture book", "kids"),
+    "Sci-Fi": ("science fiction", "sci fi", "scifi", "dystopian", "space opera", "cyberpunk"),
+    "Fantasy": ("fantasy", "magic", "fairy tales"),
+    "Mystery": ("mystery", "mysteries", "detective", "whodunit"),
+    "Thriller": ("thriller", "suspense", "espionage"),
+    "Crime": ("crime", "criminal", "noir"),
+    "Drama": ("drama", "plays", "theater", "theatre"),
+    "Horror": ("horror", "ghost stories"),
+    "Romance": ("romance", "romantic", "love stories"),
+    "Biography": ("biography", "biographies", "autobiography", "memoir", "diaries"),
+    "History": ("history", "historical", "civilization"),
 }
 
 
@@ -37,18 +43,10 @@ def mapped_parent(raw: str) -> str | None:
         return "General"
     for parent, keywords in MASTER_KEYWORDS.items():
         for keyword in keywords:
-            # Whole-token YA avoids false positives such as 'royalty'.
-            if (re.search(r"\bya\b", value) if keyword == "ya" else keyword in value):
+            # Token boundaries avoid YA/royalty, magic/magical realism mistakes.
+            if re.search(r"\b" + re.escape(keyword) + r"\b", value):
                 return parent
     return None
-
-
-def public_label(raw: str) -> str:
-    value = raw.strip()
-    if len(value) <= 80:
-        return value
-    # Keep the existing VARCHAR(80) contract without merging different long labels.
-    return value[:67] + " [" + hashlib.sha256(value.encode()).hexdigest()[:10] + "]"
 
 
 def category_write_lock(db):
@@ -68,19 +66,19 @@ def assign_category(book: Book, raw: str):
 def reconcile_categories(db) -> int:
     """Recompute live counts, also backfilling legacy raw labels. Caller commits.
 
-    Counts book records, never physical copies. Exact raw spelling is intentional.
-    Reversible: editing/deleting below 11 hides the label again.
+    Unmatched subjects stay in librarian review regardless of book count.
+    Raw provider labels are preserved; only fixed browse categories are public.
     """
     category_write_lock(db)
     db.flush()
     books = db.query(Book).order_by(Book.id).all()
     labels = [book.raw_api_label if book.raw_api_label is not None else book.category for book in books]
-    counts = Counter(raw for book, raw in zip(books, labels) if not book.category_override)
     changed = 0
     for book, raw in zip(books, labels):
-        parent = book.category_override or mapped_parent(raw)
-        hidden = parent is None and counts[raw] <= 10
-        category = parent or ("General" if hidden else public_label(raw))
+        override = book.category_override
+        parent = override if override in {"General", *MASTER_KEYWORDS} else mapped_parent(raw)
+        hidden = parent is None
+        category = parent or "General"
         if (book.raw_api_label, book.category, book.is_hidden) != (raw, category, hidden):
             book.raw_api_label, book.category, book.is_hidden = raw, category, hidden
             changed += 1

@@ -1,14 +1,8 @@
 import { isValidNewPassword, passwordPolicyMessage } from '../../api/passwordPolicy';
 import { useState } from 'react';
-import { AlertCircle, ArrowLeft, CheckCircle2, KeyRound, Mail, MessageSquareText } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { confirmPasswordReset, requestPasswordReset } from '../../api/auth';
-
-const channelOptions = [
-  { value: 'auto', label: 'Auto', icon: KeyRound },
-  { value: 'email', label: 'Email', icon: Mail },
-  { value: 'sms', label: 'SMS', icon: MessageSquareText },
-];
 
 const formatApiError = (err, fallback) => {
   const detail = err?.response?.data?.detail;
@@ -18,7 +12,6 @@ const formatApiError = (err, fallback) => {
 
 export default function ForgotPasswordPage() {
   const [identifier, setIdentifier] = useState('');
-  const [channel, setChannel] = useState('auto');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -33,11 +26,11 @@ export default function ForgotPasswordPage() {
     setResult(null);
     setLoading(true);
     try {
-      const { data } = await requestPasswordReset(identifier, channel);
+      const { data } = await requestPasswordReset(identifier, 'email');
       setResult(data);
       if (data.requires_librarian_help) {
         setStep('help');
-      } else if (data.success && data.delivery_channel) {
+      } else if (data.success) {
         setStep('confirm');
       }
     } catch (err) {
@@ -98,7 +91,7 @@ export default function ForgotPasswordPage() {
                 Reset Your Password
               </h1>
               <p className="mt-5 max-w-md text-sm font-medium leading-7 text-muted">
-                Use your email, phone number, or Member ID. If no verified contact is saved, library staff can reset your password from the members screen.
+                Use your email or RPL Member ID. Codes are sent only to the email you have verified in your profile. If you cannot receive a code, visit the librarian.
               </p>
             </div>
           </section>
@@ -120,42 +113,15 @@ export default function ForgotPasswordPage() {
 
                 <div className="space-y-2">
                   <label className="ml-1 text-sm font-semibold tracking-normal text-muted">
-                    Email, Phone, or Member ID
+                    Email or RPL Member ID
                   </label>
-                  <input aria-label="Email, Phone, or Member ID"
+                  <input aria-label="Email or RPL Member ID"
                     value={identifier}
                     onChange={(event) => setIdentifier(event.target.value)}
-                    placeholder="email@domain.com, +63..., or RPL-K7X2M"
+                    placeholder="email@domain.com or RPL-K7X2M"
                     className="w-full rounded-lg border border-line bg-subtle px-4 py-4 text-base font-bold outline-none transition-all focus:ring-2 focus:ring-line text-ink"
                     required
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="ml-1 text-sm font-semibold tracking-normal text-muted">
-                    Recovery Method
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 rounded-xl bg-subtle p-1">
-                    {channelOptions.map((option) => {
-                      const Icon = option.icon;
-                      const active = channel === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setChannel(option.value)}
-                          className={`flex items-center justify-center gap-2 rounded-lg px-3 py-3 text-sm font-semibold tracking-normal transition-all ${
-                            active
-                              ? 'bg-panel text-link shadow-sm text-link'
-                              : 'text-muted hover:text-ink '
-                          }`}
-                        >
-                          <Icon size={14} />
-                          {option.label}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
 
                 <button
@@ -174,20 +140,9 @@ export default function ForgotPasswordPage() {
                   <p className="text-sm font-semibold tracking-normal text-link">Step 2</p>
                   <h2 className="mt-1 font-semibold tracking-normal rpl-section-title">Enter reset code</h2>
                   <p className="mt-2 text-sm font-medium leading-6 text-muted">
-                    A reset code was prepared for your {result?.delivery_channel === 'sms' ? 'phone number' : 'email address'}.
+                    {result?.message || 'Check your verified email for a code.'}
                   </p>
                 </div>
-
-                {result?.debug_code && (
-                  <div className="rounded-xl border border-warning bg-warning-soft px-4 py-3">
-                    <p className="text-sm font-semibold tracking-normal text-warning">
-                      Development reset code
-                    </p>
-                    <p className="mt-1 font-sans text-2xl font-semibold tracking-normal text-warning">
-                      {result.debug_code}
-                    </p>
-                  </div>
-                )}
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -241,7 +196,7 @@ export default function ForgotPasswordPage() {
                     }}
                     className="rounded-lg border border-line py-4 text-sm font-semibold tracking-normal text-muted transition-all hover:bg-subtle"
                   >
-                    Change Method
+                    Request another code
                   </button>
                   <button
                     type="submit"

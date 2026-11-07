@@ -29,6 +29,9 @@ export default function CirculationMember({ onSelect }) {
         if (!image) throw new Error('Camera not ready. Retry or use supervised Manual ID.');
         const { data } = await faceLookup(image);
         if (!data.matched) {
+          if (['Spoofing Detected', 'liveness_uncertain'].includes(data.message)) {
+            throw new Error('Live face not confirmed. Use the camera directly, without a photo or screen, or use supervised Manual ID.');
+          }
           throw new Error(({ too_dark: 'Improve the lighting.', too_far: 'Move closer to the camera.', no_face: 'Position the member in front of the camera.' })[data.message] || 'Face not recognized. Retry or use Manual ID.');
         }
         member = data;

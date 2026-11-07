@@ -1,16 +1,15 @@
 """
 Liveness detection service for anti-spoofing.
 
-Screens image brightness, face size, and texture. Static photographs can pass
-these checks; this heuristic does not establish liveness or prevent replay.
-Returns hints for the gate: "ok", "spoof", "retry", "too_dark", "too_far".
+Screens frame quality, then applies trained photo/screen presentation detection.
+Recognition routes also verify every exact recognition box before granting access.
 """
 import cv2
 import numpy as np
 from typing import Tuple
 import base64
 import io
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 def _decode_base64_image(b64_string: str) -> np.ndarray:
@@ -18,19 +17,22 @@ def _decode_base64_image(b64_string: str) -> np.ndarray:
     if "," in b64_string:
         b64_string = b64_string.split(",", 1)[1]
     
-    img_bytes = base64.b64decode(b64_string)
-    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    img_bytes = base64.b64decode(b64_string, validate=True)
+    img = Image.open(io.BytesIO(img_bytes))
+    if img.width * img.height > 4_000_000:
+        raise ValueError("Camera frame is too large")
+    img = ImageOps.exif_transpose(img).convert("RGB")
     return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
 
 def check_liveness(b64_image: str) -> Tuple[str, float]:
     """
-    Check frame quality and basic texture; "ok" does not prove a live person.
+    Check quality and MiniFASNet scores for all faces found by the precheck.
     
     Returns:
         (hint, probability)
-        - hint: "ok", "spoof", "retry", "too_dark", "too_far"
-        - probability: confidence score (0-1, higher = more confident in classification)
+        - hint: ok/spoof/retry/too_dark/too_far/liveness_uncertain/unavailable
+        - score: model live score (not a calibrated probability)
     """
     try:
         img = _decode_base64_image(b64_image)
@@ -44,7 +46,9 @@ def check_liveness(b64_image: str) -> Tuple[str, float]:
     if brightness < 50:
         return ("too_dark", 0.0)
     
-    # Check face size using Haar Cascade
+    from services.anti_spoof_service import AntiSpoofUnavailable, score_face
+
+    # Early face/quality check; recognition boxes are independently screened too.
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
@@ -53,28 +57,42 @@ def check_liveness(b64_image: str) -> Tuple[str, float]:
     if len(faces) == 0:
         return ("retry", 0.0)
     
-    # Check if face is too small (too far)
-    face_area = faces[0][2] * faces[0][3]
-    image_area = img.shape[0] * img.shape[1]
-    
-    if face_area < image_area * 0.05:  # Face is less than 5% of image
-        return ("too_far", 0.0)
-    
-    # Basic liveness check: detect high-frequency noise (texture)
-    # Real faces have more texture than photos
-    x, y, w, h = faces[0]
-    face_roi = gray[y:y+h, x:x+w]
-    
-    # Compute Laplacian variance (measure of texture/detail)
-    laplacian = cv2.Laplacian(face_roi, cv2.CV_64F)
-    variance = laplacian.var()
-    
-    # Empirical threshold: photos typically have lower variance
-    # Real faces typically have variance > 50
-    if variance < 20:
-        spoof_prob = 0.8
-        return ("spoof", spoof_prob)
-    
-    # Passes quality checks, including for some static photos. A verified
-    # anti-spoofing method is still required for secure face-only authentication.
-    return ("ok", 0.95)
+    scores = []
+    try:
+        for box in faces:
+            hint, score = score_face(img, box)
+            if hint != "ok":
+                return hint, score
+            scores.append(score)
+    except AntiSpoofUnavailable:
+        return "unavailable", 0.0
+    return "ok", min(scores)
+
+
+def liveness_failure_message(hint: str) -> str:
+    """Only 'ok' authorizes continuation; unknown/failed checks fail closed."""
+    from fastapi import HTTPException
+
+    if hint == "unavailable":
+        raise HTTPException(status_code=503, detail="Face anti-spoofing is temporarily unavailable. Use password login or ask the librarian for assistance.")
+    return {
+        "retry": "no_face", "too_dark": "too_dark", "too_far": "too_far",
+        "spoof": "Spoofing Detected",
+    }.get(hint, "liveness_uncertain")
+
+
+def require_live_enrollment(image: str, faces: list) -> None:
+    from fastapi import HTTPException
+    from services.anti_spoof_service import check_detected_faces_liveness
+
+    hint, _score = check_detected_faces_liveness(image, faces)
+    if hint == "ok":
+        return
+    liveness_failure_message(hint)  # raises 503 for unavailable inference
+    messages = {
+        "too_dark": "The face is too dark. Improve the lighting and try again.",
+        "too_far": "Move closer to the camera and try again.",
+    }
+    raise HTTPException(status_code=422, detail=messages.get(
+        hint, "Could not verify a live face. Use the camera directly, without a photo or screen."
+    ))

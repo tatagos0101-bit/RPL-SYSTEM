@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { resolve, relative, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const secretName = /^(?:VITE_|NEXT_PUBLIC_)?(?:DATABASE_URL|POSTGRES_URL|POSTGRES_URL_NON_POOLING|POSTGRES_PRISMA_URL|POSTGRES_PASSWORD|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_JWT_SECRET|JWT_SECRET_KEY|LIBRARIAN_AUTH_CODE|ENTRY_STATION_PIN|RATE_LIMIT_STORAGE_URI)$/
+const secretName = /^(?:VITE_|NEXT_PUBLIC_)?(?:DATABASE_URL|POSTGRES_URL|POSTGRES_URL_NON_POOLING|POSTGRES_PRISMA_URL|POSTGRES_PASSWORD|SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|SUPABASE_JWT_SECRET|OTP_SMTP_PASSWORD|OTP_TWILIO_AUTH_TOKEN|JWT_SECRET_KEY|LIBRARIAN_AUTH_CODE|ENTRY_STATION_PIN|RATE_LIMIT_STORAGE_URI)$/
 const signatures = [
   ['Supabase secret key', /sb_secret_[A-Za-z0-9_-]{12,}/],
   ['credentialed database URL', /(?:postgres(?:ql)?(?:\+psycopg)?|mysql(?:\+pymysql)?):\/\/[^\s:/]+:[^\s@]+@/],

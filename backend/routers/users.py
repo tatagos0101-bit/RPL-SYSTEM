@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, Fil
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
+from services.email_identity import email_matches, normalize_email
 
 from database import get_db
 from dependencies import get_current_user, get_session_user, get_locked_current_user, get_locked_session_user
@@ -69,6 +71,19 @@ def update_profile(
     db: Session = Depends(get_db),
 ):
     current_user = lock_active_account(db, current_user.id)
+    if "email" in body.model_fields_set:
+        if not body.email:
+            raise HTTPException(422, "Email cannot be empty.")
+        email = normalize_email(body.email)
+        if email != normalize_email(current_user.email):
+            from services.passwords import verify_password
+            if not body.current_password or not verify_password(body.current_password, current_user.password_hash):
+                raise HTTPException(400, "Current password is incorrect.")
+            if any(other.id != current_user.id for other in email_matches(db, email)):
+                raise HTTPException(409, "This email cannot be used.")
+            current_user.email = email
+            current_user.email_verified = False
+            expire_unused_reset_codes_for_user(db, current_user.id)
     if body.name is not None:
         current_user.name = body.name
     if "phone" in body.model_fields_set:
@@ -77,7 +92,11 @@ def update_profile(
         current_user.phone = body.phone
     if "location" in body.model_fields_set:
         current_user.location = body.location
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "This email cannot be used.") from None
     db.refresh(current_user)
     return _build_profile(current_user, db)
 

@@ -14,5 +14,9 @@ class PasswordResetCode(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)
     used_at    = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=now_ph, nullable=False)
+    purpose = Column(String(20), nullable=False, default="reset", server_default="reset")
+    context_hash = Column(String(128), nullable=True)
+    attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    delivered_at = Column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User")

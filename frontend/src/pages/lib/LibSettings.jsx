@@ -3,6 +3,7 @@ import { LockKeyhole, LogOut, Moon, Sun } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { clearAuth } from '../../api/auth';
 import { getEntryStationPinStatus, updateEntryStationPin } from '../../api/librarian';
+import RecoveryContacts from '../../components/RecoveryContacts';
 
 const inputClass = 'mt-2 w-full rounded-xl border border-line bg-panel px-4 py-3 text-ink outline-none focus:border-line focus:ring-2 focus:ring-line disabled:opacity-60 border-line focus:ring-line';
 
@@ -97,6 +98,8 @@ export default function LibSettings() {
           </button>
         </div>
       </section>
+
+      <RecoveryContacts />
 
       <section aria-labelledby="station-pin-title" className="mt-8 rounded-xl border border-line bg-panel p-5 shadow-sm sm:p-8">
         <div className="flex items-start gap-3">

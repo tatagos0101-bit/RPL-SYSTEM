@@ -5,9 +5,10 @@ merged main **October 21, 2026**; see the [repair ledger](REPAIR_LEDGER.md) and
 [live release evidence](REPAIR_RELEASE_2026-10-21.md) for checks and limits.
 Baseline inspection: **October 14, 2026**. Station PIN management documentation
 updated **October 15, 2026** and checked against the main-branch release. Repository
-configuration alone does not verify live production state. MiniFASNet PAD work
-found during inspection remains separate and uncommitted; it is excluded from
-this release. Recheck source and Git status before relying on release status.
+configuration alone does not verify live production state. The November 7, 2026
+working tree adds contact OTP delivery, MiniFASNet PAD integration and fixed browse
+categories. These changes are not evidence of deployment; see their linked rollout
+and acceptance notes below. Recheck source and Git status before relying on release status.
 
 Use [AGENTS.md](../AGENTS.md) for working instructions, [README](../README.md) for
 setup, and [DEPLOYMENT.md](DEPLOYMENT.md) for hosting configuration. Requirements
@@ -183,7 +184,14 @@ enforce this flag: authenticated profile retrieval, password change, and logout
 remain available; other protected operations are denied until completion.
 Newly registered contact details remain unverified until ownership is established;
 existing verification flags are not rewritten. Public recovery requests return generic
-librarian-help responses outside tests; email/SMS delivery is not integrated.
+responses outside tests. [Contact verification](CONTACT_VERIFICATION.md) adds
+email-only Resend SMTP delivery, single-use purpose/contact-bound codes, and
+verified-email recovery. Phone numbers remain editable contact data with no
+verification/recovery authority. Email edits require password confirmation and
+clear verification/invalidate codes. Provider configuration, delivery acceptance and rollout
+remain separate requirements. `/api/auth/session` performs a fresh session/role
+check for navigation without avatar signing or biometric reads; full profiles
+remain available separately. Forced password changes are still enforced.
 
 [Kiosk routes](../backend/routers/kiosk.py) require a separate station PIN and invoke
 face processing with token issuance disabled. The browser keeps that PIN in session
@@ -229,13 +237,14 @@ checks for duplicates, preserves legacy encodings, and can add engine-specific
 embeddings during fallback upgrades. Login rejects multiple faces; kiosk processing
 can recognize several faces and avoids recording the same identity twice per frame.
 
-The released [liveness service](../backend/services/liveness_service.py) uses
-brightness, face size, and texture heuristics. Static photographs can pass these
-checks; they do not establish liveness or prevent replay. Separate uncommitted
-MiniFASNet work inspected on October 14 adds two ONNX models through OpenCV DNN
-and fail-closed presentation checks. That work and its model assets/tests are
-excluded from this release; physical-camera acceptance remains pending. Passive
-RGB classification would not prove camera origin or prevent every injection attack.
+The [liveness service](../backend/services/liveness_service.py) checks frame quality
+and two bundled MiniFASNet ONNX models through OpenCV DNN. Recognition screens
+every exact detected face before identity/access side effects. Failed, uncertain
+or unavailable checks fail closed, including both enrollment paths. Checksummed
+models load lazily; no runtime model downloads are needed. See
+[provenance and physical acceptance](../backend/assets/anti_spoof/README.md).
+Live-face/phone trials are user-reported passes; printed-photo testing was waived by the operator on November 7, 2026 (not performed). This integration is not a production deployment or PAD certification.
+Passive RGB classification does not prove camera origin or prevent all replay.
 
 Legacy encodings and embeddings use JSON in server memory and are not anonymous.
 [Biometric storage](BIOMETRIC_STORAGE.md) adds authenticated AES-256-GCM encryption
@@ -458,13 +467,13 @@ compile PostgreSQL SQL and mock Storage rather than exercise live Supabase polic
 | --- | --- |
 | Identity/access | Registration/uploads, information security, password recovery, first-login password, entry-station PIN, and frontend auth-route tests. Check wrong-role, suspended, anonymous, and cross-owner requests. |
 | Circulation/inventory | Copy QR, book edit, overdue, reservation policy, and frontend scan tests. Check exact-copy returns, duplicate scans, history preservation, expiry and queue promotion; assess concurrency separately on isolated PostgreSQL. |
-| Attendance/biometrics | Entry-session policy, face-engine upgrade, and entry-station tests. Check denied token/access issuance, enrollment preservation, multiple faces, and timing boundaries. Future PAD changes also need corrupt/missing-model and spoof rejection coverage. |
+| Attendance/biometrics | Entry-session policy, face-engine upgrade, and entry-station tests. Check denied token/access issuance, enrollment preservation, multiple faces, and timing boundaries. PAD tests include corrupt/missing-model and spoof rejection coverage. |
 | Storage | Cloud integration, upload validation, and information-security tests. Check ticket owner/category/expiry, private ID/avatar access, invalid content, and no production local fallback. |
 | Reports | Reading history, monthly PDF, frontend reports, and date-helper tests. Check returned loans, Philippine month boundaries, empty results, escaping, pagination, and access. |
 
 Use browser verification for changed interactions and consented physical-camera
 acceptance for biometric changes. Mocked detections and small reference sets are
-not accuracy/security certification; pending PAD tests are not part of this release.
+not accuracy/security certification; physical printed-photo acceptance is pending.
 Keep real patron data out of all fixtures and test artifacts. Report the actual
 checks, limitations, and skipped work instead of copying historical pass counts.
 
@@ -472,4 +481,7 @@ checks, limitations, and skipped work instead of copying historical pass counts.
 ## Category mapping
 
 See [category normalization and migration](CATEGORY_MAPPING.md) for the authoritative
-mapper, hidden-label threshold, librarian review, and additive book metadata columns.
+fixed Open Library browse vocabulary, hidden-label review, and additive book metadata columns.
+Book covers load lazily with asynchronous decoding. A bounded 256-entry in-process
+cache reuses deterministic QR PNGs; authorization stays in the existing endpoints.
+These remove repeated work, but live cold-start/network latency needs rollout measurements.

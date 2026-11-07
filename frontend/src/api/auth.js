@@ -11,6 +11,8 @@ import {
 export const login = (email, password, expectedRole) =>
   client.post('/api/auth/login', { email, password, expected_role: expectedRole });
 
+export const getSession = (config) => client.get('/api/auth/session', config);
+
 export const signup = (data) =>
   client.post('/api/auth/signup', data);
 
