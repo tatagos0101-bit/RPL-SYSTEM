@@ -17,6 +17,14 @@ The 12 confirmed `fixing-the-issue` repairs were released on October 21; see the
 [implementation status](docs/IMPLEMENTATION_STATUS.md) distinguishes completed
 releases from remaining security and feature work.
 
+## User manuals
+
+Guides for the November 16 updated build cover public browsing, member accounts,
+librarian administration, circulation, reporting, QR labels, and attendance.
+
+- **User manual (24 pages):** [Word](docs/user-manual/RPL_System_User_Manual.docx), [PDF](docs/user-manual/RPL_System_User_Manual.pdf), [Markdown](docs/user-manual/RPL_System_User_Manual.md).
+- **Administrator and librarian manual (21 pages):** [Word](docs/user-manual/RPL_System_Admin_Librarian_Manual.docx), [PDF](docs/user-manual/RPL_System_Admin_Librarian_Manual.pdf), [Markdown](docs/user-manual/RPL_System_Admin_Librarian_Manual.md).
+
 ## Features
 
 - **Public catalogue:** search titles/authors, filter categories and availability,
