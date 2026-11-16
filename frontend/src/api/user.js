@@ -64,3 +64,6 @@ export const uploadAvatar = async (file) => {
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 };
+
+export const removeAvatar = () =>
+  client.delete('/api/user/avatar');

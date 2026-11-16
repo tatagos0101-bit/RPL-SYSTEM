@@ -32,6 +32,8 @@ HEADER_MAP = {
     "cost per copy": "acquisition_cost",
     "currency": "acquisition_currency",
     "acquisition reference": "acquisition_reference",
+    "description": "description",
+    "book description": "description",
     "title":      "title",
     "book title": "title",
     "author":     "author",

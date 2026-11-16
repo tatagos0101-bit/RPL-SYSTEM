@@ -43,6 +43,92 @@ and API helpers. Backend code uses dependency injection, Pydantic models, SQLAlc
 sessions, and shared policy services. Match local conventions rather than applying
 a new formatter or imposing an unconfigured backend lint tool.
 
+The November 13 local public presentation revision uses
+[discovery.css](../frontend/src/styles/discovery.css) for the landing page, catalog
+and their navigation/drawer. The latest user-selected public palette is walnut
+brown, warm paper and amber. Newsreader display type and DM Sans controls/body are
+self-hosted with their font licenses. The shared global roles in
+[index.css](../frontend/src/index.css) and protected-page styling were not changed
+by that public-page revision. [Photography credits](../frontend/public/images/CREDITS.md)
+identify the locally served library photographs; they are generic imagery, not
+photographs of the RPL branch.
+
+[PublicBrowse](../frontend/src/pages/public/PublicBrowse.jsx) shares small category
+cover collages, [BookShelf](../frontend/src/components/public/BookShelf.jsx) and
+[CatalogBookCard](../frontend/src/components/public/CatalogBookCard.jsx) styling
+with the member catalog. On desktop (at least800px, hover/fine pointer), full catalogs form a vertical
+wrapping grid and category tiles wrap; mobile/coarse-pointer devices retain swipe
+scrolling even in wide landscape. Member Featured collections keep horizontal
+scrolling at every screen size, as explicitly requested in the latest clarification.
+Shelf arrows only scroll the loaded view; server pagination remains separate.
+Landing Search routes to `/browse?q=...`, and the public search uses URL-backed
+query state plus literal title/author highlights. Existing detail-modal behavior
+and role destinations remain. Public genre cover previews now come from the
+independent `include_previews=true` category metadata, with at most three public
+cover references per visible genre. All books mixes these samples; changing the
+result genre/search/page cannot replace navigation artwork. Plain category calls
+retain their original category/count response. No external catalog or circulation
+writes were added.
+
+The November16 catalog discovery revision extends the public book list with validated
+`sort=title|trending|newest|loved` (default title) and `favorites_only` (default false).
+Grouped read-only queries apply deterministic global ordering before pagination.
+Trending counts recent30-day `borrow_date`, including returned loans; newest uses
+library creation dates. Most loved counts distinct active, nondeleted member
+favorites. Positive-only filtering keeps unloved books out of Books we love. Public
+responses retain the existing book-only shape, without member identities. LIKE
+wildcards are escaped so search input is literal.
+See [discovery design](superpowers/specs/2026-11-16-catalog-discovery-design.md)
+and [local verification](superpowers/specs/2026-11-16-catalog-discovery-verification.md).
+
+The shared [login page](../frontend/src/pages/public/LoginPage.jsx) retains its
+original split layout, bookshelf backdrop and authentication/camera behavior.
+Scoped [auth.css](../frontend/src/styles/auth.css) supplies the walnut/amber tone,
+updated type and rounded controls. CSS motion is limited and reduced-motion views
+remain static. See the [approved design](superpowers/specs/2026-11-13-public-experience-revision-design.md)
+and [revision verification](superpowers/specs/2026-11-13-public-experience-revision-verification.md).
+
+The subsequent November 13 librarian presentation update uses scoped
+[librarian.css](../frontend/src/styles/librarian.css) for walnut/amber dark mode
+and a warm-paper light variant. The existing Settings appearance toggle remains
+functional. Its single import in the root CSS entry follows Tailwind so cascade
+layers retain their established order; global role values are unchanged.
+[LibLayout](../frontend/src/components/LibLayout.jsx) supplies grouped drawer
+navigation and a compact notification header. The November 16 workflow revision
+keeps the drawer closed and inert initially at every viewport, including desktop;
+the menu, close, overlay and navigation-link controls still operate it. Notification
+bounds follow measured header size, with subscriptions cleaned up on unmount.
+
+[LibDashboard](../frontend/src/pages/lib/LibDashboard.jsx) reorders the same ten
+metric drill-downs and existing charts/activity/attention content. [LibReports](../frontend/src/pages/lib/LibReports.jsx)
+now displays chart payloads already returned with the matching records; it adds
+no requests, calculations or report categories. Its filter/export/pagination
+handlers and signed snapshot context remain unchanged. The staff-only
+[ReportChart](../frontend/src/components/reporting/ReportChart.jsx) variant draws
+grouped circulation with straight solid/dashed lines and different point shapes;
+default grouped bars, scales, keyboard values and data tables remain available.
+That presentation pass left the backend, manifests, API helpers and public/login
+sources unchanged.
+See the [workspace design](superpowers/specs/2026-11-13-librarian-workspace-design.md)
+and [local verification](superpowers/specs/2026-11-13-librarian-workspace-verification.md).
+
+The November 16 workflow revision applies scoped [member-theme.css](../frontend/src/styles/member-theme.css)
+colors and local typography to existing member pages without changing their
+layouts or event handlers. Inventory uses a wider, horizontally scrollable table
+on narrow screens; headers, counts, status and actions remain readable on one line.
+Its View details action opens a read-only cover/metadata/description preview using
+the existing inventory response and shared modal controls.
+See the [workflow verification](superpowers/specs/2026-11-13-workflow-revision-verification.md)
+for the local tests and migration limits.
+Member Browse Books also provides shared top/bottom pagination and returns to the
+catalog heading on page changes, respecting reduced motion. The book viewer has
+fixed viewport-bounded dimensions, contained covers and internally scrolling
+details; its bottom slider is removed and phone navigation remains visible. See the scoped
+[catalog alignment verification](superpowers/specs/2026-11-16-member-catalog-alignment-verification.md).
+The public catalog viewer now uses the same fixed frame, contained/fallback cover
+and scrolling details, with the lower slider removed. Its search, pagination and
+role-specific reservation links are unchanged.
+
 ## Supabase architecture and deployment boundaries
 
 The agreed target matches the implemented split: **FastAPI owns identity and
@@ -177,6 +263,24 @@ Only `member` and `librarian` are persisted roles. Public catalog access is anon
 Resource ownership is enforced by individual routes; not every user route uses the
 strict `require_member` dependency. Librarian signup requires a private authorization
 code; the librarian registration flow issues temporary member passwords.
+Member profile names are displayed as locked text while editing and are
+server-protected: changed or null names
+are rejected before any other profile field changes; an unchanged legacy name
+remains accepted. Members can still edit phone/location and use the existing
+password-confirmed email flow. Librarian own-profile name editing is unchanged.
+
+Librarian registration accepts an optional government ID; attached files/tickets
+retain the existing private-upload validation. It creates a random 10-character
+password with forced first-login change, commits the member, then attempts email
+first or SMS when only a phone is present. The registration-only
+[delivery service](../backend/services/registration_delivery.py) uses existing SMTP
+settings and separately enabled Twilio credentials. Accepted sends omit the plaintext
+password from the registration response. Missing contacts or unavailable/unconfirmed
+delivery return a librarian-handoff status and the same temporary password. Both
+existing registration modals show that outcome. No plaintext password is stored;
+no registration resend queue or new schema is added. Staff password resets retain
+their original 14-character default and revocation behavior. See
+[registration delivery setup](CONTACT_VERIFICATION.md#new-member-registration-credentials).
 
 [RequireRole.jsx](../frontend/src/components/RequireRole.jsx) verifies the profile
 and redirects accounts requiring a password change. Backend dependencies also
@@ -186,8 +290,8 @@ Newly registered contact details remain unverified until ownership is establishe
 existing verification flags are not rewritten. Public recovery requests return generic
 responses outside tests. [Contact verification](CONTACT_VERIFICATION.md) adds
 email-only Resend SMTP delivery, single-use purpose/contact-bound codes, and
-verified-email recovery. Phone numbers remain editable contact data with no
-verification/recovery authority. Email edits require password confirmation and
+verified-email recovery. Registration-only SMS does not grant phone
+verification/recovery authority; phone numbers remain editable contact data. Email edits require password confirmation and
 clear verification/invalidate codes. Provider configuration, delivery acceptance and rollout
 remain separate requirements. `/api/auth/session` performs a fresh session/role
 check for navigation without avatar signing or biometric reads; full profiles
@@ -283,14 +387,35 @@ maintain physical-copy identities and legacy-loan backfills. Resizing uses row l
 and retires copies rather than reusing their identifiers. Copy statuses existing in
 the schema do not imply a complete damage/loss-management workflow.
 
+Books have an optional nullable plain-text `description`. Create/update requests
+accept at most 2000 characters; blank values clear it and omitted update values
+preserve it. Public/member book details display it as text. Add Book offers an
+editable manual description and an explicit online-summary choice when ISBN
+metadata contains one; workbook `Description` is optional. Acquisition entry
+fields were removed from the Add Book UI, while existing acquisition records,
+imports and inventory actions remain. Existing installations need the additive
+`books.description` upgrade before this backend starts; the applied initial SQL
+was not regenerated.
+
 Copy codes have the form `RPL-BOOK-00007-C002`; legacy title QR codes remain accepted.
 [Catalog scan routes](../backend/routers/books.py) normalize and resolve codes.
 [Borrow/return UI](../frontend/src/pages/lib/LibBorrowReturn.jsx) uses a shared
-[circulation dialog](../frontend/src/components/CirculationDialog.jsx) for camera QR,
-USB Enter-terminated input and manual entry. Borrowing identifies a member through
-existing face lookup or supervised manual ID; returns start with QR lookup and may
-include different borrowers. Scanning is read-only and legacy ambiguity requires
-explicit copy/loan selection. Review precedes all submissions. See [QR circulation](QR_CIRCULATION.md)
+[circulation dialog](../frontend/src/components/CirculationDialog.jsx), launched
+with separate Borrow books and Return books buttons. Borrowing identifies a member
+through existing face lookup or supervised manual ID, then automatically lists
+ready/pending reservations. Ready titles offer one-click Add to list, automatically
+choosing a validated available physical copy from the existing read-only lookup.
+Its number/code is shown in the pending/review list; Change copy is optional when
+multiple copies are available. Queued/unavailable titles cannot be picked up. QR camera, USB
+Enter-terminated input and manual code entry remain optional for reserved pickups
+and are the default for walk-ins without active reservations. Failed reservation
+loads show retry and optional scanning, without claiming there are no reservations.
+Returns start with QR lookup and may include different borrowers. Scanning and
+selection are read-only; direct legacy QR scans still require explicit ambiguous
+copy/loan selection. Automatic reservation selection never silently swaps a stale
+copy at confirmation; staff hand over the physical copy shown in review.
+Both selection paths share the original review, per-item submission and recovery
+flow. Review precedes all submissions. See [QR circulation](QR_CIRCULATION.md)
 for the locally implemented October 31, 2026 changes, recovery and acceptance limits.
 
 [Transaction routes](../backend/routers/transactions.py) require librarian access.
@@ -351,6 +476,16 @@ category. API consumers validate ticket ownership and file content/size before u
 Private database references identify objects (`supabase://...`), not expiring
 viewing URLs; authorized endpoints resolve fresh links. Local mode exposes covers
 statically and gates private ID/avatar paths. Production rejects local persistence.
+Members can add/change or remove their own photo. `DELETE /api/user/avatar`
+rechecks the locked account/session, validates the private avatar reference and
+rejects references shared with another account. Storage deletion precedes clearing
+the reference; failure is retryable and never reports success. If the later database
+commit fails, a retained reference may already point to a deleted object; retry
+finishes clearing it. No account or ID deletion is performed. Confirmed photo
+changes update the profile/navigation in the current tab and refresh other tabs
+through the existing authenticated profile revision mechanism.
+See [profile/public verification](superpowers/specs/2026-11-16-profile-public-revision-verification.md)
+for local evidence and cloud/concurrency limits.
 Repeated avatar finalization never deletes the current reference. Cover replacement
 cleanup runs after commit only when no title still references the old cover. Book
 save/cover failure is reported as partial success with a cover-only retry. Full
@@ -413,14 +548,22 @@ submitted fields. Direct browser database access remains revoked. Recommendation
 retain the list API and add per-book `source` (`collaborative`, `content`, `popular`,
 or `new`) and an explanation without other members' identities or histories.
 
-Browse Books loads recommendations independently above search/catalog. Favorite
-changes synchronize cards and details; recommendation refreshes wait until an
-open detail modal closes. There is no separate training job, dense in-memory
+Member Browse Books defaults to Featured. Owner-scoped reading stats determine
+whether to show the existing ten recommendations above Trending; no-history members
+start with Trending. What's new and Books we love follow for both. Each resource
+has independent loading, empty and retry feedback. Favorite changes synchronize
+cards/details and refresh the community favorites shelf; recommendation refreshes
+wait until an open detail modal closes. Genre/All books views use the server sort
+and top/bottom pagination. See all/category/search changes reset to the first page.
+The member browse reserved-count control opens the existing My Reservations page;
+its selection-plus-reservation count is unchanged.
+There is no new rating/editorial system, separate training job, dense in-memory
 interaction matrix, external AI service, or measured real-reader accuracy.
 
-The member header and Browse Books presentation reuse the civic theme from
+The October16 member header/Browse Books presentation used the civic theme from
 `ui-update`: Segoe UI, semantic light/dark colors, the RPL seal, and regular-case
-headings and controls. The visual reference was the production release
+headings and controls. The November16 local presentation now uses the existing
+walnut/amber palette and local Newsreader/DM Sans. The earlier visual reference was the production release
 [`dpl_hYYWEWKfAwp4eQbFZugvMA4DkK3i`](https://rpl-system-7h9tt475a-tatagos0101-5211.vercel.app),
 checked on October 16, 2026 with synthetic member/book responses. This records the
 design reference, not deployment of the recommendation feature.

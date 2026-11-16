@@ -1,4 +1,6 @@
 import ModalFrame from '../../components/ModalFrame';
+import RegistrationDelivery from '../../components/RegistrationDelivery';
+import { buildMemberRegistrationForm, registrationErrorMessage } from '../../api/memberRegistration';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -153,7 +155,6 @@ function RegisterMemberModal({ onClose, onSuccess }) {
     if (!form.name.trim())     e.name     = 'Full name is required.';
     if (!form.location.trim()) e.location = 'Address is required.';
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email.';
-    if (!idFile) e.idFile = 'Please upload a valid government ID.';
     return e;
   };
 
@@ -161,19 +162,13 @@ function RegisterMemberModal({ onClose, onSuccess }) {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     setStep('loading'); setApiErr('');
-    const fd = new FormData();
-    fd.append('name',     form.name.trim());
-    if (form.email.trim()) fd.append('email', form.email.trim());
-    if (form.phone.trim())    fd.append('phone',    form.phone.trim());
-    fd.append('location', form.location.trim());
-    fd.append('id_image', idFile);
+    const fd = buildMemberRegistrationForm(form, idFile);
     try {
       const res = await registerMember(fd);
       setResult(res.data);
       setStep('success');
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      setApiErr(Array.isArray(detail) ? detail.map(e => e.msg).join(', ') : (detail || 'Registration failed. Please try again.'));
+      setApiErr(registrationErrorMessage(err));
       setStep('form');
     }
   };
@@ -186,13 +181,15 @@ function RegisterMemberModal({ onClose, onSuccess }) {
   const inp = (err) =>
     `w-full bg-subtle border ${err ? 'border-danger' : 'border-line '} focus:border-line outline-none rounded-lg px-4 py-2.5 text-base font-medium text-ink placeholder-muted transition-colors`;
 
+  const close = () => { if (step !== 'loading') onClose(); };
+
   return (
-    <ModalFrame onClose={onClose} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
+    <ModalFrame onClose={close} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
       <div className="bg-panel border border-line rounded-xl shadow-sm w-full max-w-lg flex flex-col" style={{ maxHeight: '90vh' }}>
 
         {/* Header */}
         <div className="flex-shrink-0 px-7 pt-7 pb-5 border-b border-line">
-          <button aria-label="Close" onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-lg text-muted hover:text-muted hover:bg-subtle transition-all"><X size={16}/></button>
+          <button aria-label="Close" disabled={step === 'loading'} onClick={close} className="absolute top-4 right-4 p-1.5 rounded-lg text-muted hover:text-muted hover:bg-subtle transition-all"><X size={16}/></button>
           <p className="text-sm font-semibold tracking-normal text-link mb-1">Librarian Terminal</p>
           <h2 className="font-semibold tracking-normal text-ink rpl-section-title">Register <span className="text-link">New Member</span></h2>
         </div>
@@ -211,16 +208,13 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                 <p className="text-sm font-semibold tracking-normal text-muted mb-1">Member ID</p>
                 <p className="font-sans font-semibold text-link text-lg">{result.member_id}</p>
               </div>
-              <div>
-                <p className="text-sm font-semibold tracking-normal text-muted mb-1">Temporary Password</p>
-                <p className="font-sans font-semibold text-muted text-base">{result.temporary_password}</p>
-              </div>
+              <RegistrationDelivery result={result} />
             </div>
             {/* Reminder note */}
             <div className="flex items-start gap-2.5 px-4 py-3 bg-warning-soft border border-warning rounded-xl w-full max-w-xs text-left mb-6">
               <Info size={14} className="text-warning flex-shrink-0 mt-0.5"/>
               <p className="text-sm font-medium text-warning">
-                Remind the member to change their password after first login.
+                The member must change this password on their first login.
               </p>
             </div>
             <button onClick={() => { onSuccess(); onClose(); }} className="px-8 py-3 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all">Done</button>
@@ -254,7 +248,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                 <div>
                   <p className="text-sm font-semibold text-link">A unique temporary password will be generated.</p>
                   <p className="text-sm text-link mt-0.5">
-                    Email or phone can be used for password recovery. Members without either can still be reset by a librarian.
+                    Email is used first, then text if no email is provided. Otherwise, give the sign-in details directly to the member.
                   </p>
                 </div>
               </div>
@@ -270,7 +264,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
               <div>
                 <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Email Address <span className="text-muted font-normal normal-case">(optional)</span></label>
                 <input aria-label="Email Address" {...field('email')} type="email" placeholder="name@domain.com" className={inp(errors.email)}/>
-                <p className="mt-1 text-sm font-medium text-muted">Used for reset codes when available.</p>
+                <p className="mt-1 text-sm font-medium text-muted">Receives the temporary password when provided.</p>
                 {errors.email && <p className="mt-1 text-sm font-bold text-danger">{errors.email}</p>}
               </div>
 
@@ -279,7 +273,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                 <div>
                   <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Phone</label>
                   <input aria-label="Phone" {...field('phone')} type="tel" placeholder="+63 9XX XXX XXXX" className={inp(false)}/>
-                  <p className="mt-1 text-sm font-medium text-muted">Can receive reset codes later.</p>
+                  <p className="mt-1 text-sm font-medium text-muted">Receives the temporary password when no email is provided.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Address <span className="text-danger">*</span></label>
@@ -291,10 +285,10 @@ function RegisterMemberModal({ onClose, onSuccess }) {
               {/* ── Valid ID Upload ── */}
               <div>
                 <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">
-                  Valid Government ID <span className="text-danger">*</span>
+                  Government ID <span className="font-normal normal-case">(optional)</span>
                 </label>
 
-                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={onFile} className="hidden"/>
+                <input ref={fileRef} type="file" aria-label="Government ID (optional)" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={onFile} className="hidden"/>
 
                 {!idFile ? (
                   /* Upload drop zone */

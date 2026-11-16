@@ -6,16 +6,16 @@ import { STAFF_LIBRARIAN_NAV_LINKS } from '../api/librarianNavigation';
 import { parseApiDateTime } from '../api/dateTime';
 import { isPasswordChangePath } from '../api/authRoutes';
 import {
-  BookOpen, PlusSquare, Users,
+  BookOpen, PlusSquare, Users, LayoutDashboard, ArrowLeftRight,
   QrCode, FileText,
   Menu, X, ChevronRight, ShieldCheck,
   AlertTriangle, Bell, BookMarked, Settings,
 } from 'lucide-react';
 
 const NAV_ICONS = {
-  home: <BookOpen size={18} />,
+  home: <LayoutDashboard size={18} />,
   inventory: <BookOpen size={18} />,
-  'borrow-return': <BookMarked size={18} />,
+  'borrow-return': <ArrowLeftRight size={18} />,
   reservations: <BookMarked size={18} />,
   'due-books': <AlertTriangle size={18} />,
   reports: <FileText size={18} />,
@@ -31,6 +31,7 @@ const LibLayout = () => {
   const [bellOpen, setBellOpen] = useState(false);
   const [nowMs, setNowMs] = useState(0);
   const bellRef = useRef(null);
+  const headerRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const changingPassword = isPasswordChangePath(location.pathname);
@@ -101,31 +102,46 @@ const LibLayout = () => {
 
   const close = () => setSidebarOpen(false);
 
+  useEffect(() => {
+    const header = headerRef.current;
+    const measureHeader = () => header.style.setProperty('--staff-header-measured-height', `${header.getBoundingClientRect().height}px`);
+    const observer = new ResizeObserver(measureHeader);
+    observer.observe(header);
+    measureHeader();
+    return () => observer.disconnect();
+  }, []);
+
+  const labels = { home: 'Dashboard', reports: 'Reports & Analytics' };
+  const currentLink = STAFF_LIBRARIAN_NAV_LINKS.find(link => link.to === location.pathname);
+  const pageTitle = currentLink ? labels[currentLink.key] || currentLink.label : 'Librarian workspace';
+  const navGroups = [
+    ['Workspace', ['home', 'inventory', 'users']],
+    ['Circulation', ['borrow-return', 'reservations', 'due-books']],
+    ['Library management', ['reports', 'add-book', 'qr-bulk', 'public-catalog']],
+  ];
+
   return (
-    <div className="rpl-page min-h-screen flex flex-col bg-subtle font-sans transition-colors duration-300">
-
-      {/* ── TOP NAVBAR ── */}
-      <nav className="rpl-chrome rpl-header sticky top-0 z-40">
-
-        {/* Left: Hamburger */}
-        <button
-          onClick={() => setSidebarOpen((v) => !v)}
-          className={shellClasses.hamburger}
-          aria-label={sidebarOpen ? 'Close menu' : 'Open menu'} aria-expanded={sidebarOpen} aria-controls="staff-navigation"
-        >
-          {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
-
-        <button onClick={() => navigate('/librarian/home')} className="rpl-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></button>
-
+    <div className="rpl-staff min-h-screen">
+      <nav ref={headerRef} className="staff-header" aria-label="Workspace header">
+        <div className="staff-header-leading">
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            className={`staff-menu-toggle ${shellClasses.hamburger}`}
+            aria-label={sidebarOpen ? 'Close menu' : 'Open menu'} aria-expanded={sidebarOpen} aria-controls="staff-navigation"
+          >
+            {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+          <p className="staff-route-title">{pageTitle}</p>
+        </div>
+        <button onClick={() => navigate('/librarian/home')} className="staff-header-brand"><img src="/RPL.png" alt="" /><span>Rizal Provincial Library</span></button>
         {/* Notifications */}
         <div className="rpl-header-actions">
           {/* Notification Bell */}
           <div className="relative" ref={bellRef}>
             <button
               onClick={() => setBellOpen((v) => !v)}
-              className="relative p-2 rounded-lg text-link text-muted hover:text-link hover:text-ink hover:bg-info-soft hover:bg-panel transition-all"
-              aria-label="Notifications"
+              className="staff-notification-button"
+              aria-label="Notifications" aria-expanded={bellOpen} aria-controls="staff-notifications"
             >
               <Bell size={18} />
               {unreadCount > 0 && (
@@ -137,7 +153,7 @@ const LibLayout = () => {
 
             {/* Dropdown Panel */}
             {bellOpen && (
-              <div className="fixed left-3 right-3 top-[var(--rpl-header-height)] sm:absolute sm:left-auto sm:right-0 sm:top-full mt-2 sm:w-80 [overflow-wrap:anywhere] bg-panel border border-line rounded-xl shadow-sm z-[100] overflow-hidden">
+              <div id="staff-notifications" className="staff-notifications fixed left-3 right-3 top-[var(--rpl-header-height)] sm:absolute sm:left-auto sm:right-0 sm:top-full mt-2 sm:w-80 [overflow-wrap:anywhere] bg-panel border border-line rounded-xl shadow-sm z-[100] overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-line">
                   <p className="font-semibold text-sm tracking-normal text-link text-ink">
@@ -185,6 +201,7 @@ const LibLayout = () => {
                         {!n.is_read && (
                           <button
                             onClick={() => handleMarkRead(n.id)}
+                            aria-label="Mark notification as read"
                             className="flex-shrink-0 text-sm font-semibold tracking-normal text-link hover:text-link transition-colors mt-0.5"
                           >
                             ✓
@@ -201,107 +218,33 @@ const LibLayout = () => {
         </div>
       </nav>
 
-      {/* ── OVERLAY ── */}
-      <div
-        className={shellClasses.overlay}
-        onClick={close}
-      />
-
-      {/* ── SLIDE-IN SIDEBAR ── */}
-      <aside
-        id="staff-navigation" inert={!sidebarOpen} className={`rpl-drawer ${shellClasses.sidebar}`}
-      >
-        {/* Opaque navigation panel */}
-        <div className="h-full bg-panel border-r border-line flex flex-col shadow-sm">
-
-          {/* Sidebar Header */}
-          <div className="px-5 py-4 border-b border-line flex items-center justify-between">
-            <p className="rpl-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></p>
-            <button
-              onClick={close}
-              className="p-2 text-link text-muted hover:text-link hover:text-ink hover:bg-info-soft hover:bg-panel rounded-lg transition-all"
-              aria-label="Close menu"
-            >
-              <X size={18} />
-            </button>
+      <div className={`staff-overlay ${shellClasses.overlay}`} onClick={close} />
+      <aside id="staff-navigation" aria-label="Librarian navigation" inert={!sidebarOpen} className={`rpl-drawer staff-sidebar ${shellClasses.sidebar}`}>
+        <div className="staff-sidebar-inner">
+          <div className="staff-sidebar-brand">
+            <p><img src="/RPL.png" alt="" /><span>Rizal Provincial<br />Library</span></p>
+            <button onClick={close} className="staff-drawer-close" aria-label="Close menu"><X size={20} /></button>
           </div>
-
-          {/* Staff Badge */}
-          <div className="px-5 py-4 border-b border-line">
-            <div className="flex items-center gap-3 px-3 py-3 bg-info-soft bg-panel rounded-xl border border-line">
-              <div className="w-10 h-10 bg-action rounded-xl flex items-center justify-center flex-shrink-0">
-                <ShieldCheck size={18} className="text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-bold text-link text-ink text-sm truncate">Librarian</p>
-                <p className="text-sm font-semibold tracking-normal text-link text-muted mt-0.5">
-                  Authorized Staff
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Nav Links */}
-          <nav className="flex-1 px-4 py-5 space-y-1 overflow-y-auto">
-            <p className="text-sm font-semibold tracking-normal text-link text-muted px-4 mb-3">
-              Navigation
-            </p>
-            {STAFF_LIBRARIAN_NAV_LINKS.filter((link) => link.key !== 'settings').map((link, i) => {
-              const active = location.pathname === link.to;
-              return (
-                <Link
-                  key={link.to}
-                  aria-current={active ? 'page' : undefined}
-                  to={link.to}
-                  onClick={close}
-                  style={{ animationDelay: `${i * 40}ms` }}
-                  className={`animate-slide-in-left group flex items-center gap-3 px-4 py-3.5 rounded-xl font-semibold text-sm tracking-normal transition-all duration-200 relative overflow-hidden ${
-                    active
-                      ? 'bg-action text-white shadow-sm '
-                      : 'text-link text-muted hover:bg-info-soft hover:bg-panel hover:text-link hover:translate-x-1'
-                  }`}
-                >
-                  {/* Active left bar */}
-                  {active && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-panel rounded-full" />
-                  )}
-                  <span className={`transition-transform duration-200 ${active ? 'text-white' : 'text-link text-muted group-hover:text-link group-hover:text-link'}`}>
-                    {NAV_ICONS[link.key] || <BookOpen size={18} />}
-                  </span>
-                  <span className="flex-1">{link.label}</span>
-                  <ChevronRight
-                    size={12}
-                    className={`transition-all duration-200 ${active ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 group-hover:opacity-60 group-hover:translate-x-0'}`}
-                  />
-                </Link>
-              );
-            })}
+          <nav className="staff-navigation" aria-label="Librarian pages">
+            {navGroups.map(([group, keys]) => <div className="staff-nav-group" key={group}>
+              <p className="staff-nav-label">{group}</p>
+              {keys.map(key => STAFF_LIBRARIAN_NAV_LINKS.find(link => link.key === key)).map(link => {
+                const active = location.pathname === link.to;
+                return <Link key={link.to} aria-current={active ? 'page' : undefined} to={link.to} onClick={close} className={`staff-nav-link ${active ? 'is-active' : ''}`}>
+                  <span aria-hidden="true">{NAV_ICONS[link.key] || <BookOpen size={18} />}</span>
+                  <span>{labels[link.key] || link.label}</span>
+                  {active && <ChevronRight size={13} aria-hidden="true" />}
+                </Link>;
+              })}
+            </div>)}
           </nav>
-
-          {/* Settings stays below the navigation divider. */}
-          <div className="shrink-0 px-4 pb-6 border-t border-line pt-4">
-            <Link
-              to="/librarian/settings"
-              onClick={close}
-              aria-current={location.pathname === '/librarian/settings' ? 'page' : undefined}
-              className={`group flex items-center gap-3 px-4 py-3.5 rounded-xl font-semibold text-sm tracking-normal transition-all duration-200 ${
-                location.pathname === '/librarian/settings'
-                  ? 'bg-action text-white shadow-sm '
-                  : 'text-link text-muted hover:bg-info-soft hover:bg-panel hover:text-link'
-              }`}
-            >
-              <Settings size={18} />
-              <span className="flex-1">Settings</span>
-              <ChevronRight size={12} />
-            </Link>
+          <div className="staff-sidebar-bottom">
+            <Link to="/librarian/settings" onClick={close} aria-current={location.pathname === '/librarian/settings' ? 'page' : undefined} className={`staff-nav-link ${location.pathname === '/librarian/settings' ? 'is-active' : ''}`}><Settings size={18} aria-hidden="true" /><span>Settings</span></Link>
+            <div className="staff-identity"><span><ShieldCheck size={19} aria-hidden="true" /></span><p>Librarian<small>Authorized Staff</small></p></div>
           </div>
         </div>
       </aside>
-
-      {/* ── PAGE CONTENT ── */}
-      <main className={shellClasses.main}>
-        <Outlet />
-      </main>
+      <main className={`staff-main ${shellClasses.main}`}><Outlet /></main>
     </div>
   );
 };

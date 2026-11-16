@@ -20,6 +20,9 @@ import secrets
 import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File, Form
+from pydantic import EmailStr, TypeAdapter, ValidationError
+from starlette.concurrency import run_in_threadpool
+from services.registration_delivery import deliver_registration_credentials
 from services.passwords import hash_password
 from services.passwords import verify_password
 from services.member_deletion import lock_existing_member, delete_face_data, delete_account
@@ -390,8 +393,14 @@ async def register_member(
     db:       Session          = Depends(get_db),
     _:        User             = Depends(require_librarian),
 ):
-    """Librarian registers a new member with a valid government ID upload."""
-    email = email.lower().strip() if email else None
+    """Librarian registers a member; an optional ID retains private upload checks."""
+    email = (email.strip().lower() or None) if email else None
+    if email:
+        try:
+            email = str(TypeAdapter(EmailStr).validate_python(email))
+        except ValidationError:
+            raise HTTPException(422, "Enter a valid email address.") from None
+    phone = (phone.strip() or None) if phone else None
     name  = name.strip()
 
     if not name:
@@ -402,19 +411,21 @@ async def register_member(
     if email and email_matches(db, email):
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
-    content, original_filename, reference = await read_upload(folder="ids", user_id=_.id, file=id_image, ticket=upload_ticket)
-    ext = validate_upload_bytes(
-        content=content,
-        filename=original_filename,
-        allowed_exts=ID_EXTS,
-        max_bytes=10 * 1024 * 1024,
-        human_label="ID image",
-    )
+    id_reference = None
+    if id_image is not None or upload_ticket:
+        content, original_filename, reference = await read_upload(folder="ids", user_id=_.id, file=id_image, ticket=upload_ticket)
+        ext = validate_upload_bytes(
+            content=content,
+            filename=original_filename,
+            allowed_exts=ID_EXTS,
+            max_bytes=10 * 1024 * 1024,
+            human_label="ID image",
+        )
 
-    filename = f"{uuid.uuid4().hex}{ext}"
-    id_reference = reference or save_upload("ids", filename, content)
+        filename = f"{uuid.uuid4().hex}{ext}"
+        id_reference = reference or save_upload("ids", filename, content)
 
-    temporary_password = _generate_temporary_password()
+    temporary_password = _generate_temporary_password(length=10)
     new_user = User(
         name          = name,
         email         = email or None,
@@ -423,7 +434,7 @@ async def register_member(
         email_verified = False,
         phone_verified = False,
         role          = "member",
-        phone         = phone.strip() if phone else None,
+        phone         = phone,
         location      = location.strip(),
         status        = "active",
         id_image_url  = id_reference,
@@ -437,6 +448,9 @@ async def register_member(
         raise HTTPException(409, 'Registration conflicts with an existing account. Refresh and check before retrying.') from None
     db.refresh(new_user)
 
+    delivery = await run_in_threadpool(deliver_registration_credentials,
+        member_id=new_user.member_id, temporary_password=temporary_password,
+        email=new_user.email, phone=new_user.phone)
     return {
         "success":          True,
         "id":               new_user.id,
@@ -445,7 +459,9 @@ async def register_member(
         "email":            new_user.email,
         "email_verified":   bool(new_user.email_verified),
         "phone_verified":   bool(new_user.phone_verified),
-        "temporary_password": temporary_password,
+        "phone":            new_user.phone,
+        "password_delivery": delivery,
+        "temporary_password": None if delivery["status"] == "accepted" else temporary_password,
     }
 
 

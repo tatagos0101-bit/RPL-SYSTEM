@@ -26,7 +26,7 @@ import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 import { buildUserHomeOverview } from '../../api/userHomeSummary';
 import BookCover from '../../components/BookCover';
 
-const GENRE_COLORS = ['#2563eb', '#7c3aed', '#f59e0b', '#059669', '#db2777', '#0891b2'];
+const GENRE_COLORS = ['var(--member-chart-1)', 'var(--member-chart-2)', 'var(--member-chart-3)', 'var(--member-chart-4)', 'var(--member-chart-5)', 'var(--member-chart-6)'];
 
 const NOTICE_STYLES = {
   overdue: {

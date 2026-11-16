@@ -1,14 +1,15 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { formatReportValue } from '../../api/reportingFilters';
 
-const palette = ['var(--rpl-link)', 'var(--rpl-success)', 'var(--rpl-warning)', 'var(--rpl-muted)', 'var(--rpl-danger)'];
-export default function ReportChart({ chart }) {
+const palette = ['var(--rpl-chart-1, var(--rpl-link))', 'var(--rpl-chart-2, var(--rpl-success))', 'var(--rpl-chart-3, var(--rpl-warning))', 'var(--rpl-chart-4, var(--rpl-muted))', 'var(--rpl-chart-5, var(--rpl-danger))'];
+export default function ReportChart({ chart, variant }) {
   const id = useId();
   const [active, setActive] = useState(null);
   const container = useRef(null);
   const [width, setWidth] = useState(660);
   useEffect(() => { const observer = new ResizeObserver(entries => setWidth(entries[0].contentRect.width)); observer.observe(container.current); return () => observer.disconnect(); }, []);
   const points = chart.points || [];
+  const staff = variant === 'staff';
   const grouped = chart.type === 'grouped';
   const max = Math.max(1, ...points.flatMap(p => grouped ? [p.borrowed, p.returned] : [p.value]));
   const total = points.reduce((sum, p) => sum + (p.value || 0), 0);
@@ -18,11 +19,11 @@ export default function ReportChart({ chart }) {
   const plotLeft = Math.max(44, (String(max).length * 9 + 10) * 660 / Math.max(280, width));
   const x = i => plotLeft + (i + .5) * (628 - plotLeft) / Math.max(1, points.length);
   const y = value => 180 - (value || 0) / max * 145;
-  return <section ref={container} className="min-w-0 rounded-xl border border-line bg-panel p-4 sm:p-5" aria-labelledby={id}>
+  return <section ref={container} className={staff ? 'staff-report-chart' : 'min-w-0 rounded-xl border border-line bg-panel p-4 sm:p-5'} data-chart-type={chart.type} data-chart-layout={horizontal ? 'horizontal' : undefined} aria-labelledby={id}>
     <h2 id={id} className="text-xl font-semibold text-ink">{chart.title}</h2>
-    {grouped && <p className="mt-2 flex flex-wrap gap-4 text-sm"><span className="text-link">● Borrowed</span><span className="text-success">■ Returned</span></p>}
+    {grouped && <p className="mt-2 flex flex-wrap gap-4 text-sm"><span className={`text-link ${staff ? 'staff-chart-legend' : ''}`}>{staff ? 'Borrowed' : '● Borrowed'}</span><span className={`text-success ${staff ? 'staff-chart-legend' : ''}`}>{staff ? 'Returned' : '■ Returned'}</span></p>}
     {!points.length ? <p className="py-12 text-center text-muted">No matching records.</p> : <>
-      {horizontal ? <ol className="my-5 space-y-3">{points.map((p, i) => <li key={i} className="text-sm"><div className="mb-1 flex items-start justify-between gap-4"><span>{p.label}</span><strong className="tabular-nums">{formatReportValue(p.value)}</strong></div><svg viewBox="0 0 100 3" className="w-full" role="img" aria-label={text(p)} tabIndex="0" onFocus={() => setActive(i)} onBlur={() => setActive(null)} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}><title>{text(p)}</title><rect width="100" height="3" fill="var(--rpl-subtle)" /><rect width={(p.value || 0) / max * 100} height="3" fill="var(--rpl-link)" /></svg></li>)}</ol> : <svg viewBox={chart.type === 'donut' ? '25 0 210 210' : '0 0 660 220'} className={chart.type === 'donut' ? 'mx-auto mt-4 h-44 w-44 overflow-visible' : 'mt-4 w-full overflow-visible'} role="group" aria-label={`${chart.title}. Focus a point for its value; the data table follows.`}>
+      {horizontal ? <ol className="my-5 space-y-3">{points.map((p, i) => <li key={i} className="text-sm"><div className="mb-1 flex items-start justify-between gap-4"><span>{p.label}</span><strong className="tabular-nums">{formatReportValue(p.value)}</strong></div><svg viewBox="0 0 100 3" preserveAspectRatio={staff ? 'none' : undefined} className="w-full" role="img" aria-label={text(p)} tabIndex="0" onFocus={() => setActive(i)} onBlur={() => setActive(null)} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}><title>{text(p)}</title><rect width="100" height="3" fill="var(--rpl-subtle)" /><rect width={(p.value || 0) / max * 100} height="3" fill="var(--rpl-link)" /></svg></li>)}</ol> : <svg viewBox={chart.type === 'donut' ? '25 0 210 210' : '0 0 660 220'} className={chart.type === 'donut' ? 'mx-auto mt-4 h-44 w-44 overflow-visible' : 'mt-4 w-full overflow-visible'} role="group" aria-label={`${chart.title}. Focus a point for its value; the data table follows.`}>
         {chart.type === 'donut' ? <>
           <circle cx="130" cy="105" r="72" fill="none" stroke="var(--rpl-line)" strokeWidth="25" />
           {points.map((p, i) => { const length = total ? p.value / total * 100 : 0; const start = total ? points.slice(0, i).reduce((sum, point) => sum + point.value, 0) / total * 100 : 0;
@@ -31,10 +32,17 @@ export default function ReportChart({ chart }) {
           <text x="130" y="111" textAnchor="middle" fill="var(--rpl-ink)" fontSize="24">{formatReportValue(total)}</text>
         </> : <>
           {[...new Set([0, Math.ceil(max / 2), max])].map(value => <g key={value}><line x1={plotLeft} x2="628" y1={y(value)} y2={y(value)} stroke="var(--rpl-line)" /><text x={plotLeft - 8} y={y(value) + 4} textAnchor="end" fontSize={labelSize} fill="var(--rpl-muted)">{value}</text></g>)}
+          {staff && grouped && <>
+            <polyline points={points.map((p, i) => `${x(i)},${y(p.borrowed)}`).join(' ')} fill="none" stroke="var(--rpl-link)" strokeWidth="3" />
+            <polyline points={points.map((p, i) => `${x(i)},${y(p.returned)}`).join(' ')} fill="none" stroke="var(--rpl-success)" strokeWidth="3" strokeDasharray="8 5" />
+          </>}
           {chart.type === 'line' && <polyline points={points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')} fill="none" stroke="var(--rpl-link)" strokeWidth="3" />}
           {points.map((p, i) => <g key={i} tabIndex="0" role="img" aria-label={text(p)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)}>
             <title>{text(p)}</title>
-            {chart.type === 'line' ? <circle cx={x(i)} cy={y(p.value)} r="4" fill="var(--rpl-link)" /> : grouped ? <>
+            {chart.type === 'line' ? <circle cx={x(i)} cy={y(p.value)} r="4" fill="var(--rpl-link)" /> : grouped ? staff ? <>
+              <circle cx={x(i)} cy={y(p.borrowed)} r="4" fill="var(--rpl-link)" />
+              <rect x={x(i) - 4} y={y(p.returned) - 4} width="8" height="8" fill="var(--rpl-success)" />
+            </> : <>
               <rect x={x(i) - 200 / points.length} y={y(p.borrowed)} width={180 / points.length} height={180 - y(p.borrowed)} fill="var(--rpl-link)" />
               <rect x={x(i) + 20 / points.length} y={y(p.returned)} width={180 / points.length} height={180 - y(p.returned)} fill="var(--rpl-success)" />
             </> : <rect x={x(i) - 180 / points.length} y={y(p.value)} width={360 / points.length} height={180 - y(p.value)} fill="var(--rpl-link)" />}

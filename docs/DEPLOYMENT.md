@@ -14,6 +14,30 @@ Authentication remains in FastAPI. Supabase Auth is not used by this application
 Database passwords and Supabase secret/service-role keys belong only in server
 environment variables. Never put them in a `VITE_*` variable or commit `.env` files.
 
+## Member registration delivery prerequisite
+
+The November 16 local revision makes government ID optional and adds email-first,
+registration-only SMS delivery with librarian fallback for shorter temporary
+passwords. No schema/dependency upgrade is required. Deploy the updated API before
+the frontend; older APIs still return a librarian-handoff password, which the new
+UI supports. Configure SMTP and optional Twilio settings only in the API server
+and verify approved test recipients separately; see
+[registration credential delivery](CONTACT_VERIFICATION.md#new-member-registration-credentials).
+No live sending or production configuration was performed in the local session.
+
+## Catalog discovery compatibility prerequisite (local only)
+
+The November16 local catalog revision adds server-side `sort` and `favorites_only`
+query parameters to the existing public book list. The stable genre artwork fix
+also adds opt-in `include_previews=true` to the category list, returning up to three
+public cover/id references per genre. Default category calls are unchanged.
+Deploy the updated API before
+its frontend, after separate release authorization: an older API ignores those
+parameters and cannot supply the new ranked/favorite-only shelves. No schema,
+dependency or environment upgrade is required. Ranking/response behavior was tested
+locally with isolated synthetic fixtures; no production release or live database
+verification was performed. See [catalog verification](superpowers/specs/2026-11-16-catalog-discovery-verification.md).
+
 ## Reporting release prerequisite (not deployed)
 
 The [reporting center](REPORTING_CENTER.md) adds `copy_acquisitions` and reporting
@@ -250,6 +274,23 @@ memory and reports interruption instead of offering a partial archive.
 Follow the staged [repair rollout](REPAIR_ROLLOUT.md), including an isolated
 production-shaped migration rehearsal and approval for the live maintenance
 window. Local synthetic tests are not evidence of a production migration.
+
+### Book description upgrade
+
+The November 16 local workflow revision requires nullable `books.description`
+(`TEXT`). On an existing database, use the existing `python migrate.py` upgrade
+from `backend/` against an explicitly selected and authorized target before
+starting the updated backend, then release the frontend. The additive schema
+service leaves old descriptions NULL and preserves existing values on repeat
+execution. Do not regenerate or reapply the initial schema SQL. Keep production
+`AUTO_MIGRATE=false`; no new environment variables or dependencies are required.
+
+Only the isolated local SQLite development database received the necessary
+additive column during this session, with repeat execution checked. Migration
+fixtures covered old SQLite rows and PostgreSQL DDL compilation; live PostgreSQL
+upgrade, concurrency and production deployment were not verified or performed.
+The complete migration entry point also contains earlier data backfills, so review
+its effects and rehearse the authorized target before a production upgrade.
 
 ### Personalized recommendation upgrade
 

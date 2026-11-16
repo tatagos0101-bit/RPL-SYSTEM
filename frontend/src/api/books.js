@@ -19,3 +19,10 @@ export const getBookByScan = (code) =>
   client.get(`/api/books/scan/${encodeURIComponent(code)}`);
 
 export const getLoanPolicy = () => client.get('/api/books/policy');
+
+export const getTrendingShelf = () => getBooks({ sort: 'trending', limit: 12 });
+export const getNewestShelf = () => getBooks({ sort: 'newest', limit: 12 });
+export const getLovedShelf = () => getBooks({ sort: 'loved', favorites_only: true, limit: 12 });
+
+export const getCategoryPreviews = () =>
+  client.get('/api/books/categories', { params: { include_previews: true } });

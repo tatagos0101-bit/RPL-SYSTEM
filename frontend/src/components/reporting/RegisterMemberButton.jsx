@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { CheckCircle2, Info, X, XCircle, Upload, ImageIcon, RefreshCw, UserPlus } from 'lucide-react';
 import ModalFrame from '../ModalFrame';
 import { registerMember } from '../../api/librarian';
+import { buildMemberRegistrationForm, registrationErrorMessage } from '../../api/memberRegistration';
+import RegistrationDelivery from '../RegistrationDelivery';
 const EMPTY_FORM = { name: '', email: '', phone: '', location: '' };
 export default function RegisterMemberButton({ onRegistered }) {
   const [showRegModal, setShowRegModal] = useState(false);
@@ -14,6 +16,7 @@ export default function RegisterMemberButton({ onRegistered }) {
   const idFileRef = useRef(null);
 
   const handleRegClose = () => {
+    if (regLoading) return;
     setShowRegModal(false);
     setForm(EMPTY_FORM);
     setIdFile(null);
@@ -38,19 +41,10 @@ export default function RegisterMemberButton({ onRegistered }) {
       setRegError('Enter a valid email address.');
       return;
     }
-    if (!idFile) {
-      setRegError('Please upload a valid government ID.');
-      return;
-    }
 
     setRegLoading(true);
     try {
-      const fd = new FormData();
-      fd.append('name', form.name.trim());
-      if (form.email.trim()) fd.append('email', form.email.trim());
-      if (form.phone.trim()) fd.append('phone', form.phone.trim());
-      fd.append('location', form.location.trim());
-      fd.append('id_image', idFile);
+      const fd = buildMemberRegistrationForm(form, idFile);
       const res = await registerMember(fd);
       setRegResult(res.data);
       setForm(EMPTY_FORM);
@@ -59,8 +53,7 @@ export default function RegisterMemberButton({ onRegistered }) {
       if (idFileRef.current) idFileRef.current.value = '';
       onRegistered?.();
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      setRegError(Array.isArray(detail) ? detail.map((item) => item.msg).join(', ') : (detail || 'Registration failed. Please try again.'));
+      setRegError(registrationErrorMessage(err));
     } finally {
       setRegLoading(false);
     }
@@ -85,7 +78,7 @@ const RegisterMemberModal = ({
 }) => (
   <ModalFrame onClose={onClose} aria-label="Register member" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-6">
     <div className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-panel p-8 shadow-sm sm:p-10">
-      <button aria-label="Close"
+      <button aria-label="Close" disabled={regLoading}
         onClick={onClose}
         className="absolute right-6 top-6 rounded-lg p-2 text-muted transition hover:bg-subtle hover:text-ink"
       >
@@ -114,14 +107,11 @@ const RegisterMemberModal = ({
               <p className="mb-1 text-sm font-semibold tracking-normal text-muted">Member ID</p>
               <p className="font-sans text-lg font-semibold text-link">{regResult.member_id}</p>
             </div>
-            <div>
-              <p className="mb-1 text-sm font-semibold tracking-normal text-muted">Temporary Password</p>
-              <p className="font-sans font-semibold text-muted">{regResult.temporary_password}</p>
-            </div>
+            <RegistrationDelivery result={regResult} />
           </div>
           <div className="flex w-full items-start gap-2.5 rounded-xl border border-warning bg-warning-soft px-4 py-3 text-left">
             <Info size={14} className="mt-0.5 flex-shrink-0 text-warning" />
-            <p className="text-sm font-medium text-warning">Remind the member to change their password after first login.</p>
+            <p className="text-sm font-medium text-warning">The member must change this password on their first login.</p>
           </div>
           <button
             onClick={onClose}
@@ -137,7 +127,7 @@ const RegisterMemberModal = ({
           <Info size={15} className="mt-0.5 flex-shrink-0 text-link" />
           <div>
             <p className="text-sm font-semibold text-link">A unique temporary password will be generated.</p>
-            <p className="mt-0.5 text-sm text-link">The member will be reminded to change this after first login.</p>
+            <p className="mt-0.5 text-sm text-link">Email is used first, then text if no email is provided. Otherwise, give the sign-in details directly to the member.</p>
           </div>
         </div>
 
@@ -148,11 +138,12 @@ const RegisterMemberModal = ({
 
         <div>
           <label className="mb-1.5 block text-sm font-semibold tracking-normal text-muted">
-            Valid Government ID <span className="text-danger">*</span>
+            Government ID <span className="font-normal normal-case">(optional)</span>
           </label>
           <input
             ref={idFileRef}
             type="file"
+            aria-label="Government ID (optional)"
             accept="image/jpeg,image/png,image/webp,application/pdf"
             onChange={(e) => {
               const file = e.target.files?.[0];
@@ -224,6 +215,7 @@ const RegisterMemberModal = ({
         <div className="flex gap-3 pt-2">
           <button
             type="button"
+            disabled={regLoading}
             onClick={onClose}
             className="flex-1 rounded-lg border border-line py-3.5 text-sm font-semibold tracking-normal text-muted transition hover:bg-subtle"
           >
@@ -251,6 +243,7 @@ const FormInput = ({ label, value, onChange, placeholder, type = 'text', require
     </label>
     <input
       type={type}
+      aria-label={label}
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}

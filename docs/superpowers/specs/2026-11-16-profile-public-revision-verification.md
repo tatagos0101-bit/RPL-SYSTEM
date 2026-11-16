@@ -1,0 +1,31 @@
+# Profile and public viewer: local verification
+
+Verified on November 16, 2026 after the user resumed work. The frontend and API were started first, then the scoped changes were implemented. No Git metadata exists in this downloaded archive; pre-task copies and SHA-256 hashes are retained in `.tools/profile-public-revision/baseline/`. Unrelated prior work was preserved.
+
+## Delivered behavior
+
+- Member names remain visible and read-only in Edit Profile, with a librarian-managed explanation. Profile saves send phone/location only. The server rejects a changed or null member name before applying other fields, while accepting an unchanged legacy name and preserving librarian own-profile name editing.
+- Existing avatar upload now offers Add/Change photo and Remove photo. A shared pending guard prevents competing upload/removal actions. Confirmed changes update the member profile/navigation and other tabs through existing revision events. Errors retain the displayed state and allow retry. Contact/email saves publish only their own fields so delayed responses cannot restore a removed photo. No signed URL or photo is persisted in browser storage.
+- Self-scoped `DELETE /api/user/avatar` rechecks the locked active session/account, validates the avatar category/reference, rejects shared references, and uses existing private Storage deletion. Repeating removal without a photo succeeds. Storage failure preserves the reference. A failed later database commit returns an error; the retained reference may then point to an already deleted object, and retry finishes clearing it. IDs, accounts, sessions and other members are not deletion targets.
+- The public `/browse` preview has a consistent viewport-bounded frame, contained covers with missing/broken-image fallback, scrolling details, a fixed Close control and visible 44px Previous/Next controls. The lower slider/counter bar is removed; the cover position indicator remains. Search, category shelves, pagination and exact role-specific reservation links retain their existing behavior.
+
+## Checks actually run
+
+- Before implementation: the new name/own-avatar tests reproduced three failures; synthetic browser checks confirmed an editable name, no Remove photo button and the public range slider.
+- Backend: **73 passed** across `test_profile_name_photo.py` (19 cases), `test_repair_auth.py`, `test_contact_verification.py`, `test_auth_sessions.py`, `test_auth_registration_uploads.py` and `test_member_deletion.py`. The first run had one incorrect new test expectation for existing logout HTTP 204; that expectation was corrected and the full selected set passed.
+- Additional relevant Storage/profile checks: **16 passed** across `test_cloud_integration.py`, explicit profile clear/omitted fields, private identity uploads and public cover access. Total backend checks: **89 passed**. These use isolated SQLite/temp uploads and mocked Storage, not production records.
+- Used the installed backend virtual environment with `.tools/profile-public-revision/qa/run_backend.py`, `-q -p no:cacheprovider --tb=no --show-capture=no --disable-warnings`, unique task basetemps and `tmp_path_retention_count=0`. The runner supplies only the synthetic fixture station PIN and disables pytest's optional Windows symlink helper. No environment file was changed.
+- Frontend helpers: `node --test frontend/src/api/*.test.js`: **95 passed**.
+- Scoped ESLint from `frontend/`: `node_modules/.bin/eslint.cmd src/pages/user/UserProfile.jsx src/pages/public/PublicBrowse.jsx src/api/user.js`: **passed**.
+- `npm.cmd --prefix frontend run build`: **passed**, including the existing credential check across **78 built files**.
+- Browser: **18 grouped checks passed** using local Chrome/Playwright with all API/upload paths intercepted by synthetic fixtures. Covered read-only name/payload, failure/retry, same-tab/navigation and cross-tab initials, upload after removal, pending exclusion, delayed-contact-response safety, mobile light/dark overflow, public role links and fixed viewer geometry. Missing/portrait/wide/broken covers and long descriptions were exercised at 1280x900, 390x844, 667x375 and 568x320, each at 16px and 32px root text. Checked control hit targets, internal scrolling, Escape/focus return and arrow keys. Screenshots were visually inspected. The Browser plugin was unavailable, so the documented local Playwright fallback was used.
+- Preservation guards: **11 baseline files unchanged**, including dependencies/schema/storage, shared avatar/profile revision/layout/cover components, member viewer and theme styles. **14 existing backend functions unchanged** apart from the requested profile-update guard. Public hooks/navigation, existing user API helpers, password form and profile row components remain unchanged.
+- Fresh read-only code review: **no actionable findings**. Review did not duplicate the browser/test runs.
+
+## Local runtime and limits
+
+Before each API start/restart, checked exact `backend/rizal_library.local.db`, development mode, local storage, encryption/config validation and process-only `AUTO_MIGRATE=false`. Only the task-owned API process was restarted, after matching PID, executable and start time and checking its Windows console/Python children. The existing frontend remained running. Website and API health returned HTTP 200; OpenAPI includes the new DELETE route. Final local probe results are retained with the task artifacts.
+
+No schema or dependency changes, production migrations, live cloud writes, real photo/patron fixtures, commits, pushes or deployment were performed. SQLite/mocked Storage checks do not establish live Supabase policy/deletion or PostgreSQL concurrency. At 568x320 with 32px root text, the existing fixed public header can obscure a shelf card's pointer target; keyboard activation was used to enter the preview for that case. The requested preview controls and scrolling passed. That existing shelf/header behavior was left outside this scoped change.
+
+Evidence: `.tools/profile-public-revision/art/`, test logs and synthetic QA scripts under `.tools/profile-public-revision/qa/`. Temporary pytest folders are removed where Windows permissions allow; any denied folders are left with their ACLs unchanged and recorded in the cleanup result.

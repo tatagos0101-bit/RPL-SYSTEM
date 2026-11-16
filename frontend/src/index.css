@@ -1,72 +1,76 @@
 @import "tailwindcss";
+@import "./styles/discovery.css";
+@import "./styles/auth.css";
+@import "./styles/librarian.css";
+@import "./styles/member-theme.css";
 
 /* Tailwind v4 dark mode via .dark class on <html> */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Civic library palette. Existing Tailwind utilities share these tokens. */
+/* Heritage library palette. Existing Tailwind utilities share these tokens. */
 @theme {
   --font-sans: "Segoe UI", Arial, sans-serif;
-  --color-blue-50: #f0f5fc;
-  --color-blue-100: #dce8f8;
-  --color-blue-200: #bdd2ee;
-  --color-blue-300: #91b5e4;
-  --color-blue-400: #6b9cdb;
-  --color-blue-500: #3870bb;
-  --color-blue-600: #2457a7;
-  --color-blue-700: #1c4689;
-  --color-blue-800: #193a6b;
-  --color-blue-900: #14263d;
-  --color-blue-950: #0e1c2e;
-  --color-slate-50: #f8fafc;
-  --color-slate-100: #f5f7fa;
-  --color-slate-200: #dce2ea;
-  --color-slate-400: #758398;
-  --color-slate-500: #59697f;
-  --color-slate-600: #46566c;
-  --color-slate-900: #14263d;
-  --color-slate-950: #0e1c2e;
+  --color-blue-50: #EFF5F0;
+  --color-blue-100: #E0EBE2;
+  --color-blue-200: #BDD5C5;
+  --color-blue-300: #94BDA5;
+  --color-blue-400: #6C9E80;
+  --color-blue-500: #477F61;
+  --color-blue-600: #286047;
+  --color-blue-700: #1C4C3C;
+  --color-blue-800: #153E35;
+  --color-blue-900: #112F29;
+  --color-blue-950: #0D211C;
+  --color-slate-50: #FFFDFA;
+  --color-slate-100: #F5F0E6;
+  --color-slate-200: #DFDED4;
+  --color-slate-400: #8F9E92;
+  --color-slate-500: #5D7064;
+  --color-slate-600: #465A4D;
+  --color-slate-900: #1C2924;
+  --color-slate-950: #0F1F1A;
 }
 
 /* Theme roles are paired here; components use the same role in either mode. */
 :root {
-  --rpl-canvas: #f5f7fa;
-  --rpl-panel: #ffffff;
-  --rpl-subtle: #edf2f7;
-  --rpl-ink: #14263d;
-  --rpl-muted: #526279;
-  --rpl-line: #cbd5e1;
-  --rpl-link: #2457a7;
-  --rpl-action: #2457a7;
-  --rpl-action-hover: #1c4689;
-  --rpl-info-soft: #eaf1fc;
+  --rpl-canvas: #F5F0E6;
+  --rpl-panel: #FFFDFA;
+  --rpl-subtle: #ECE9DF;
+  --rpl-ink: #1C2924;
+  --rpl-muted: #59675D;
+  --rpl-line: #D8D4C8;
+  --rpl-link: #286047;
+  --rpl-action: #153E35;
+  --rpl-action-hover: #0D2D25;
+  --rpl-info-soft: #E7EEE7;
   --rpl-success: #166534;
   --rpl-success-soft: #eaf7ef;
   --rpl-warning: #854d0e;
   --rpl-warning-soft: #fff6dd;
   --rpl-danger: #b4233b;
   --rpl-danger-soft: #fff0f2;
-  --rpl-focus: #2457a7;
+  --rpl-focus: #286047;
   --rpl-header-height: 64px;
 }
 .dark {
   color-scheme: dark;
-  --rpl-canvas: #0e1c2e;
-  --rpl-panel: #14263d;
-  --rpl-subtle: #1e334d;
-  --rpl-ink: #edf2f9;
-  --rpl-muted: #bdcadd;
-  --rpl-line: #40546f;
-  --rpl-link: #a8caff;
-  --rpl-action: #2457a7;
-  --rpl-action-hover: #1c4689;
-  --rpl-info-soft: #1e3556;
+  --rpl-canvas: #0F1F1A;
+  --rpl-panel: #142A23;
+  --rpl-subtle: #1C352C;
+  --rpl-ink: #F5F0E6;
+  --rpl-muted: #B5C6BA;
+  --rpl-line: #3E584B;
+  --rpl-link: #B6D5C0;
+  --rpl-action: #35715B;
+  --rpl-action-hover: #285A49;
+  --rpl-info-soft: #203C30;
   --rpl-success: #9ae6b4;
   --rpl-success-soft: #193d30;
   --rpl-warning: #f6d58a;
   --rpl-warning-soft: #42351f;
   --rpl-danger: #ffb3c0;
   --rpl-danger-soft: #482637;
-  --rpl-focus: #a8caff;
+  --rpl-focus: #D3B072;
 }
 @theme inline {
   --color-canvas: var(--rpl-canvas);
@@ -135,6 +139,7 @@
 .rpl-scan-frame { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
 .rpl-scan-heading { flex-shrink: 0; background: var(--rpl-panel); }
 .rpl-scan-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.rpl-scan-dialog form > label.min-w-48 { min-width: min(12rem, 100%); }
 .rpl-scan-dialog::backdrop { background: rgb(5 14 25 / 80%); }
 @media (max-width: 639px) {
   :root { --rpl-header-height: 112px; }

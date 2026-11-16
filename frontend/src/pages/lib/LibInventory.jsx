@@ -1,12 +1,12 @@
-import BookAcquisitionDialog from '../../components/BookAcquisitionDialog';
 import { acquisitionSources } from '../../api/acquisitions';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Package, CheckCircle, Clock, BookOpen, Trash2, RefreshCw, ImagePlus, Library, Pencil } from 'lucide-react';
+import { Search, Plus, Package, CheckCircle, Clock, BookOpen, Trash2, RefreshCw, ImagePlus, Library, Pencil, Eye } from 'lucide-react';
 import BookCover from '../../components/BookCover';
 import BookEditDialog from '../../components/BookEditDialog';
+import BookDetailsDialog from '../../components/BookDetailsDialog';
 import { getCategories } from '../../api/books';
 import { getInventoryStats, deleteBook, uploadBookCover } from '../../api/librarian';
 
@@ -23,9 +23,9 @@ const LibInventory = () => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [uploadingId, setUploadingId] = useState(null);
-  const [acquisitionBook, setAcquisitionBook] = useState(null);
   const [source, setSource] = useState('');
   const [editingBook, setEditingBook] = useState(null);
+  const [viewingBook, setViewingBook] = useState(null);
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef(null);
   const uploadTargetId = useRef(null);
@@ -77,7 +77,7 @@ const LibInventory = () => {
 
   return (
     <div className="rpl-page min-h-screen bg-transparent pt-8 px-6 md:px-12 pb-20 font-sans text-ink transition-colors duration-300">
-      {acquisitionBook && <BookAcquisitionDialog key={acquisitionBook.id} book={acquisitionBook} onClose={() => setAcquisitionBook(null)} onSaved={fetchData} />}
+      {viewingBook && <BookDetailsDialog book={viewingBook} onClose={() => setViewingBook(null)} />}
       {editingBook && <BookEditDialog key={editingBook.id} book={editingBook} categories={categories}
         onClose={() => setEditingBook(null)} onSaved={handleSaved} />}
       {/* Hidden file input for cover upload */}
@@ -157,8 +157,8 @@ const LibInventory = () => {
               <RefreshCw size={24} className="animate-spin text-link" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px] text-left">
+            <div className="overflow-x-auto" tabIndex="0" role="region" aria-label="Book inventory, scroll horizontally for more columns">
+              <table className="staff-inventory-table w-full text-left">
                 <thead>
                   <tr className="border-b border-line">
                     <th className="px-8 py-5 text-sm font-semibold tracking-normal text-muted">Book</th>
@@ -180,7 +180,7 @@ const LibInventory = () => {
                             <div className="w-10 h-14 rounded-xl overflow-hidden bg-subtle flex-shrink-0">
                               <BookCover src={book.cover_url} alt={book.title} />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <p className="font-bold text-sm text-ink">{book.title}</p>
                               <p className="text-sm text-muted font-medium">{book.author}</p>
                               <p className="mt-1 text-sm text-muted">{Object.entries(book.acquisition_sources || {}).map(([key, count]) => `${acquisitionSources[key]}: ${count}`).join(' · ') || 'No current physical copies'}</p>
@@ -204,8 +204,11 @@ const LibInventory = () => {
                         </td>
                         <td className="px-8 py-4 text-sm font-sans text-muted">{book.location_shelf || '—'}</td>
                         <td className="px-8 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button type="button" onClick={() => setAcquisitionBook(book)} aria-label={`Acquisitions for ${book.title}`} className="rounded-lg border border-line px-3 py-2 text-sm font-semibold text-link">Acquisitions</button>
+                          <div className="inventory-actions flex items-center justify-end gap-2">
+                            <button type="button" onClick={() => setViewingBook(book)} aria-label={`View details for ${book.title}`} style={{ minHeight: 44 }}
+                              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-link hover:bg-info-soft">
+                              <Eye size={14} aria-hidden="true" /> View details
+                            </button>
                             <button type="button" onClick={() => { setSuccess(''); setEditingBook(book); }}
                               aria-label={`Edit ${book.title}`}
                               className="inline-flex items-center gap-1.5 rounded-lg bg-info-soft px-3 py-2 text-sm font-bold text-link hover:bg-info-soft">

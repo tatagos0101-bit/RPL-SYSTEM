@@ -1,9 +1,9 @@
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { useState } from 'react';
-import { Search, BookOpen, CheckCircle2, ArrowDownLeft, ArrowUpRight, Zap, ScanFace, RefreshCw, ChevronRight, Package } from 'lucide-react';
+import { Search, BookOpen, CheckCircle2, ArrowDownLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
-import QuickScanModal from '../../components/CirculationDialog';
+import CirculationDialog from '../../components/CirculationDialog';
 
 // ─── STATUS STYLES ─────────────────────────────────────────────────────────────
 
@@ -22,7 +22,7 @@ const STATUS_STYLE = {
 export default function LibBorrowReturn() {
   const [search, setSearch]             = useState('');
   const [filter, setFilter]             = useState('all');
-  const [showScanner, setShowScanner]   = useState(false);
+  const [scannerMode, setScannerMode] = useState(null);
 
   const listing = useServerPage('/api/transactions', { search,
     type: ['borrow', 'return'].includes(filter) ? filter : '',
@@ -32,7 +32,7 @@ export default function LibBorrowReturn() {
   const handleCommit = () => fetchTransactions();
 
   const [returnLoan, setReturnLoan] = useState(null);
-  const handleQuickReturn = tx => { setReturnLoan(tx); setShowScanner(true); };
+  const handleQuickReturn = tx => { setReturnLoan(tx); setScannerMode('return'); };
 
   const totalBorrowed = listing.totals.borrowed ?? 0;
   const totalReturned = listing.totals.returned ?? 0;
@@ -41,10 +41,11 @@ export default function LibBorrowReturn() {
   return (
     <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
 
-      {showScanner && (
-        <QuickScanModal
+      {scannerMode && (
+        <CirculationDialog
           initialReturn={returnLoan}
-          onClose={() => { setShowScanner(false); setReturnLoan(null); }}
+          initialMode={scannerMode}
+          onClose={() => { setScannerMode(null); setReturnLoan(null); }}
           onCommit={handleCommit}
         />
       )}
@@ -62,37 +63,10 @@ export default function LibBorrowReturn() {
             </h1>
           </div>
 
-          <button
-            onClick={() => setShowScanner(true)}
-            className="group flex items-center gap-3 px-7 py-4 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all duration-200 shadow-sm flex-shrink-0"
-          >
-            <Zap size={16} className="transition-transform duration-200" />
-            Quick Scan Session
-          </button>
-        </div>
-
-        {/* ── HOW IT WORKS STRIP ── */}
-        <div className="animate-fade-in-up delay-75 bg-info-soft border border-line rounded-xl px-6 py-4 mb-7 flex flex-col sm:flex-row items-center gap-4">
-          <p className="text-sm font-semibold tracking-normal text-link flex-shrink-0">Quick Scan Flow</p>
-          <div className="flex items-center gap-3 flex-1 flex-wrap justify-center sm:justify-start">
-            {[
-              { icon: <ScanFace size={14} />,    label: 'Borrow: Face / ID · Return: QR first' },
-              { icon: <Package size={14} />,     label: 'Add Books (1+)' },
-              { icon: <CheckCircle2 size={14} />, label: 'Confirm All' },
-            ].map((s, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-panel rounded-xl border border-line text-link">
-                  {s.icon}
-                  <span className="text-sm font-semibold tracking-normal">{s.label}</span>
-                </div>
-                {i < 2 && <ChevronRight size={12} className="text-link flex-shrink-0" />}
-              </div>
-            ))}
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={() => { setReturnLoan(null); setScannerMode('borrow'); }} className="inline-flex items-center justify-center gap-2 rounded-full bg-action px-6 py-3 font-semibold text-white hover:bg-action-hover"><ArrowUpRight size={18} />Borrow books</button>
+            <button type="button" onClick={() => { setReturnLoan(null); setScannerMode('return'); }} className="inline-flex items-center justify-center gap-2 rounded-full border border-line bg-panel px-6 py-3 font-semibold text-ink hover:bg-subtle"><ArrowDownLeft size={18} />Return books</button>
           </div>
-          <button onClick={() => setShowScanner(true)}
-            className="text-sm font-semibold tracking-normal text-link hover:underline underline-offset-4 flex-shrink-0">
-            Start →
-          </button>
         </div>
 
         {/* ── SUMMARY TILES ── */}

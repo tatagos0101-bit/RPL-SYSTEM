@@ -156,7 +156,7 @@ def test_registration_does_not_assert_contact_ownership(client, db_session):
     staff = account(db_session, "librarian")
     login(client, staff)
     result = client.post("/api/librarian/users/register", data={
-        "name": "New synthetic member", "email": "new@example.test",
+        "name": "New synthetic member", "email": "new@example.com",
         "phone": "+63 900 000 0000", "location": "Test location",
     }, files={"id_image": ("id.png", BytesIO(b"\x89PNG\r\n\x1a\n" + b"synthetic"), "image/png")})
     assert result.status_code == 201

@@ -2,6 +2,7 @@
 Public book endpoints — accessible by everyone (no auth required).
 """
 from datetime import datetime, timedelta
+from typing import Literal
 
 from timezone_utils import now_ph
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -15,6 +16,7 @@ from models.book import Book
 from models.transaction import Transaction
 from schemas.book import BookOut, BookListResponse, BookScanOut
 from services.book_copy_service import normalize_scan_code, resolve_scan
+from services.catalog_discovery import order_catalog, category_cover_previews
 from config import LOAN_DAYS, FINE_PER_DAY, PICKUP_WINDOW_HOURS
 from services.borrowing_capacity import COMMITMENT_LIMIT
 
@@ -36,6 +38,8 @@ def list_books(
     search:         str  = Query("", max_length=200, description="Search title or author"),
     category:       str  = Query("", max_length=100, description="Filter by category"),
     available_only: bool = Query(False, description="Only show books with copies available"),
+    sort: Literal["title", "trending", "newest", "loved"] = Query("title", description="Catalog ordering"),
+    favorites_only: bool = Query(False, description="Only books favorited by active members"),
     skip:           int  = Query(0,  ge=0),
     limit:          int  = Query(20, ge=1, le=2000),
     db: Session = Depends(get_db),
@@ -43,17 +47,19 @@ def list_books(
     q = db.query(Book)
 
     if search:
-        like = f"%{search}%"
+        escaped = search.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        like = f"%{escaped}%"
         q = q.filter(
-            Book.title.ilike(like) | Book.author.ilike(like)
+            Book.title.ilike(like, escape="\\") | Book.author.ilike(like, escape="\\")
         )
     if category:
         q = q.filter(Book.category.ilike(category))
     if available_only:
         q = q.filter(Book.copies_available > 0)
 
-    total = q.count()
-    items = q.order_by(Book.title, Book.id).offset(skip).limit(limit).all()
+    q = order_catalog(q, sort, favorites_only, now=now_ph())
+    total = q.order_by(None).count()
+    items = q.offset(skip).limit(limit).all()
 
     return BookListResponse(total=total, skip=skip, limit=limit, items=items)
 
@@ -62,7 +68,7 @@ def list_books(
 
 @router.get("/categories")
 @limiter.limit("30/minute")
-def get_categories(request: Request, db: Session = Depends(get_db)):
+def get_categories(request: Request, db: Session = Depends(get_db), include_previews: bool = False):
     rows = (
         db.query(Book.category, func.count(Book.id).label("count"))
         .filter((Book.is_hidden == False) | (Book.category == "General"))
@@ -70,7 +76,12 @@ def get_categories(request: Request, db: Session = Depends(get_db)):
         .order_by(desc("count"))
         .all()
     )
-    return [{"category": r.category, "count": r.count} for r in rows]
+    result = [{"category": r.category, "count": r.count} for r in rows]
+    if include_previews:
+        previews = category_cover_previews(db, [row.category for row in rows])
+        for item in result:
+            item["preview_covers"] = previews[item["category"]]
+    return result
 
 
 # ── Trending — most borrowed in last 30 days ──────────────────────────────────

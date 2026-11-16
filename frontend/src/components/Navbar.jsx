@@ -47,7 +47,7 @@ const Navbar = () => {
   return (
     <>
       {/* TOP NAV */}
-      <nav className="rpl-chrome rpl-header fixed top-0 left-0 w-full z-50">
+      <nav className={`rpl-chrome rpl-header fixed top-0 left-0 w-full z-50 ${['/', '/browse'].includes(location.pathname) ? 'rpl-discovery-nav' : ''} ${location.pathname === '/browse' ? 'rpl-catalog-nav' : ''}`}>
         {logoutError && <p role="alert" className="absolute top-full left-0 w-full p-3 bg-panel text-danger">{logoutError}</p>}
 
         {/* Left: Hamburger + Logo */}
@@ -65,6 +65,12 @@ const Navbar = () => {
 
         {/* Right: Theme toggle + Auth button */}
         <div className="rpl-header-actions">
+          {['/', '/browse'].includes(location.pathname) && (
+            <div className="discovery-nav-links">
+              <Link to="/" aria-current={location.pathname === '/' ? 'page' : undefined}>Home</Link>
+              {!hideCurrentCatalog && <Link to="/browse" aria-current={location.pathname === '/browse' ? 'page' : undefined}>Catalog</Link>}
+            </div>
+          )}
           <button
             onClick={toggleTheme}
             className="p-2.5 rounded-lg text-muted hover:bg-subtle transition-all"

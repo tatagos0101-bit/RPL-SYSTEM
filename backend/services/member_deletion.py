@@ -62,6 +62,29 @@ def _validate_private_reference(reference, folder):
     raise HTTPException(409, "A legacy private upload needs storage review before this account can be deleted.")
 
 
+def remove_profile_photo(db, user):
+    """Remove only the locked account's avatar; the caller owns the transaction."""
+    reference = user.avatar_url
+    if not reference:
+        user.avatar_url = None
+        return
+    try:
+        _validate_private_reference(reference, "avatars")
+    except HTTPException:
+        raise HTTPException(409, "This photo needs storage review by the library before it can be removed.") from None
+    if db.query(User.id).filter(
+        User.id != user.id,
+        or_(User.avatar_url == reference, User.id_image_url == reference),
+    ).first():
+        raise HTTPException(409, "This photo is shared with another account. Ask the library to review its ownership.")
+    # Retain the reference on failure so the existing storage delete can be retried.
+    try:
+        storage_service.delete_upload(reference, folder="avatars")
+    except (HTTPException, OSError):
+        raise HTTPException(502, "Photo removal could not be completed. Please try again.") from None
+    user.avatar_url = None
+
+
 def delete_account(db, member):
     if member.deleted_at is not None:
         return  # A repeated confirmed request cannot damage retained history.

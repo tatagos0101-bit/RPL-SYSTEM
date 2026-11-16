@@ -1,5 +1,5 @@
 """Additive schema upgrades compiled for the database's actual SQL dialect."""
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, false, true, inspect, text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, false, true, inspect, text
 from sqlalchemy.schema import CreateColumn
 
 
@@ -29,7 +29,7 @@ ADDITIONS = {
         ("attempts", Integer, text("0")),
         ("delivered_at", DateTime(timezone=True), None),
     ],
-    "books": [("category_override", String(80), None), ("raw_api_label", String(1000), None), ("is_hidden", Boolean, true())],
+    "books": [("category_override", String(80), None), ("raw_api_label", String(1000), None), ("is_hidden", Boolean, true()), ("description", Text, None)],
     "entry_logs": [("time_out", DateTime(timezone=True), None)],
     "notifications": [("user_id", Integer, None)],
     "users": [

@@ -6,12 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, Fil
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from services.email_identity import email_matches, normalize_email
 
 from database import get_db
 from dependencies import get_current_user, get_session_user, get_locked_current_user, get_locked_session_user
-from services.member_deletion import lock_active_account
+from services.member_deletion import lock_active_account, remove_profile_photo
 from services.auth_cookie import set_auth_cookie
 from services.auth_sessions import create_session_token, revoke_user_sessions
 from services.password_reset import expire_unused_reset_codes_for_user
@@ -71,6 +71,8 @@ def update_profile(
     db: Session = Depends(get_db),
 ):
     current_user = lock_active_account(db, current_user.id)
+    if current_user.role == "member" and "name" in body.model_fields_set and body.name != current_user.name:
+        raise HTTPException(403, "Your name is managed by the librarian. Please ask the library to update it.")
     if "email" in body.model_fields_set:
         if not body.email:
             raise HTTPException(422, "Email cannot be empty.")
@@ -158,6 +160,21 @@ async def upload_avatar(
     except HTTPException:
         logger.warning("Could not delete previous avatar for user_id=%s", current_user.id)
     return {"avatar_url": resolve_upload_url(current_user.avatar_url)}
+
+
+@router.delete("/avatar")
+def remove_avatar(
+    current_user: User = Depends(get_locked_current_user),
+    db: Session = Depends(get_db),
+):
+    current_user = lock_active_account(db, current_user.id)
+    remove_profile_photo(db, current_user)
+    try:
+        db.commit()
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(503, "Photo removal could not be saved. Please retry removing the photo.") from None
+    return {"avatar_url": None}
 
 
 @router.get("/biometric-status", response_model=BiometricStatus)

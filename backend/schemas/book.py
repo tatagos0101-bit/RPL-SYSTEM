@@ -8,6 +8,19 @@ _ISBN_RE = re.compile(r"^[\d\-X]{8,20}$", re.IGNORECASE)
 _URL_RE  = re.compile(r"^https?://", re.IGNORECASE)
 
 
+def _description_value(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    if "\x00" in value:
+        raise ValueError("Description cannot contain null characters")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ValueError("Description must contain valid Unicode text") from exc
+    return value.strip() or None
+
+
+
 class BookBase(BaseModel):
     title:            str
     author:           str
@@ -17,6 +30,12 @@ class BookBase(BaseModel):
     copies_total:     int             = 1
     location_shelf:   Optional[str]   = None
     cover_url:        Optional[str]   = None
+    description:      Optional[str]   = Field(default=None, max_length=2000)
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: Optional[str]) -> Optional[str]:
+        return _description_value(value)
 
     @field_validator("title")
     @classmethod
@@ -119,6 +138,12 @@ class BookUpdate(BaseModel):
     copies_available: Optional[int]   = None
     location_shelf:   Optional[str]   = None
     cover_url:        Optional[str]   = None
+    description:      Optional[str]   = Field(default=None, max_length=2000)
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: Optional[str]) -> Optional[str]:
+        return _description_value(value)
 
     @field_validator("title")
     @classmethod
@@ -224,6 +249,7 @@ class BookOut(BaseModel):
     copies_available: int
     location_shelf:   Optional[str]
     cover_url:        Optional[str]
+    description:      Optional[str] = None
     qr_code:          Optional[str]
     created_at:       datetime
 

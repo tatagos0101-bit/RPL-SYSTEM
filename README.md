@@ -21,17 +21,24 @@ releases from remaining security and feature work.
 
 - **Public catalogue:** search titles/authors, filter categories and availability,
   browse genre shelves, and look up books or physical copies through QR codes.
+  Landing searches retain the query and highlight matching title/author text.
+  Desktop catalogs wrap into vertical grids; phone shelves retain horizontal swiping.
   Catalogue contents come from uploaded library inventory; there is no fixed
-  number of books per category.
+  number of books per category. Book details show optional librarian-entered
+  descriptions; Add Book can use an online ISBN summary or a manual note.
 - **Member accounts:** email or Member ID/password login, profile and avatar
   updates, face enrollment/login, and a password-change screen for temporary
   passwords issued by staff.
 - **Member dashboard:** active loans, due dates, fines, borrowing history,
   activity, and reading goals. Returned loans remain part of historical statistics.
-- **Browse Books recommendations:** the first section suggests books using item
-  similarity learned from favorites, book-detail views, and borrowing history.
-  Members can favorite books on cards or in details. New readers see community
-  popularity, with newest books filling gaps when activity is sparse.
+- **Member Browse Books:** an Open Library-inspired Featured view shows
+  recommendations first for members with borrowing history, then Trending,
+  What's new, and Books we love. New readers start with Trending. Recommendations
+  retain item similarity from favorites, book-detail views, and borrowing history.
+  Books we love uses active members' favorites, without fabricated ratings.
+  Featured collections scroll sideways on every screen.
+  Genre catalogs offer Trending, Newest, Most loved and Title sorting across all
+  matching pages; cards retain favorite/reserve/queue/cancel actions.
 - **Reservations:** members share five slots across active/overdue loans and
   ready/pending reservations. Selections hold no stock until atomic confirmation.
   Available capacity is protected for 24 hours; unavailable titles require explicit
@@ -39,16 +46,22 @@ releases from remaining security and feature work.
   into a loan; return, cancellation and expiry free slots. Confirmation retries
   reuse a member-scoped request ID to prevent duplicates.
   Confirmation uses the authenticated session, without an additional face scan.
-- **Librarian tools:** register members with a government ID upload, enroll faces,
+- **Librarian tools:** register members with an optional government ID upload, enroll faces,
   replace/delete enrolled face data, delete member accounts after all books are
   returned, suspend/reactivate accounts, issue temporary password resets, manage inventory,
   import `.xlsx` workbooks with per-row validation/savepoints, and process
-  borrowing/returns for individual copies. Failed cover uploads can be retried
+  borrowing/returns for individual copies. Borrowing automatically lists the
+  identified member's reservations, with exact-copy selection for ready pickups;
+  QR/code entry remains available for pickups and walk-ins. Failed cover uploads can be retried
   after a successful book save without creating another title. Book creation and
   workbook imports retain request IDs and server receipts for interrupted-response
   recovery; bulk ISBN retries skip confirmed rows. QR lists and reservations use
   server pagination. Complete QR export downloads every matching identity in bounded
   PDF batches and assembles a ZIP with a label-count manifest.
+  Registration creates a random 10-character temporary password and sends it by
+  email first, or by text if only a phone is supplied. Without contact details or
+  confirmed provider acceptance, the librarian receives it for direct handoff.
+  First login requires a password change. See [delivery setup](docs/CONTACT_VERIFICATION.md#new-member-registration-credentials).
   Account deletion removes personal details and referenced private files while
   retaining deidentified loan/attendance history; see the
   [member deletion policy and release checks](docs/MEMBER_MANAGEMENT.md).
@@ -147,6 +160,10 @@ librarian authorization code with unique random values. Set or change the entran
 station PIN in **Librarian → Settings**, confirming your librarian password and a
 new 6–12 digit PIN. Existing stations need the new PIN on their next scan/log refresh.
 Local MySQL is also supported if its database and connection URL are configured.
+Existing databases require the additive nullable `books.description` column before
+running this version. Use the existing explicit migration path on the intended
+development target, then set `AUTO_MIGRATE=false` for routine restarts. See the
+[description upgrade](docs/DEPLOYMENT.md#book-description-upgrade) for release order.
 Keep this environment file private. Do not overwrite an existing configured file.
 
 Start the backend in one terminal:
@@ -208,9 +225,11 @@ checks. These results do not verify production deployment or real-camera accurac
   Detection and matching work, but face-only login needs stronger liveness
   verification or another authentication factor. Actual camera accuracy with
   enrolled library members remains unverified.
-- **Email/SMS delivery is not integrated:** public password-recovery requests
-  direct users to a librarian. Staff can issue temporary password resets;
-  notifications currently appear in the application.
+- **Message delivery requires configuration:** verified-email recovery and new-member
+  credential emails use the configured SMTP provider. Registration-only texts require
+  a configured Twilio sender/account. Unavailable registration delivery falls back to
+  librarian handoff; public SMS verification/recovery and overdue-message delivery
+  remain unavailable. Provider acceptance is not proof of inbox/handset delivery.
 - **Recommendation quality is not yet measured on real readers:** item-based
   collaborative filtering runs on demand, supplemented by author/category matches
   and popularity. It has no separately trained model or external AI service.

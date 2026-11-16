@@ -1,0 +1,59 @@
+﻿/* Member presentation only: existing page layouts and controls stay in place. */
+.rpl-member {
+  --rpl-canvas: #f5efe4;
+  --rpl-panel: #fffbf4;
+  --rpl-subtle: #eee3d2;
+  --rpl-ink: #37291f;
+  --rpl-muted: #705c4b;
+  --rpl-line: #d8c7b0;
+  --rpl-link: #825016;
+  --rpl-action: #edbf72;
+  --rpl-action-hover: #f5ce8e;
+  --rpl-info-soft: #efe2cb;
+  --rpl-success: #47673b;
+  --rpl-success-soft: #e5eddd;
+  --rpl-warning: #805013;
+  --rpl-warning-soft: #f6e8c7;
+  --rpl-danger: #a84230;
+  --rpl-danger-soft: #f9e3dc;
+  --rpl-focus: #825016;
+  --member-chart-1: #9c661e;
+  --member-chart-2: #47673b;
+  --member-chart-3: #407184;
+  --member-chart-4: #795a85;
+  --member-chart-5: #b95137;
+  --member-chart-6: #857241;
+  color: var(--rpl-ink);
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+}
+.dark .rpl-member {
+  color-scheme: dark;
+  --rpl-canvas: #241e19;
+  --rpl-panel: #302820;
+  --rpl-subtle: #3a3026;
+  --rpl-ink: #f6eddf;
+  --rpl-muted: #c0b19c;
+  --rpl-line: #514438;
+  --rpl-link: #edbf72;
+  --rpl-info-soft: #3e3223;
+  --rpl-success: #adca9d;
+  --rpl-success-soft: #313d29;
+  --rpl-warning: #edbf72;
+  --rpl-warning-soft: #473820;
+  --rpl-danger: #f2a79c;
+  --rpl-danger-soft: #492d28;
+  --rpl-focus: #f2ca86;
+  --member-chart-1: #edbf72;
+  --member-chart-2: #adca9d;
+  --member-chart-3: #8db9c9;
+  --member-chart-4: #ba9cc3;
+  --member-chart-5: #e39a87;
+  --member-chart-6: #c6b277;
+}
+.rpl-member .font-sans { font-family: inherit; }
+.rpl-member :where(h1, h2, h3, .rpl-brand) { font-family: 'Newsreader', Georgia, serif; }
+@layer utilities {
+  .rpl-member :is(.bg-action, [class~="!bg-action"]),
+  .rpl-member :is(.bg-action, [class~="!bg-action"]) :is(.text-white, [class~="!text-white"]),
+  .rpl-member [class~="hover:bg-action"]:hover { color: #241c14 !important; }
+}

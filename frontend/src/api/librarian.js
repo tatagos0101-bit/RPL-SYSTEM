@@ -26,7 +26,7 @@ export const getMembers = (params = {}) =>
   client.get('/api/librarian/users', { params });
 
 export const registerMember = async (formData) =>
-  client.post('/api/librarian/users/register', await prepareUploadForm(formData, 'id_image', 'ids'));
+  client.post('/api/librarian/users/register', await prepareUploadForm(formData, 'id_image', 'ids'), { timeout: 90000 });
 
 export const getMemberStats = () =>
   client.get('/api/librarian/users/stats');
@@ -124,8 +124,8 @@ export const getLibReservations = (params = {}) =>
 export const cancelLibReservation = (id) =>
   client.delete(`/api/librarian/reservations/${id}`);
 
-export const getMemberReservations = (userId) =>
-  client.get(`/api/librarian/member/${userId}/reservations`);
+export const getMemberReservations = (userId, options = {}) =>
+  client.get(`/api/librarian/member/${userId}/reservations`, options);
 
 export const getMemberActiveLoans = (userId) =>
   client.get(`/api/librarian/member/${userId}/active-loans`);

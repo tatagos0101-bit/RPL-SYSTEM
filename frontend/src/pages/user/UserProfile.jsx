@@ -6,18 +6,23 @@ import {
   KeyRound, ChevronDown, ChevronUp, AlertCircle, Camera,
   Edit3, UserCircle2,
 } from 'lucide-react';
-import { getProfile, getBiometricStatus, updateProfile, changePassword, uploadAvatar } from '../../api/user';
+import { getProfile, getBiometricStatus, updateProfile, changePassword, uploadAvatar, removeAvatar } from '../../api/user';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 import UserAvatar from '../../components/UserAvatar';
 import EmailContact from '../../components/EmailContact';
 import { avatarFileError, publishProfileUpdate, PROFILE_UPDATED, PROFILE_REVISION_KEY } from '../../api/profileUpdates';
 
-// Display only a confirmed upload; a failed request keeps the previous photo.
+// Apply only confirmed photo changes; failures keep the previous photo.
 function AvatarUpload({ currentUrl, name, onUploaded }) {
   const inputRef = useRef(null);
+  const photoButtonRef = useRef(null);
   const pending = useRef(false);
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [notice, setNotice] = useState('');
+  const busy = uploading || removing;
+  const photoAction = currentUrl ? 'Change photo' : 'Add photo';
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0];
@@ -31,10 +36,12 @@ function AvatarUpload({ currentUrl, name, onUploaded }) {
     pending.current = true;
     setUploading(true);
     setUploadError('');
+    setNotice('');
     try {
       const { data } = await uploadAvatar(file);
       onUploaded(data.avatar_url);
       publishProfileUpdate({ avatar_url: data.avatar_url });
+      setNotice('Profile photo saved.');
     } catch (error) {
       const detail = error.response?.data?.detail;
       setUploadError(typeof detail === 'string' ? detail : 'Photo could not be saved. Please try again.');
@@ -45,21 +52,48 @@ function AvatarUpload({ currentUrl, name, onUploaded }) {
     }
   };
 
+  const handleRemove = async () => {
+    if (pending.current) return;
+    pending.current = true;
+    setRemoving(true);
+    setUploadError('');
+    setNotice('');
+    try {
+      await removeAvatar();
+      onUploaded(null);
+      publishProfileUpdate({ avatar_url: null });
+      setNotice('Profile photo removed. You can add another photo anytime.');
+      requestAnimationFrame(() => photoButtonRef.current?.focus());
+    } catch (error) {
+      const detail = error.response?.data?.detail;
+      setUploadError(typeof detail === 'string' ? detail : 'Photo could not be removed. Please try again.');
+    } finally {
+      pending.current = false;
+      setRemoving(false);
+    }
+  };
+
   return (
     <div className="relative self-start shrink-0 max-w-full">
       <input ref={inputRef} aria-label="Choose profile photo" type="file"
-        accept="image/jpeg,image/png,image/webp" disabled={uploading} onChange={handleFile} className="hidden" />
-      <button type="button" aria-label="Change profile photo" disabled={uploading}
+        accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={handleFile} className="hidden" />
+      <button ref={photoButtonRef} type="button" aria-label={currentUrl ? 'Change profile photo' : 'Add profile photo'} disabled={busy}
         onClick={() => inputRef.current?.click()} style={{ width: 96, height: 96 }}
         className="relative group block rounded-xl ring-4 ring-line shadow-sm disabled:cursor-wait">
         <UserAvatar url={currentUrl} name={name} size={96} />
-        <span className={`absolute inset-0 rounded-xl bg-black/50 flex flex-col items-center justify-center gap-1 text-white ${uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}`}>
-          {uploading ? <RefreshCw size={18} className="animate-spin" /> : <Camera size={18} />}
-          <span className="text-xs">{uploading ? 'Saving…' : 'Change photo'}</span>
+        <span className={`absolute inset-0 rounded-xl bg-black/50 flex flex-col items-center justify-center gap-1 text-white ${busy ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}`}>
+          {busy ? <RefreshCw size={18} className="animate-spin" /> : <Camera size={18} />}
+          <span className="text-xs">{uploading ? 'Saving...' : removing ? 'Removing...' : photoAction}</span>
         </span>
       </button>
       <p className="mt-3 text-xs text-muted">JPG, PNG or WebP · Up to 5 MB</p>
-      {uploading && <p role="status" className="mt-1 text-sm text-muted">Saving profile photo…</p>}
+      {currentUrl && <button type="button" onClick={handleRemove} disabled={busy}
+        className="mt-2 min-h-[44px] rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted transition-colors hover:bg-subtle hover:text-ink disabled:cursor-wait disabled:opacity-60">
+        {removing ? 'Removing photo...' : 'Remove photo'}
+      </button>}
+      {(busy || notice) && <p role="status" className="mt-1 max-w-xs text-sm text-muted">
+        {uploading ? 'Saving profile photo...' : removing ? 'Removing profile photo...' : notice}
+      </p>}
       {uploadError && <p role="alert" className="mt-2 max-w-xs text-sm text-danger">{uploadError}</p>}
     </div>
   );
@@ -206,7 +240,7 @@ export default function UserProfile() {
   const [error, setError] = useState('');
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ name: '', phone: '', location: '' });
+  const [form, setForm] = useState({ phone: '', location: '' });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -240,7 +274,7 @@ export default function UserProfile() {
       .then(([p, b]) => {
         setProfile(p.data);
         setBiometric(b.data);
-        setForm({ name: p.data.name || '', phone: p.data.phone || '', location: p.data.location || '' });
+        setForm({ phone: p.data.phone || '', location: p.data.location || '' });
       })
       .catch(() => setError('Failed to load profile.'))
       .finally(() => setLoading(false));
@@ -249,12 +283,12 @@ export default function UserProfile() {
   useEffect(() => { load(); }, []);
 
   const handleSave = async () => {
-    if (!form.name.trim()) { setSaveError('Name cannot be empty.'); return; }
     setSaving(true); setSaveError('');
     try {
-      const res = await updateProfile({ name: form.name.trim(), phone: form.phone.trim() || null, location: form.location.trim() || null });
-      setProfile(res.data);
-      publishProfileUpdate(res.data);
+      const res = await updateProfile({ phone: form.phone.trim() || null, location: form.location.trim() || null });
+      const patch = { phone: res.data.phone, phone_verified: res.data.phone_verified, location: res.data.location };
+      setProfile(previous => ({ ...previous, ...patch }));
+      publishProfileUpdate(patch);
       setEditing(false);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -281,7 +315,6 @@ export default function UserProfile() {
     ? toUtcDate(profile.member_since).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })
     : '—';
 
-  const inputCls = 'w-full bg-subtle border border-line focus:border-line outline-none rounded-lg px-4 py-2.5 text-base font-medium text-ink placeholder-muted transition-colors';
 
   return (
     <div className="rpl-page rpl-profile min-h-screen bg-canvas text-ink pb-24 transition-colors duration-300">
@@ -300,7 +333,7 @@ export default function UserProfile() {
           {/* Top strip — dark with dot pattern */}
           <div className="h-32 bg-subtle relative overflow-hidden">
             <div className="absolute inset-0 opacity-20"
-              style={{ backgroundImage: 'radial-gradient(circle, #475569 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+              style={{ backgroundImage: 'radial-gradient(circle, var(--rpl-line) 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
             <div className="absolute inset-0 bg-info-soft" />
 
             {/* Branding - Shifted right to avoid avatar overlap */}
@@ -337,7 +370,7 @@ export default function UserProfile() {
                   </button>
                 ) : (
                   <>
-                    <button onClick={() => { setEditing(false); setForm({ name: profile.name || '', phone: profile.phone || '', location: profile.location || '' }); setSaveError(''); }}
+                    <button onClick={() => { setEditing(false); setForm({ phone: profile.phone || '', location: profile.location || '' }); setSaveError(''); }}
                       disabled={saving}
                       className="flex items-center gap-1.5 px-4 py-2.5 border border-line text-muted hover:bg-subtle rounded-lg font-semibold text-sm tracking-normal transition-all disabled:opacity-50">
                       <X size={12} /> Cancel
@@ -364,8 +397,11 @@ export default function UserProfile() {
               </div>
             ) : (
               <div className="max-w-xs">
-                <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Full Name</label>
-                <input aria-label="Full Name" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className={inputCls} placeholder="Your full name" />
+                <dl>
+                  <dt className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-muted"><Lock size={12} aria-hidden="true" />Full Name</dt>
+                  <dd className="rounded-lg border border-line bg-subtle px-4 py-2.5 font-medium text-ink">{profile.name}</dd>
+                </dl>
+                <p id="member-name-policy" className="mt-2 text-sm text-muted">Only library staff can update your verified name. Please contact the library to request a correction.</p>
               </div>
             )}
 
@@ -393,7 +429,7 @@ export default function UserProfile() {
 
               <div className="space-y-2">
                 {/* Email */}
-                <EmailContact profile={profile} onUpdated={data => { setProfile(data); publishProfileUpdate(data); }} />
+                <EmailContact profile={profile} onUpdated={data => { const patch = { email: data.email, email_verified: data.email_verified }; setProfile(previous => ({ ...previous, ...patch })); publishProfileUpdate(patch); }} />
 
                 {/* Phone */}
                 {editing ? (

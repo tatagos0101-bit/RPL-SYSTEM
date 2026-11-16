@@ -3,7 +3,7 @@
 Implementation prepared November 7, 2026; this document does not establish a live rollout.
 FastAPI still owns accounts, passwords and sessions. Supabase Auth is not used.
 Login accepts email or RPL Member ID with the existing password. Phone numbers are
-editable contact information only; they cannot verify an account or receive reset codes. Existing contacts are not
+editable contact information; registration-only texts can deliver initial sign-in details when email is absent, but phones cannot verify an account or receive reset codes. Existing contacts are not
 retroactively marked verified and accounts without a phone are not locked out.
 
 ## User flow
@@ -104,3 +104,64 @@ consent/retention decisions and overdue-message delivery are separate work.
 
 Provider references: [Python SMTP](https://docs.python.org/3/library/smtplib.html),
 [Resend SMTP](https://resend.com/docs/send-with-smtp).
+
+## New-member registration credentials
+
+Local implementation added November 16, 2026. This does not establish a deployed
+release or real delivery. ID upload is optional in both librarian registration
+forms; supplied documents retain their existing private Storage and ticket rules.
+Name/address remain required. No schema migration or new dependency is needed.
+
+Registration generates a random 10-character password that meets the existing
+password policy. The account is committed before sending. Email takes priority
+when supplied; only a phone-only account attempts SMS. Without contacts, or when
+the selected provider is unavailable/acceptance is unconfirmed, the authenticated
+librarian receives the password to give directly to the member. A successful
+provider acceptance returns its channel/status and no plaintext password. The
+password is never persisted as plaintext. All new members must change it on first
+login; sending does not set either contact's verified flag. Existing staff password
+resets retain their original 14-character default and session-revocation behavior.
+
+Email uses the same `OTP_SMTP_*` and `OTP_EMAIL_FROM` server settings documented
+above, with a separate registration subject/body and Resend idempotency key. It
+includes the Member ID and first-login instructions. Registration uses one SMTP
+attempt with a 5-second socket timeout; existing OTP retry behavior is unchanged.
+The registration request has a 90-second client timeout. A network-unknown response
+instructs staff to check the member list before registering again; existing password
+reset is available when sign-in details are inaccessible. This is not a durable
+message queue and has no registration resend endpoint.
+
+The prepared registration SMS adapter uses Twilio. It is disabled by default
+and requires all of these API-server-only
+settings from `backend/.env.example`:
+
+| Setting | Purpose |
+| --- | --- |
+| `REGISTRATION_SMS_PROVIDER` | `twilio` to enable; blank keeps librarian handoff |
+| `REGISTRATION_TWILIO_ACCOUNT_SID` | Private Twilio Account SID |
+| `REGISTRATION_TWILIO_AUTH_TOKEN` | Private Twilio account credential |
+| `REGISTRATION_TWILIO_FROM` | SMS-enabled sender number in international `+` format |
+
+Use an existing authorized provider account and SMS-enabled sender with the
+necessary destination permissions. Do not place these settings in `VITE_*`, browser
+storage, logs or Git. No account, paid resource, credential or production setting
+was provisioned by this change. The adapter uses Twilio's fixed HTTPS
+[Messages API](https://www.twilio.com/docs/messaging/api/message-resource#create-a-message-resource),
+Basic auth, one bounded attempt and no redirect/retry after an unknown outcome.
+Philippine `09...`, `9...` and `639...` mobile formats normalize to `+639...` for
+sending; explicit international E.164 numbers are also accepted. Original trimmed
+phone contact data is retained. Invalid SMS destinations fall back to the librarian.
+Provider acceptance is not proof of delivery; a later carrier rejection cannot be
+inferred from the synchronous response. No delivery webhooks were added.
+
+Email transport follows [Resend SMTP](https://resend.com/docs/send-with-smtp),
+including its SMTP idempotency header. This feature does not enable public SMS
+verification or password recovery; those requests and legacy SMS codes remain
+rejected. Do not conflate sending initial credentials to staff-entered contact
+information with verified contact ownership.
+
+Local configuration was checked by presence only: both mail and registration SMS
+transports were unconfigured. All transport/browser checks used synthetic data and
+mocked providers; no live inbox/handset acceptance was tested. Configure credentials
+privately and check explicitly approved test recipients before claiming live
+sending. See the [local verification](superpowers/specs/2026-11-16-member-registration-verification.md).

@@ -4,9 +4,10 @@ Implemented locally on October 31, 2026; this document does not establish produc
 
 ## Counter workflow
 
-- Open **Borrow / Return → Quick Scan Session**.
-- **Borrow Books**: identify the member using supervised Manual ID or existing face recognition. Scan library copy labels, review the list, then **Confirm Borrowing**.
+- Open **Borrow / Return**, then **Borrow books** or **Return books**.
+- **Borrow Books**: identify the member using supervised Manual ID or existing face recognition. For a ready reservation, click **Add to list** directly: an available physical copy is selected automatically and its number/code is shown. **Change copy** is optional when several copies are available. Hand over the copy shown in the pending/review list. Queued or unavailable reservations cannot be added. Scanning/code entry remains optional for pickups and is the default for walk-ins. Review the list, then **Confirm Borrowing**.
 - **Return Books**: scan immediately, without identifying a member first. The list can contain different members' loans. Review the borrower, copy, due date and estimated fine, then **Confirm Returns**. The server supplies the final fine and return time.
+- Reservation copy selection uses the same existing read-only lookup/filtering. Add to list creates no loan or exclusive allocation; exact copy availability, holds, quota and overdue rules are checked again at confirmation. A changed copy is rejected without silently substituting another one.
 - A camera detection, USB scanner input followed by Enter, or typed code uses the same lookup. Scanning never records a transaction. Remove unwanted items before confirmation.
 - Each item is submitted separately. Confirmed items remain confirmed if a later item fails. Unsubmitted items are explicitly marked.
 - Legacy title QR codes still work. If multiple copies/loans match, staff must select one explicitly. ISBNs are not physical-copy identifiers. Missing physical-copy setup must be repaired through inventory/migration procedures, never by the scan endpoint.

@@ -1,5 +1,5 @@
-import AcquisitionFields from '../../components/AcquisitionFields';
-import { emptyAcquisition, acquisitionPayload } from '../../api/acquisitions';
+import BookDescriptionField from '../../components/BookDescriptionField';
+import { fetchBookByISBN, MAX_BOOK_DESCRIPTION_LENGTH } from '../../api/bookMetadata';
 import { useState, useEffect, useRef } from 'react';
 import {
   PlusSquare, Upload, FileText, CheckCircle2, AlertCircle,
@@ -12,52 +12,6 @@ import { extractISBNsFromFile, normalizeISBN, isISBN } from '../../api/isbnFiles
 import { errorMessage, readJournal, saveJournal, reconcileWrite, isDefiniteRejection, sha256, isUnconfirmedISBNRow, removeISBNResults } from '../../api/inventoryWrites';
 
 // ── Shared ISBN fetcher ────────────────────────────────────────────────────────
-async function fetchBookByISBN(isbn) {
-  const clean = isbn.replace(/[-\s]/g, '');
-  const gbRes = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${clean}`);
-  if (gbRes.ok) {
-    const gbData = await gbRes.json();
-    if (gbData.totalItems > 0) {
-      const info = gbData.items[0].volumeInfo;
-      const thumbnail = info.imageLinks?.thumbnail || info.imageLinks?.smallThumbnail || '';
-
-      const suggestion = await suggestBookCategory(info.categories || []);
-      const category = suggestion.data.raw_api_label;
-
-      return {
-        title:     info.title || '',
-        author:    info.authors ? info.authors.join(', ') : '',
-        category,
-        year:      info.publishedDate ? info.publishedDate.slice(0, 4) : '',
-        cover_url: thumbnail.replace('http://', 'https://').replace('&zoom=1', '&zoom=0'),
-      };
-    }
-  }
-  // Fallback: Open Library
-  const olRes = await fetch(
-    `https://openlibrary.org/api/books?bibkeys=ISBN:${clean}&format=json&jscmd=data`
-  );
-  if (olRes.ok) {
-    const olData = await olRes.json();
-    const key = `ISBN:${clean}`;
-    if (olData[key]) {
-      const info = olData[key];
-      const cover = info.cover?.large || info.cover?.medium || info.cover?.small || '';
-      const subjects = (info.subjects || []).map((subject) => subject.name || subject).filter(Boolean);
-      const suggestion = await suggestBookCategory(subjects);
-      const category = suggestion.data.raw_api_label;
-      return {
-        title:     info.title || '',
-        author:    info.authors ? info.authors.map((a) => a.name).join(', ') : '',
-        category,
-        year:      info.publish_date ? info.publish_date.slice(-4) : '',
-        cover_url: cover,
-      };
-    }
-  }
-  throw new Error('Not found');
-}
-
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -68,10 +22,9 @@ export default function LibAddBook() {
   // ── Manual form state ──────────────────────────────────────────────────────
   const [form, setForm] = useState({
     title: '', author: '', category: '', year: '',
-    isbn: '', copies: '', location: '', cover_url: '',
+    isbn: '', copies: '', location: '', cover_url: '', description: '',
   });
-  const [acquisition, setAcquisition] = useState(emptyAcquisition);
-  const [bulkAcquisition, setBulkAcquisition] = useState(emptyAcquisition);
+  const [onlineDescription, setOnlineDescription] = useState('');
   const [submitting, setSubmitting]   = useState(false);
   const [submitted, setSubmitted]     = useState(false);
   const [formError, setFormError]     = useState('');
@@ -159,10 +112,11 @@ export default function LibAddBook() {
       return;
     }
     setLookingUp(true);
+    setOnlineDescription('');
     setLookupError('');
     setLookupSuccess(false);
     try {
-      const data = await fetchBookByISBN(cleanIsbn);
+      const data = await fetchBookByISBN(cleanIsbn, { suggestCategory: suggestBookCategory });
       const { matched, isNew } = { matched: data.category, isNew: !categories.includes(data.category) };
       setForm((prev) => ({
         ...prev,
@@ -174,6 +128,7 @@ export default function LibAddBook() {
         category:  matched        || prev.category,
       }));
       if (matched && isNew) setUseCustomCategory(true);
+      setOnlineDescription(data.description);
       setLookupSuccess(true);
     } catch {
       setLookupError('Book not found. Check the ISBN and try again.');
@@ -200,8 +155,8 @@ export default function LibAddBook() {
         catch { setCoverRetry({ id: res.data.id, file: coverFile }); }
       }
       setSubmitted(true);
-      setAcquisition(emptyAcquisition());
-      setForm({ title: '', author: '', category: '', year: '', isbn: '', copies: '', location: '', cover_url: '' });
+      setOnlineDescription('');
+      setForm({ title: '', author: '', category: '', year: '', isbn: '', copies: '', location: '', cover_url: '', description: '' });
       setIsbnInput(''); setLookupSuccess(false); setLookupError(''); setUseCustomCategory(false);
       removeCoverFile();
     } catch (error) {
@@ -248,8 +203,11 @@ export default function LibAddBook() {
         return setFormError('Cover URL must be at most 500 characters.');
     }
 
+    if ((form.description || '').length > MAX_BOOK_DESCRIPTION_LENGTH)
+      return setFormError('Book description must be at most 2,000 characters.');
+
     submitManual({
-      ...(acquisitionPayload(acquisition) ? { acquisition: acquisitionPayload(acquisition) } : {}),
+      description: form.description?.trim() || null,
       title:          t,
       author:         a,
       category:       c,
@@ -317,8 +275,8 @@ export default function LibAddBook() {
       if (bulkAbortRef.current) break;
       const isbn = isbns[i];
       try {
-        const data = await fetchBookByISBN(isbn);
-        results.push({ isbn, status: 'found', data: { ...data, category: data.category } });
+        const data = await fetchBookByISBN(isbn, { suggestCategory: suggestBookCategory });
+        results.push({ isbn, status: 'found', data: { ...data, category: data.category, online_description: data.description } });
       } catch {
         results.push({ isbn, status: 'not_found', data: null });
       }
@@ -396,7 +354,7 @@ export default function LibAddBook() {
           category: (row.data.category || 'General').slice(0, 1000),
           year: row.data.year ? parseInt(row.data.year) : null,
           isbn: row.isbn, copies_total: parseInt(bulkCopies) || 1,
-          ...(acquisitionPayload(bulkAcquisition) ? { acquisition: acquisitionPayload(bulkAcquisition) } : {}),
+          description: row.data.description?.trim() || null,
           cover_url: row.data.cover_url ? row.data.cover_url.slice(0, 500) : null,
         };
         updateRow(row);
@@ -714,7 +672,7 @@ export default function LibAddBook() {
                   </div>
                 </div>
 
-                <AcquisitionFields value={acquisition} onChange={setAcquisition} disabled={submitting || !!pendingManual} />
+                <BookDescriptionField value={form.description} onChange={description => setForm(previous => ({ ...previous, description }))} onlineDescription={onlineDescription} lookedUp={lookupSuccess || !!lookupError} disabled={submitting || !!pendingManual} />
                 <button type="submit" disabled={submitting || !!pendingManual || !!recoveryError}
                   className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold text-sm tracking-normal transition-all shadow-sm flex items-center justify-center gap-2 mt-2">
                   {submitting ? <RefreshCw size={15} className="animate-spin" /> : <PlusSquare size={15} />}
@@ -894,6 +852,12 @@ export default function LibAddBook() {
                           <p className="text-sm font-bold text-danger">Not found</p>
                         )}
                         <p className="text-sm font-sans text-muted mt-0.5 break-all">{row.isbn}</p>
+                        {row.status === 'found' && <div className="mt-3"><BookDescriptionField
+                          value={row.data?.description || ''} onlineDescription={row.data?.online_description || ''} lookedUp
+                          disabled={bulkBusy || row.imported || row.skipped || isUnconfirmedISBNRow(row)}
+                          onChange={description => setBulkResults(current => current.map(item => item.isbn === row.isbn ? { ...item, data: { ...item.data, description } } : item))}
+                        /></div>}
+
                         {row.imported && <p className="text-sm text-success">Imported — book #{row.bookId}</p>}
                         {row.importError && (
                           <p className="text-sm font-bold text-danger mt-0.5">{row.importError}</p>
@@ -944,7 +908,6 @@ export default function LibAddBook() {
                         )}
                       </div>
                     )}
-                    <AcquisitionFields value={bulkAcquisition} onChange={setBulkAcquisition} disabled={bulkBusy || hasUnconfirmedRows} description="Applies to all new copies in the selected ISBN batch. Use separate batches for different sources. Pending retries retain their original details." />
                     <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
                       <div className="flex-shrink-0">
                         <label className="block text-sm font-semibold tracking-normal text-muted mb-1">Copies each</label>
@@ -1047,7 +1010,7 @@ export default function LibAddBook() {
                   </div>
                 ))}
               </div>
-              <p className="mb-4 text-sm text-muted">Optional acquisition columns: Acquisition source (purchased, donated, other, or blank), Acquisition date (YYYY-MM-DD), Donor / supplier, Cost per copy, Currency, Acquisition reference. These apply to each copy in that row. Blank fields remain unknown.</p>
+              <p className="mb-4 text-sm text-muted">Optional: add a Description column for a short book summary or note shown in the public and member catalog. Existing spreadsheets without that column are still supported.</p>
               <button onClick={handleUpload} disabled={(!file && !pendingWorkbook) || uploading || !!recoveryError}
                 className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-2">
                 {uploading ? <RefreshCw size={15} className="animate-spin" /> : <FileText size={15} />}

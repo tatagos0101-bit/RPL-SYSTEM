@@ -64,6 +64,9 @@ def override_get_db():
 
 @pytest.fixture(autouse=True)
 def reset_db(monkeypatch, tmp_path):
+    # Tests must never inherit live message delivery from a local environment.
+    monkeypatch.setenv("OTP_SMTP_HOST", "")
+    monkeypatch.setenv("REGISTRATION_SMS_PROVIDER", "")
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     app.dependency_overrides[database.get_db] = override_get_db

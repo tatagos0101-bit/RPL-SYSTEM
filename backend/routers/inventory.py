@@ -128,7 +128,11 @@ def add_book(
     request_id: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
     category_write_lock(db)
-    digest = fingerprint(body.model_dump(mode="json", exclude={"acquisition"} if body.acquisition is None else set()))
+    excluded = {"acquisition"} if body.acquisition is None else set()
+    # Preserve hashes for requests saved before optional descriptions existed.
+    if body.description is None:
+        excluded.add("description")
+    digest = fingerprint(body.model_dump(mode="json", exclude=excluded))
     saved = find_write(db, _.id, request_id, "create-book", digest)
     if saved:
         return saved.result

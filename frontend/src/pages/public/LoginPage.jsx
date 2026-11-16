@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Info, ScanFace, KeyRound, MapPin } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ScanFace, KeyRound, MapPin, ArrowRight } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import { clearAuth, login, faceAuth, persistAuth } from '../../api/auth';
@@ -168,195 +168,79 @@ const LoginPage = ({ expectedRole = 'member' }) => {
   };
 
   return (
-    <div className="rpl-page rpl-public min-h-screen flex font-sans transition-colors duration-300 bg-panel">
+    <div className="rpl-page rpl-public rpl-auth">
+      <header className="auth-brandbar">
+        <Link to={portalLandingPath} aria-label={`Back to ${portalLandingLabel}`} className="auth-brand">
+          <img src="/RPL.png" alt="" width="44" height="44" />
+          <span>Rizal Provincial Library</span>
+        </Link>
+      </header>
 
-      {/* ── LEFT PANEL (dark branding) ── */}
-      <div className="hidden lg:flex lg:w-1/2 bg-panel flex-col justify-between p-16 relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-info-soft rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-info-soft rounded-full blur-[80px] pointer-events-none" />
+      <main className="auth-main">
+        <section className="auth-card" aria-labelledby="auth-heading">
+          <div className="auth-form-panel">
+            <p className="auth-portal-label">{portalLabel} Access Portal</p>
+            <h1 id="auth-heading">Welcome back</h1>
 
-        {/* Top: Tagline */}
-        <div className="relative z-10 pt-16">
-          <span className="inline-block px-4 py-1.5 bg-info-soft text-link rounded-full text-sm font-semibold tracking-normal mb-6">
-            {portalLabel} Access Portal
-          </span>
+            <div className="auth-methods" role="group" aria-label="Sign-in method">
+              <button type="button" onClick={() => setTab('password')} aria-pressed={tab === 'password'}
+                className={`auth-method ${tab === 'password' ? 'is-active' : ''}`}>
+                <KeyRound size={18} aria-hidden="true" /> Password
+              </button>
+              <button type="button" onClick={() => setTab('face')} aria-pressed={tab === 'face'}
+                className={`auth-method ${tab === 'face' ? 'is-active' : ''}`}>
+                <ScanFace size={18} aria-hidden="true" /> Face ID
+              </button>
+            </div>
 
-          <h2 className="font-semibold tracking-normal text-ink leading-[0.9] mb-6 rpl-section-title">
-            Welcome <br /> Back.
-          </h2>
+            <p className="auth-divider"><span>Identity Verification System</span></p>
 
-          <p className="text-muted text-base font-medium leading-relaxed max-w-xs">
-            Secure, biometric-integrated library management for the people of Rizal Province.
-          </p>
-        </div>
-
-        {/* Middle: Registration notice */}
-        <div className="relative z-10 bg-panel border border-line rounded-xl p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <Info size={16} className="text-link" />
-            <p className="text-sm font-semibold tracking-normal text-link">
-              {isLibrarianPortal ? 'Staff Accounts Only' : 'New Member?'}
-            </p>
-          </div>
-          <p className="text-sm text-muted leading-relaxed">
-            {isLibrarianPortal ? (
+            {tab === 'password' && (
               <>
-                Librarian access is issued by authorized administrators only.
-                Member accounts cannot enter the staff console.
-              </>
-            ) : (
-              <>
-                Account registration is done in person at the{' '}
-                <span className="text-ink font-bold">Taytay branch</span>. A librarian will set up your account and enroll your Face ID.
+                {error && (
+                  <div className="auth-error" role="alert">
+                    <AlertCircle size={18} aria-hidden="true" />
+                    <p>{error}</p>
+                  </div>
+                )}
+                <form onSubmit={handleLogin} className="auth-form">
+                  <div className="auth-field-group">
+                    <label htmlFor="auth-identifier">Email or Member ID</label>
+                    <div className="auth-field">
+                      <Mail size={18} aria-hidden="true" />
+                      <input id="auth-identifier" aria-label="Email or Member ID" type="text"
+                        placeholder="email@domain.com or RPL-K7X2M" value={email}
+                        onChange={(e) => setEmail(e.target.value)} required />
+                    </div>
+                  </div>
+                  <div className="auth-field-group">
+                    <div className="auth-password-label">
+                      <label htmlFor="auth-password">Password</label>
+                      {!isLibrarianPortal && <Link to="/user/forgot-password">Forgot?</Link>}
+                    </div>
+                    <div className="auth-field auth-password-field">
+                      <Lock size={18} aria-hidden="true" />
+                      <input id="auth-password" aria-label="Password" type={showPassword ? 'text' : 'password'}
+                        placeholder="Enter your password" value={password}
+                        onChange={(e) => setPassword(e.target.value)} required />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}
+                        className="auth-password-toggle">
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+                  <button type="submit" disabled={isLoading} aria-busy={isLoading} aria-label={isLoading ? 'Signing in' : 'Sign in'} className="auth-submit">
+                    {isLoading ? <span className="auth-submit-spinner animate-spin" aria-label="Signing in" /> : 'Sign in'}
+                  </button>
+                </form>
               </>
             )}
-          </p>
-        </div>
 
-        {/* Bottom: Footer text */}
-        <div className="relative z-10">
-          <p className="text-sm font-semibold tracking-normal text-muted">
-            © 2025 Rizal Provincial Library
-          </p>
-        </div>
-      </div>
-
-      {/* ── RIGHT PANEL (form) ── */}
-      <div className="relative w-full lg:w-1/2 flex items-center justify-center px-5 sm:px-8 py-8 pt-32 sm:pt-36 bg-subtle transition-colors">
-        <Link
-          to={portalLandingPath}
-          aria-label={`Back to ${portalLandingLabel}`}
-          className="rpl-auth-brand absolute top-6 sm:top-8 left-4 right-4 flex justify-center px-3 py-2"
-        >
-          <span className="rpl-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></span>
-        </Link>
-
-        <div className="w-full max-w-md">
-
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="font-semibold tracking-normal text-ink leading-none mb-3 rpl-title">
-              Sign In
-            </h1>
-            <p className="text-muted font-bold text-sm tracking-normal">
-              Identity Verification System
-            </p>
-          </div>
-
-          {/* Tab toggle */}
-          <div className="flex gap-2 mb-8 p-1 bg-subtle rounded-xl">
-            <button
-              type="button"
-              onClick={() => setTab('password')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold tracking-normal transition-all ${
-                tab === 'password'
-                  ? 'bg-panel text-ink shadow-sm'
-                  : 'text-muted hover:text-muted '
-              }`}
-            >
-              <KeyRound size={14} />
-              Password
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('face')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold tracking-normal transition-all ${
-                tab === 'face'
-                  ? 'bg-panel text-link text-link shadow-sm'
-                  : 'text-muted hover:text-muted '
-              }`}
-            >
-              <ScanFace size={14} />
-              Face ID
-            </button>
-          </div>
-
-          {/* ── PASSWORD TAB ── */}
-          {tab === 'password' && (
-            <>
-              {error && (
-                <div className="flex items-start gap-3 p-4 bg-danger-soft border border-danger rounded-xl mb-6">
-                  <AlertCircle size={18} className="text-danger mt-0.5 flex-shrink-0" />
-                  <p className="text-sm font-bold text-danger leading-relaxed">{error}</p>
-                </div>
-              )}
-
-              <form onSubmit={handleLogin} className="space-y-5">
-                {/* Email */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-muted tracking-normal ml-1">
-                    Email or Member ID
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={17} />
-                    <input aria-label="Email or Member ID"
-                      type="text"
-                      placeholder="email@domain.com or RPL-K7X2M"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-panel border border-line rounded-lg py-4 pl-12 pr-4 outline-none focus:ring-2 focus:ring-line transition-all font-medium text-ink placeholder:text-muted"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="text-sm font-semibold text-muted tracking-normal ml-1">
-                      Password
-                    </label>
-                    {!isLibrarianPortal && (
-                      <Link
-                        to="/user/forgot-password"
-                        className="text-sm font-semibold tracking-normal text-link hover:text-link"
-                      >
-                        Forgot?
-                      </Link>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={17} />
-                    <input aria-label="Password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-panel border border-line rounded-lg py-4 pl-12 pr-12 outline-none focus:ring-2 focus:ring-line transition-all font-medium text-ink placeholder:text-muted"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-link transition-colors"
-                    >
-                      {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Submit */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold tracking-normal text-sm shadow-sm transition-all flex justify-center items-center mt-2"
-                >
-                  {isLoading ? (
-                    <div className="w-5 h-5 border-2 border-line border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    `Authorize ${portalLabel}`
-                  )}
-                </button>
-              </form>
-            </>
-          )}
-
-          {/* ── FACE ID TAB ── */}
           {tab === 'face' && (
-            <div className="flex flex-col items-center gap-5">
+            <div className="auth-face-content flex flex-col items-center gap-5">
               {/* Webcam + HUD */}
-              <div className="relative w-64 h-64 rounded-xl overflow-hidden bg-panel border-2 border-line shadow-sm">
+              <div className="auth-face-frame relative w-64 h-64 rounded-xl overflow-hidden bg-panel border-2 border-line shadow-sm">
                 {faceStatus !== 'matched' && (
                   <Webcam
                     ref={webcamRef}
@@ -386,13 +270,13 @@ const LoginPage = ({ expectedRole = 'member' }) => {
                     <div className="absolute bottom-3 left-3 w-8 h-8 border-b-2 border-l-2 border-line rounded-bl-lg" />
                     <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-line rounded-br-lg" />
                     {/* Scan line */}
-                    <div className="animate-scan-line bg-info-soft" style={{ boxShadow: '0 0 8px 2px rgba(96,165,250,0.6)' }} />
+                    <div className="animate-scan-line bg-info-soft" style={{ boxShadow: '0 0 8px 2px rgba(199,161,90,0.6)' }} />
                   </>
                 )}
               </div>
 
               {/* Status text */}
-              <div className="text-center space-y-1">
+              <div role="status" aria-live="polite" className="auth-face-status text-center space-y-1">
                 {(faceStatus === 'scanning' || faceStatus === 'failed') && (
                   <>
                     <p className={`text-sm font-semibold tracking-normal ${faceStatus === 'failed' ? 'text-danger' : 'text-link text-link'}`}>
@@ -421,50 +305,34 @@ const LoginPage = ({ expectedRole = 'member' }) => {
               </p>
             </div>
           )}
+          </div>
 
-          {/* Mobile-only: New Member notice */}
-          <div className="lg:hidden mt-8 bg-panel border border-line rounded-xl p-6">
-            <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-7 h-7 bg-info-soft rounded-lg flex items-center justify-center flex-shrink-0">
-                <Info size={14} className="text-link" />
-              </div>
-              <p className="text-sm font-semibold tracking-normal text-link">
-                {isLibrarianPortal ? 'Staff Access Only' : 'Want to Create an Account?'}
-              </p>
+          <aside className="auth-welcome" aria-label="Library account guidance">
+            <div className="auth-welcome-brand">
+              <img src="/RPL.png" alt="" width="76" height="76" />
+              <p>Rizal Provincial Library</p>
             </div>
-            <p className="text-sm text-muted leading-relaxed mb-4">
+            <h2>{isLibrarianPortal ? 'Staff Accounts Only' : 'New Member?'}</h2>
+            <p className="auth-access-description">
               {isLibrarianPortal ? (
-                <>
-                  Only librarian accounts can enter this portal. Member accounts must use the public member login.
-                </>
+                <>Librarian access is issued by authorized administrators only. Member accounts cannot enter the staff console.</>
               ) : (
-                <>
-                  Account registration is done in person at the{' '}
-                  <span className="text-ink font-bold">Rizal Provincial Library</span>.
-                  Visit the library and a librarian will set up your account and enroll your Face ID.
-                </>
+                <>Account registration is done in person at the <strong>Taytay branch</strong>. A librarian will set up your account and enroll your Face ID.</>
               )}
             </p>
-            <div className="flex items-start gap-2.5 pt-4 border-t border-line">
-              <MapPin size={14} className="text-link mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-muted font-medium">
-                Taytay Municipal Compound, Taytay, Rizal
-                <span className="block text-muted mt-0.5">Mon – Fri · 8:00 AM – 5:00 PM</span>
-              </p>
+            <div className="auth-location">
+              <MapPin size={16} aria-hidden="true" />
+              <p>Taytay Municipal Compound, Taytay, Rizal<span>Mon – Fri · 8:00 AM – 5:00 PM</span></p>
             </div>
-          </div>
-
-          {/* Back to portal landing */}
-          <div className="mt-6 text-center">
-            <Link
-              to={portalLandingPath}
-              className="text-sm font-semibold tracking-normal text-muted hover:text-link transition-colors"
-            >
+            <Link to={portalLandingPath} className="auth-guidance-link">
               {expectedRole === 'librarian' ? 'Back to Staff Portal' : 'Back to Home'}
+              <ArrowRight size={17} aria-hidden="true" />
             </Link>
-          </div>
-        </div>
-      </div>
+            <p className="auth-mission">Secure, biometric-integrated library management for the people of Rizal Province.</p>
+          </aside>
+        </section>
+      </main>
+      <footer className="auth-footer">© 2025 Rizal Provincial Library</footer>
     </div>
   );
 };

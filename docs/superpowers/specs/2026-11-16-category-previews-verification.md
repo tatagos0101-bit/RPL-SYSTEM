@@ -1,0 +1,22 @@
+# Stable public previews and librarian book details
+
+Completed locally on November 16, 2026, preserving both active user requests.
+
+The public category tiles previously derived images from filtered result rows. The red browser probe reproduced both changing All books art and History losing its images after selecting Fantasy. PublicBrowse now requests independent opt-in category preview metadata; each genre receives at most 3 existing public cover/id references ordered by title/id. All books combines samples across genres. Genre/search/page changes update results while navigation art stays fixed. Missing art remains an honest neutral placeholder. Default category API responses retain the exact category/count contract; existing member caller fallback and browse behavior remain unchanged. No entire inventory fetch or per-genre query loop was introduced.
+
+The removed librarian Acquisitions action is replaced with View details. It opens a read-only fixed-frame cover/metadata/description dialog using the already-loaded inventory row. It adds no API calls or writes. Cover containment/fallback, internal scrolling, 44px close controls, Escape and focus return reuse existing modal/cover patterns. Edit/cover/delete behavior and source metadata remain intact.
+
+## Actual validation
+
+- **72 backend tests passed** across test_category_previews.py (5 new cases), test_category_service.py and test_catalog_discovery.py. Red stage had 4 expected failures and 1 legacy-contract pass. Covers optional/default contracts, three-per-category bounds, stable ordering, empty/hidden art, legacy General visibility, rare categories beyond the first 100 records, empty inventory, invalid flag and at most 2 SELECT queries. Isolated SQLite/synthetic fixtures only; existing runner supplies synthetic fixture PIN and disables optional Windows pytest symlinks. No real patron/private fixtures or live cloud calls.
+- **98 frontend helper tests passed** via `node --test frontend/src/api/*.test.js`.
+- Scoped ESLint passed for BookDetailsDialog.jsx, LibInventory.jsx, PublicBrowse.jsx, CatalogCategories.jsx and api/books.js.
+- Frontend build passed, including the existing credential scan across **79 built files**.
+- Synthetic local Chrome/Playwright verified public thumbnail DOM sources remain unchanged through Fantasy/History/All, title search/clear and pagination on 1440px desktop and 390px mobile dark. Rare-genre art was available beyond the first result page. Category requests did not increase during filtering (the existing React development double mount can make 2 initial requests). Tests await result responses before screenshot capture.
+- Read-only inventory preview passed at 1440x900, 390x844 dark and 667x375: keyboard open/close, focus return, fixed dimensions across missing/portrait/wide covers, long metadata/scroll, ISBN/shelf/description/zero counts, 44px targets and no unexpected writes/runtime errors/overlay. Screenshots of both features were visually inspected. Browser plugin unavailable; reused installed Playwright/Chrome, no new tooling/dependencies.
+- Source guards preserved 8 inventory/public handlers and the original public book modal. Member browse/cart/shelf, existing backend book list/sort/scan policies, inventory API and shared modal/cover/edit components remain unchanged.
+- Separate fresh read-only reviews of the inventory details and category preview changes reported no actionable findings. Reviewers did not duplicate test runs.
+
+Before restarting the API, validated exact development SQLite `backend/rizal_library.local.db`, local storage, encryption/config and process-only AUTO_MIGRATE=false. Restarted only the recorded owned backend PID/executable/start time and verified its Python/console children. Website/API returned 200; actual local preview metadata loaded for 6 genres, bounds <= 3 held, and default category output had no preview fields. Frontend remains running at localhost:5173.
+
+No schema/dependency/environment-file changes, migrations, commits, pushes, production access or deployment occurred. SQLite/mocked UI checks do not establish live PostgreSQL policy/performance. Updated API must precede a future separately authorized frontend release; older APIs cannot supply preview artwork metadata. Temporary pytest fixture folders were removed after checking absolute Windows paths and rejecting reparse points. Evidence/baselines/scripts are retained under `.tools/catalog-category-previews/` and `.tools/inventory-book-details/`.

@@ -1,12 +1,20 @@
 import useReadResource from '../../api/useReadResource';
+import { Link } from 'react-router-dom';
 import ModalFrame from '../../components/ModalFrame';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
-import { Search, Sparkles, Heart, Bookmark, XCircle, RefreshCw, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Search, BookOpen, Heart, Bookmark, XCircle, RefreshCw, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import 'react-toastify/dist/ReactToastify.css';
-import { getBook, getCategories } from '../../api/books';
+import { getBook, getCategories, getTrendingShelf, getNewestShelf, getLovedShelf } from '../../api/books';
+import { getReadingStats } from '../../api/user';
+import { normalizeCatalogSearch } from '../../api/catalogDiscovery';
+import BookShelf from '../../components/public/BookShelf';
+import CatalogCategories from '../../components/public/CatalogCategories';
+import CatalogSort from '../../components/public/CatalogSort';
+import CatalogSection from '../../components/public/CatalogSection';
+import MemberCatalogCard from '../../components/public/MemberCatalogCard';
 import { recordBookView } from '../../api/bookInteractions';
 import useBookRecommendations from '../../api/useBookRecommendations';
 import { getReservations, cancelReservation as apiCancelReservation } from '../../api/reservations';
@@ -25,7 +33,11 @@ import { loadPendingConfirmation } from '../../api/reservationCart';
 export default function UserBrowseBooks() {
   const allowance = useBorrowingCapacity();
   const categoryResource = useReadResource(getCategories);
-  const categories = ['All', ...(categoryResource.data || []).map(item => item.category)];
+  const historyResource = useReadResource(getReadingStats);
+  const trendingResource = useReadResource(getTrendingShelf);
+  const newestResource = useReadResource(getNewestShelf);
+  const lovedResource = useReadResource(getLovedShelf);
+  const hasBorrowed = (historyResource.data?.total_books_read || 0) > 0;
   const [reservations, setReservations] = useState([]);
 
   const [cart, setCart] = useState(() => loadReservationCart());
@@ -35,14 +47,20 @@ export default function UserBrowseBooks() {
   const {
     recs, recLoading, recError, favorites, favoritesLoading, favoritesError,
     pendingFavorites, toggleFavorite, retryRecommendations, retryFavorites,
-  } = useBookRecommendations(selected !== null);
+  } = useBookRecommendations(selected !== null || !hasBorrowed);
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [sort, setSort] = useState('trending');
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [modalShelf, setModalShelf] = useState(null);
+  const searchTerm = normalizeCatalogSearch(search);
+  const featured = activeCategory === null && !searchTerm;
   const [slideDir, setSlideDir] = useState('right');
   const [animKey, setAnimKey] = useState(0);
   const touchStartX = useRef(null);
+  const catalogHeadingRef = useRef(null);
 
-  const listing = useServerPage('/api/books', { search, category: activeCategory === 'All' ? '' : activeCategory });
+  const listing = useServerPage('/api/books', { search: searchTerm, category: activeCategory || '', sort, favorites_only: favoritesOnly });
   const { items: books, loading } = listing;
   useEffect(() => {
     getReservations().then(({ data }) => setReservations(data)).catch(() => toast.error('Could not load reservations. Please reload to retry.'));
@@ -106,8 +124,14 @@ export default function UserBrowseBooks() {
     });
   }, []);
 
-  const modalBooks = useMemo(() => selected && !filteredBooks.some(book => book.id === selected.id)
-    ? [selected, ...filteredBooks] : filteredBooks, [selected, filteredBooks]);
+  const selectBook = (book, shelf) => {
+    setModalShelf(shelf);
+    openBook(book);
+  };
+  const modalBooks = useMemo(() => {
+    const source = modalShelf || filteredBooks;
+    return selected && !source.some(book => book.id === selected.id) ? [selected, ...source] : source;
+  }, [selected, filteredBooks, modalShelf]);
 
   const navigateBook = (dir) => {
     const idx = modalBooks.findIndex(b => b.id === selected?.id);
@@ -136,156 +160,102 @@ export default function UserBrowseBooks() {
   }, [selected, modalBooks, openBook]);
 
   const favoriteProps = (book) => ({
-    book, active: favorites.has(book.id), onToggle: () => toggleFavorite(book.id),
+    book, active: favorites.has(book.id), onToggle: async () => {
+      await toggleFavorite(book.id);
+      lovedResource.retry();
+      if (sort === 'loved') listing.reload();
+    },
     disabled: favoritesLoading || favoritesError || pendingFavorites.has(book.id),
   });
 
+  const changeCatalogPage = (page) => {
+    listing.setPage(page);
+    catalogHeadingRef.current?.scrollIntoView({ block: 'start',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
+
+  const trendingBooks = trendingResource.data?.items || [];
+  const newestBooks = newestResource.data?.items || [];
+  const lovedBooks = lovedResource.data?.items || [];
+  const previewBooks = [...new Map([...trendingBooks, ...newestBooks, ...lovedBooks, ...books].map(book => [book.id, book])).values()];
+  const showAll = (nextSort, onlyLoved = false) => {
+    listing.setPage(0);
+    setActiveCategory(''); setSearch(''); setSort(nextSort); setFavoritesOnly(onlyLoved);
+    requestAnimationFrame(() => catalogHeadingRef.current?.scrollIntoView({ block: 'start',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  };
+  const changeCategory = (value) => { listing.setPage(0); setActiveCategory(value); setSearch(''); setFavoritesOnly(false); };
+  const renderBook = (book, shelf, query = '', badge) => <MemberCatalogCard key={book.id} book={book} query={query}
+    onSelect={() => selectBook(book, shelf)} onAdd={() => addToCart(book)} onCancel={() => handleCancelReservation(book.id)}
+    isInCart={cart.some(item => item.id === book.id)} isReserved={reservations.some(item => item.book_id === book.id)}
+    favorite={<FavoriteButton {...favoriteProps(book)} />} badge={badge} />;
+
   return (
-    <div className="rpl-page min-h-screen bg-subtle text-ink pb-16 transition-colors duration-300">
+    <div className="rpl-page rpl-catalog rpl-member-catalog min-h-screen min-w-0 text-ink pb-16">
       <ToastContainer theme={isDark ? 'dark' : 'light'} />
-
-
-      {/* ── HEADER ── */}
-      <div className="animate-fade-in-up px-4 sm:px-6 md:px-10 pt-5 pb-4 border-b border-line">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <p className="text-sm font-semibold tracking-normal text-muted mb-2">
-              Member Terminal
-            </p>
-            <h1 className="rpl-title text-ink">
-              Browse <span className="text-link">Books</span>
-            </h1>
-          </div>
-
-          {(cart.length > 0 || reservations.length > 0) && (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-info-soft border border-line rounded-xl">
-              <Bookmark size={14} className="text-link" />
-              <span className="text-sm font-semibold tracking-normal text-link">
-                {cart.length + reservations.length} reserved
-              </span>
-            </div>
-          )}
+      <main className="discovery-container catalog-content">
+        <div className="catalog-member-heading">
+          <div><p className="text-sm text-muted mb-1">Member library</p><h1 className="rpl-title">Browse <span className="text-link">Books</span></h1></div>
+          {(cart.length > 0 || reservations.length > 0) && <Link to="/user/reservations"
+            aria-label={`View My Reservations, ${cart.length + reservations.length} reserved`}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-panel px-4 py-2.5 text-sm font-semibold text-link transition-colors hover:bg-info-soft">
+            <Bookmark size={16} aria-hidden="true" />{cart.length + reservations.length} reserved
+          </Link>}
         </div>
-      </div>
-
-      <div className="min-w-0 px-4 sm:px-6 md:px-10 pt-5 space-y-8">
-        <section aria-labelledby="recommendations-title" className="min-w-0">
-          <div className="flex items-start gap-3 mb-4">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-info-soft text-link">
-              <Sparkles size={18} />
-            </div>
-            <div className="min-w-0">
-              <h2 id="recommendations-title" className="rpl-section-title text-ink">Recommended for you</h2>
-              <BorrowingCapacity {...allowance} />
-              <p className="text-sm text-muted">Books are not held until you confirm. Availability may change.</p>
-              <p className="text-sm text-muted mt-1">
-                Discover your next read, using favorites, book views, and borrowing activity.
-              </p>
-            </div>
+        <div className="catalog-search">
+          <Search aria-hidden="true" size={20} />
+          <input type="text" maxLength={200} aria-label="Search by title or author" placeholder="Search by title or author" value={search}
+            onChange={event => { listing.setPage(0); setSearch(event.target.value); if (activeCategory === null) setActiveCategory(''); }} />
+          {search && <button type="button" aria-label="Clear search" onClick={() => setSearch('')}><X size={18} /></button>}
+        </div>
+        <div className="catalog-member-allowance"><BorrowingCapacity {...allowance} /><p>Books are not held until you confirm. Availability may change.</p></div>
+        {categoryResource.error && <p role="alert" className="catalog-category-error text-danger">Categories could not be loaded. <button onClick={categoryResource.retry}>Retry categories</button></p>}
+        <CatalogCategories categories={categoryResource.data || []} activeCategory={activeCategory} onSelect={changeCategory} books={previewBooks} featured headingLevel={2} />
+        {favoritesError && <p role="status" className="catalog-category-error text-muted">Favorites could not be loaded. <button onClick={retryFavorites}>Retry favorites</button></p>}
+        {featured ? <div className="catalog-panel catalog-featured">
+          <div className="catalog-featured-heading">
+            <h2>Featured</h2>
+            <nav aria-label="Featured sections">Jump to
+              {hasBorrowed && <a href="#member-recommended">Recommended for you</a>}
+              <a href="#member-trending">Trending</a><a href="#member-new">What's new</a><a href="#member-loved">Books we love</a>
+            </nav>
           </div>
-          {recLoading ? (
-            <div role="status" aria-label="Loading recommendations" className="flex gap-4 overflow-hidden">
-              {[0, 1, 2, 3].map(item => <div key={item} className="h-64 w-40 shrink-0 animate-pulse rounded-xl border border-line bg-panel" />)}
-            </div>
-          ) : recError ? (
-            <div role="status" className="rounded-lg border border-line p-4 text-sm">
-              <p>Recommendations are unavailable. You can still browse all books below.</p>
-              <button onClick={retryRecommendations} className="mt-2 text-link underline">Retry recommendations</button>
-            </div>
-          ) : recs.length === 0 ? (
-            <p className="rounded-lg bg-panel p-4 text-sm text-muted">No new suggestions yet. Explore the catalog and favorite books you enjoy.</p>
-          ) : (
-            <div className="flex gap-4 overflow-x-auto pb-3" aria-label="Recommended books">
-              {recs.map(book => (
-                <SmallBookCard key={book.id} book={book}
-                  onSelect={() => openBook(book)} onAdd={() => addToCart(book)}
-                  onCancel={() => handleCancelReservation(book.id)}
-                  isInCart={cart.some(item => item.id === book.id)}
-                  isReserved={reservations.some(item => item.book_id === book.id)}
-                  favorite={<FavoriteButton {...favoriteProps(book)} />}
-                  badge={recommendationBadge(book.source)} />
-              ))}
-            </div>
-          )}
-        </section>
-        {favoritesError && (
-          <p role="status" className="text-sm text-muted">
-            Favorites could not be loaded. <button onClick={retryFavorites} className="underline text-link">Retry favorites</button>
-          </p>
-        )}
+          {historyResource.loading && <p role="status" className="text-sm text-muted">Loading your reading history...</p>}
+          {historyResource.error && <p role="status" className="catalog-category-error text-muted">Reading history could not be loaded. <button onClick={historyResource.retry}>Retry reading history</button></p>}
+          {hasBorrowed && <CatalogSection id="member-recommended" heading="Recommended for you" description="Based on your borrowing and reading interests."
+            loading={recLoading} error={recError} onRetry={retryRecommendations} hasBooks={recs.length > 0}
+            emptyMessage="No new suggestions yet. Explore the catalog and favorite books you enjoy.">
+            {recs.map(book => renderBook(book, recs, '', recommendationBadge(book.source)))}
+          </CatalogSection>}
+          <CatalogSection id="member-trending" heading="Trending" description="Popular loans from the past 30 days, with new arrivals to explore."
+            loading={trendingResource.loading} error={trendingResource.error} onRetry={trendingResource.retry} onSeeAll={() => showAll('trending')}
+            hasBooks={trendingBooks.length > 0} emptyMessage="No books in the collection yet.">
+            {trendingBooks.map(book => renderBook(book, trendingBooks))}
+          </CatalogSection>
+          <CatalogSection id="member-new" heading="What's new" description="The latest additions to the library."
+            loading={newestResource.loading} error={newestResource.error} onRetry={newestResource.retry} onSeeAll={() => showAll('newest')}
+            hasBooks={newestBooks.length > 0} emptyMessage="No new arrivals yet.">
+            {newestBooks.map(book => renderBook(book, newestBooks, '', { label: 'New arrival' }))}
+          </CatalogSection>
+          <CatalogSection id="member-loved" heading="Books we love" description="Books saved to favorites by our reading community."
+            loading={lovedResource.loading} error={lovedResource.error} onRetry={lovedResource.retry} onSeeAll={() => showAll('loved', true)}
+            hasBooks={lovedBooks.length > 0} emptyMessage="No community favorites yet. Favorite a book to help build this shelf.">
+            {lovedBooks.map(book => renderBook(book, lovedBooks))}
+          </CatalogSection>
+        </div> : <div ref={catalogHeadingRef} className="catalog-panel catalog-full-list">
+          <BookShelf resetKey={`${activeCategory}:${searchTerm}:${sort}:${listing.page}`} heading={searchTerm ? `Results for “${searchTerm}”` : activeCategory || 'All books'}
+            label={`${activeCategory || 'All books'} shelf`} description={<p className="catalog-results-count">{listing.total} {listing.total === 1 ? 'book' : 'books'}{favoritesOnly ? ' loved by readers' : ''}</p>}
+            headingAction={<CatalogSort value={sort} onChange={value => { setSort(value); setFavoritesOnly(false); }} />}
+            before={<nav aria-label="Catalog pages at top" className="catalog-page-controls catalog-page-controls-top"><PageControls {...listing} setPage={changeCatalogPage} /></nav>}
+            after={<nav aria-label="Catalog pages at bottom" className="catalog-page-controls catalog-page-controls-bottom"><PageControls {...listing} setPage={changeCatalogPage} /></nav>}>
+            {loading ? <div role="status" aria-label="Loading catalog" className="catalog-shelf-state"><RefreshCw className="animate-spin text-link" /></div>
+              : listing.error ? <div role="status" className="catalog-shelf-state catalog-empty"><p>Books could not be loaded.</p><button onClick={listing.reload}>Retry books</button></div>
+                : filteredBooks.length ? filteredBooks.map(book => renderBook(book, filteredBooks, searchTerm))
+                  : <div className="catalog-shelf-state catalog-empty"><BookOpen size={34} aria-hidden="true" /><p>No books found</p><button onClick={() => { setSearch(''); setActiveCategory(''); setFavoritesOnly(false); }}>Reset filters</button></div>}
+          </BookShelf>
+        </div>}
+      </main>
 
-          {/* ── DIVIDER ── */}
-          <div className="flex items-center gap-4">
-            <div className="h-px flex-1 bg-subtle" />
-            <span className="text-sm font-semibold tracking-normal text-muted">All Books</span>
-            <div className="h-px flex-1 bg-subtle" />
-          </div>
-
-          {categoryResource.error && <p role="alert" className="text-danger">Categories could not be loaded. <button onClick={categoryResource.retry}>Retry categories</button></p>}
-          <PageControls {...listing} />
-          {/* ── FILTER & SEARCH ── */}
-          <div className="animate-fade-in-up delay-200 flex flex-col lg:flex-row gap-4">
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-5 py-2.5 rounded-full text-sm font-semibold tracking-normal transition-all duration-200 border flex-shrink-0  ${
-                    activeCategory === cat
-                      ? 'bg-action border-line text-white shadow-md '
-                      : 'bg-panel border-line text-muted hover:text-ink dark:hover:text-white hover:border-line '
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
-              <input
-                type="text" aria-label="Search title or author..."
-                placeholder="Search title or author..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-panel border border-line rounded-lg py-3 pl-11 pr-4 outline-none focus:border-line text-base font-medium text-ink placeholder:text-muted transition-all"
-              />
-            </div>
-          </div>
-
-          {/* ── BOOK GRID ── */}
-          {loading ? (
-            <div role="status" aria-label="Loading catalog" className="flex justify-center py-16"><RefreshCw className="animate-spin text-link" /></div>
-          ) : filteredBooks.length > 0 ? (
-            <div className="animate-fade-in-up delay-300 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {filteredBooks.map((book) => {
-                const isInCart = !!cart.find((c) => c.id === book.id);
-                const isReserved = !!reservations.find((r) => r.book_id === book.id);
-                return (
-                  <BigBookCard
-                    key={book.id}
-                    book={book}
-                    onSelect={() => openBook(book)}
-                    onAdd={() => addToCart(book)}
-                    onCancel={() => handleCancelReservation(book.id)}
-                    favorite={<FavoriteButton {...favoriteProps(book)} />}
-                    isInCart={isInCart}
-                    isReserved={isReserved}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <div className="py-20 text-center">
-              <p className="text-muted font-semibold tracking-normal text-sm mb-3">No books found</p>
-              <button onClick={() => { setActiveCategory('All'); setSearch(''); }}
-                className="text-sm font-semibold tracking-normal text-link underline underline-offset-4">
-                Reset filters
-              </button>
-            </div>
-          )}
-      </div>
-
-      {/* ── BOOK DETAIL MODAL ── */}
       {selected && (() => {
         const currentIdx = modalBooks.findIndex(b => b.id === selected.id);
         const isInCart = !!cart.find((c) => c.id === selected.id);
@@ -297,18 +267,10 @@ export default function UserBrowseBooks() {
             className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
             onClick={() => setSelected(null)}
           >
-            {/* Left arrow */}
-            {currentIdx > 0 && (
-              <button
-                aria-label="Previous book" onClick={(e) => { e.stopPropagation(); navigateBook(-1); }}
-                className="absolute left-2 md:left-4 z-10 p-2 md:p-3 bg-panel hover:bg-panel rounded-full text-ink transition-all hidden sm:block"
-              >
-                <ChevronLeft size={28} />
-              </button>
-            )}
+
 
             <div
-              className="max-w-3xl w-full bg-panel border border-line rounded-xl md:rounded-xl overflow-hidden shadow-sm max-h-[90vh] overflow-y-auto"
+              className="relative max-w-3xl w-full h-[min(36rem,calc(100dvh_-_2rem))] min-h-0 bg-panel border border-line rounded-xl overflow-hidden shadow-sm"
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => { touchStartX.current = e.clientX; }}
               onMouseUp={(e) => {
@@ -324,9 +286,25 @@ export default function UserBrowseBooks() {
                 if (Math.abs(diff) > 50) navigateBook(diff > 0 ? 1 : -1);
               }}
             >
-              <div key={animKey} className={`grid md:grid-cols-2 ${slideDir === 'right' ? 'animate-slide-in-right' : 'animate-slide-in-left-book'}`}>
-                <div className="aspect-[3/4] md:aspect-auto bg-subtle relative">
-                  <BookCover src={selected.cover_url} alt={selected.title} iconSize={48} />
+              <button aria-label="Close book details" onClick={() => setSelected(null)}
+                className="absolute top-3 right-3 z-20 flex h-[44px] w-[44px] items-center justify-center rounded-full border border-line bg-panel text-muted transition-colors hover:text-ink">
+                <XCircle size={26} />
+              </button>
+              <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-2/5 md:right-auto md:h-full md:w-1/2 landscape:right-auto landscape:h-full landscape:w-1/2">
+                {currentIdx > 0 && <button
+                  aria-label="Previous book" onClick={(e) => { e.stopPropagation(); navigateBook(-1); }}
+                  className="pointer-events-auto absolute left-2 top-1/2 flex h-[44px] w-[44px] -translate-y-1/2 items-center justify-center rounded-full border border-line bg-panel text-ink transition-colors hover:bg-subtle">
+                  <ChevronLeft size={28} />
+                </button>}
+                {currentIdx < modalBooks.length - 1 && <button
+                  aria-label="Next book" onClick={(e) => { e.stopPropagation(); navigateBook(1); }}
+                  className="pointer-events-auto absolute right-2 top-1/2 flex h-[44px] w-[44px] -translate-y-1/2 items-center justify-center rounded-full border border-line bg-panel text-ink transition-colors hover:bg-subtle">
+                  <ChevronRight size={28} />
+                </button>}
+              </div>
+              <div key={animKey} className={`grid h-full min-h-0 grid-rows-[minmax(0,2fr)_minmax(0,3fr)] md:grid-cols-2 md:grid-rows-1 landscape:grid-cols-2 landscape:grid-rows-1 ${slideDir === 'right' ? 'animate-slide-in-right' : 'animate-slide-in-left-book'}`}>
+                <div className="relative min-h-0 min-w-0 overflow-hidden bg-subtle">
+                  <BookCover src={selected.cover_url} alt={selected.title} className="h-full w-full object-contain" iconSize={48} />
                   {/* Page indicator */}
                   <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/40 rounded-full">
                     <span className="text-sm font-semibold text-white tracking-normal">
@@ -334,98 +312,67 @@ export default function UserBrowseBooks() {
                     </span>
                   </div>
                 </div>
-                <div className="min-w-0 p-5 md:p-10 flex flex-col justify-center relative">
-                  <button aria-label="Close book details" onClick={() => setSelected(null)}
-                    className="absolute top-6 right-6 text-muted hover:text-ink transition-colors">
-                    <XCircle size={26} />
-                  </button>
-                  <span className={`inline-block mb-4 px-3 py-1 rounded-full text-sm font-semibold tracking-normal w-fit ${
-                    selected.availability_status === 'Available'
-                      ? 'bg-success-soft text-success'
-                      : selected.availability_status === 'Limited'
-                      ? 'bg-warning-soft text-warning'
-                      : 'bg-danger-soft text-danger'
-                  }`}>
-                    {selected.availability_status === 'Available' ? `${selected.copies_available} Available` :
-                     selected.availability_status === 'Limited' ? 'Limited Copies' :
-                     'Not available'}
-                  </span>
-                  <h2 className="pr-8 font-semibold tracking-normal mb-2 leading-none text-ink rpl-section-title">
-                    {selected.title}
-                  </h2>
-                  <p className="text-link font-bold text-sm tracking-normal mb-1">
-                    {selected.author}
-                  </p>
-                  <p className="text-muted text-sm font-medium mb-5">
-                    {selected.category} • {selected.year}
-                  </p>
-                  {selected.isbn && (
-                    <p className="text-muted text-sm font-sans mb-5">ISBN: {selected.isbn}</p>
-                  )}
-                  <div className="mb-4"><FavoriteButton {...favoriteProps(selected)} showLabel /></div>
-                  {detailLoading && <p role="status" className="mb-3 text-sm">Loading book details…</p>}
-                  {!isAvailable && (
-                    <p className="text-sm font-bold leading-relaxed text-warning bg-warning-soft border border-warning rounded-xl px-4 py-3 mb-5">
-                      Currently not available. Reserve now to join the queue. You'll be notified when it's your turn.
+                <div className="min-h-0 min-w-0 overflow-y-auto p-5 md:p-10 flex flex-col relative">
+                  <div className="my-auto w-full shrink-0">
+                    <span className={`inline-block mb-4 px-3 py-1 rounded-full text-sm font-semibold tracking-normal w-fit ${
+                      selected.availability_status === 'Available'
+                        ? 'bg-success-soft text-success'
+                        : selected.availability_status === 'Limited'
+                        ? 'bg-warning-soft text-warning'
+                        : 'bg-danger-soft text-danger'
+                    }`}>
+                      {selected.availability_status === 'Available' ? `${selected.copies_available} Available` :
+                       selected.availability_status === 'Limited' ? 'Limited Copies' :
+                       'Not available'}
+                    </span>
+                    <h2 className="pr-8 font-semibold tracking-normal mb-2 leading-none text-ink rpl-section-title">
+                      {selected.title}
+                    </h2>
+                    <p className="text-link font-bold text-sm tracking-normal mb-1">
+                      {selected.author}
                     </p>
-                  )}
-                  {isReserved ? (
-                    <button
-                      onClick={() => { handleCancelReservation(selected.id); setSelected(null); }}
-                      className="w-full py-4 bg-danger-soft hover:bg-danger-soft rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-3 text-danger"
-                    >
-                      <X size={16} />
-                      Cancel Reservation
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => { addToCart(selected); setSelected(null); }}
-                      disabled={isInCart || detailLoading}
-                      className={`w-full py-4 rounded-lg font-semibold text-sm tracking-normal transition-all  flex items-center justify-center gap-3 text-white ${
-                        isInCart ? 'bg-emerald-700 cursor-default' : 'bg-action hover:bg-action-hover disabled:opacity-40 disabled:cursor-not-allowed'
-                      }`}
-                    >
-                      <Bookmark size={16} />
-                      {detailLoading ? 'Loading…' : isInCart ? 'Already In Selection' : isAvailable ? 'Reserve This Book' : 'Join Reservation Queue'}
-                    </button>
-                  )}
+                    <p className="text-muted text-sm font-medium mb-5">
+                      {selected.category} • {selected.year}
+                    </p>
+                    {selected.isbn && (
+                      <p className="text-muted text-sm font-sans mb-5">ISBN: {selected.isbn}</p>
+                    )}
+                    {selected.description && <section className="mb-5"><h3 className="mb-2 font-semibold text-ink">About this book</h3><p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{selected.description}</p></section>}
+                    <div className="mb-4"><FavoriteButton {...favoriteProps(selected)} showLabel /></div>
+                    {detailLoading && <p role="status" className="mb-3 text-sm">Loading book details…</p>}
+                    {!isAvailable && (
+                      <p className="text-sm font-bold leading-relaxed text-warning bg-warning-soft border border-warning rounded-xl px-4 py-3 mb-5">
+                        Currently not available. Reserve now to join the queue. You'll be notified when it's your turn.
+                      </p>
+                    )}
+                    {isReserved ? (
+                      <button
+                        onClick={() => { handleCancelReservation(selected.id); setSelected(null); }}
+                        className="w-full py-4 bg-danger-soft hover:bg-danger-soft rounded-lg font-semibold text-sm tracking-normal transition-all flex items-center justify-center gap-3 text-danger"
+                      >
+                        <X size={16} />
+                        Cancel Reservation
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { addToCart(selected); setSelected(null); }}
+                        disabled={isInCart || detailLoading}
+                        className={`w-full py-4 rounded-lg font-semibold text-sm tracking-normal transition-all  flex items-center justify-center gap-3 text-white ${
+                          isInCart ? 'bg-emerald-700 cursor-default' : 'bg-action hover:bg-action-hover disabled:opacity-40 disabled:cursor-not-allowed'
+                        }`}
+                      >
+                        <Bookmark size={16} />
+                        {detailLoading ? 'Loading…' : isInCart ? 'Already In Selection' : isAvailable ? 'Reserve This Book' : 'Join Reservation Queue'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Slider bar */}
-              <div
-                className="px-8 py-3 border-t border-line flex items-center gap-4"
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <span className="text-sm font-semibold text-muted tracking-normal tabular-nums shrink-0 w-12">
-                  {currentIdx + 1} / {modalBooks.length}
-                </span>
-                <input
-                  type="range" aria-label="Browse book details"
-                  min={0}
-                  max={modalBooks.length - 1}
-                  value={currentIdx >= 0 ? currentIdx : 0}
-                  onChange={(e) => {
-                    const targetIdx = parseInt(e.target.value);
-                    if (targetIdx === currentIdx) return;
-                    setSlideDir(targetIdx > currentIdx ? 'right' : 'left');
-                    setAnimKey(k => k + 1);
-                    openBook(modalBooks[targetIdx]);
-                  }}
-                  className="min-w-0 w-full flex-1 accent-blue-600 cursor-pointer"
-                />
-              </div>
+
             </div>
 
-            {/* Right arrow */}
-            {currentIdx < modalBooks.length - 1 && (
-              <button
-                aria-label="Next book" onClick={(e) => { e.stopPropagation(); navigateBook(1); }}
-                className="absolute right-2 md:right-4 z-10 p-2 md:p-3 bg-panel hover:bg-panel rounded-full text-ink transition-all hidden sm:block"
-              >
-                <ChevronRight size={28} />
-              </button>
-            )}
+
           </ModalFrame>
         );
       })()}
@@ -434,105 +381,6 @@ export default function UserBrowseBooks() {
 }
 
 // ─── CARD COMPONENTS ──────────────────────────────────────────────────────────
-
-const SmallBookCard = ({ book, onSelect, onAdd, onCancel, isInCart, isReserved, badge, favorite }) => {
-  const available = (book.copies_available ?? 0) > 0;
-  return (
-    <div
-      className="flex-none w-40 min-w-0 group cursor-pointer transition-transform duration-200"
-    >
-      <div className={`relative aspect-[2/3] rounded-xl overflow-hidden border transition-all duration-300 shadow-md mb-3 ${
-        'border-line group-hover:border-line group-hover:shadow-sm '
-      }`}>
-        <BookCover src={book.cover_url} alt={book.title} className="w-full h-full object-cover transition-transform duration-500" iconSize={24} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-        <div className="absolute top-2 left-2">
-          <span className={`px-2 py-1 ${badge.color} rounded-lg text-sm font-semibold tracking-normal text-white`}>
-            {badge.label}
-          </span>
-        </div>
-        <button aria-label={`View details for ${book.title}`} onClick={onSelect} className="absolute inset-0 focus-visible:ring-4 focus-visible:ring-blue-500 focus-visible:ring-inset" />
-        <div className="absolute top-10 right-2">{favorite}</div>
-        {isReserved ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); onCancel(); }}
-            className="absolute bottom-2 left-2 right-2 py-2 rounded-lg text-sm font-semibold tracking-normal transition-all bg-danger-soft hover:bg-danger-soft text-danger"
-          >
-            Cancel
-          </button>
-        ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onAdd(); }}
-            disabled={isInCart}
-            className={`absolute bottom-2 left-2 right-2 py-2 rounded-lg text-sm font-semibold tracking-normal transition-all ${
-              isInCart
-                ? 'bg-success-soft text-success cursor-default'
-                : available
-                ? 'bg-info-soft hover:bg-info-soft text-link'
-                : 'bg-warning-soft hover:bg-warning-soft text-warning'
-            }`}
-          >
-            {isInCart ? 'In Selection' : available ? 'Reserve' : 'Join Queue'}
-          </button>
-        )}
-      </div>
-      <button onClick={onSelect} className="w-full min-w-0 text-left text-sm font-bold text-ink line-clamp-2 leading-tight break-words">{book.title}</button>
-      <p className="text-sm text-muted font-medium mt-0.5">{book.author}</p>
-      <p className="mt-1 text-sm leading-snug text-link break-words">{book.reason}</p>
-    </div>
-  );
-};
-
-const BigBookCard = ({ book, onSelect, onAdd, onCancel, isInCart, isReserved, favorite }) => {
-  const available = (book.copies_available ?? 0) > 0;
-  return (
-    <div className="min-w-0 group transition-transform duration-200 ">
-      <div className={`relative aspect-[2/3] rounded-xl overflow-hidden border transition-all duration-300 mb-3 ${
-        'border-line group-hover:border-line shadow-sm group-hover:shadow-sm '
-      }`}>
-        <BookCover src={book.cover_url} alt={book.title} className="w-full h-full object-cover transition-transform duration-500" iconSize={24} />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        {book.availability_status === 'Unavailable' && !isReserved && (
-          <div className="absolute top-2 left-2 px-2 py-1 bg-danger-soft rounded-lg">
-            <p className="text-sm font-semibold text-ink">Unavailable</p>
-          </div>
-        )}
-        {book.availability_status === 'Limited' && !isReserved && (
-          <div className="absolute top-2 left-2 px-2 py-1 bg-warning-soft rounded-lg">
-            <p className="text-sm font-semibold text-ink">Limited</p>
-          </div>
-        )}
-        <button aria-label={`View details for ${book.title}`} onClick={onSelect} className="absolute inset-0 focus-visible:ring-4 focus-visible:ring-blue-500 focus-visible:ring-inset" />
-        <div className="absolute top-10 right-2">{favorite}</div>
-        {isReserved ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); onCancel(); }}
-            className="absolute bottom-0 left-0 right-0 p-3 font-semibold text-sm tracking-normal transition-all bg-rose-600 text-white"
-          >
-            Cancel Reservation
-          </button>
-        ) : (
-          <button
-            onClick={(e) => { e.stopPropagation(); onAdd(); }}
-            disabled={isInCart}
-            className={`absolute bottom-0 left-0 right-0 p-3 font-semibold text-sm tracking-normal transition-all ${
-              isInCart
-                ? 'bg-success-soft text-success cursor-default'
-                : available
-                ? 'bg-action hover:bg-action-hover text-white'
-                : 'bg-warning-soft hover:bg-warning-soft text-warning'
-            }`}
-          >
-            {isInCart ? 'In Selection' : available ? 'Reserve' : 'Join Queue'}
-          </button>
-        )}
-      </div>
-      <button onClick={onSelect} className="w-full min-w-0 text-left text-sm font-bold text-ink line-clamp-2 leading-tight break-words">{book.title}</button>
-      <p className="text-sm text-muted font-medium mt-0.5 truncate">{book.author}</p>
-      <p className="text-sm text-muted font-semibold tracking-normal mt-0.5">{book.category}</p>
-    </div>
-  );
-};
 
 const recommendationBadge = (source) => ({
   collaborative: { label: 'For you', color: 'bg-violet-600' },

@@ -140,7 +140,7 @@ const UserLayout = () => {
   const close = () => setSidebarOpen(false);
 
   return (
-    <div className="rpl-page min-h-screen flex flex-col bg-subtle font-sans transition-colors duration-300">
+    <div className="rpl-member rpl-page min-h-screen flex flex-col bg-subtle font-sans transition-colors duration-300">
       {logoutError && <p role="alert" className="p-3 bg-panel text-danger">{logoutError}</p>}
       {headerError && <p role="alert" className="p-3 bg-panel text-danger">{headerError} <button className="underline" onClick={() => setHeaderVersion(value => value + 1)}>Retry loading</button></p>}
 

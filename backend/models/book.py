@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, true
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, true
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -20,6 +20,7 @@ class Book(Base):
     copies_available  = Column(Integer, nullable=False, default=1)
     location_shelf    = Column(String(80), nullable=True)
     cover_url         = Column(String(500), nullable=True)
+    description       = Column(Text, nullable=True)
 
     # Unique QR string e.g. "RPL-00001"
     qr_code           = Column(String(30), unique=True, nullable=True, index=True)

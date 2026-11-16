@@ -55,13 +55,13 @@ def test_librarian_registration_uses_random_temp_password_and_requires_change(cl
     first = client.post(
         "/api/librarian/users/register",
         headers={"Authorization": f"Bearer {token}"},
-        data={"name": "First Member", "email": "first@example.test", "location": "Rizal"},
+        data={"name": "First Member", "email": "first@example.com", "location": "Rizal"},
         files={"id_image": ("id.png", BytesIO(PNG_BYTES), "image/png")},
     )
     second = client.post(
         "/api/librarian/users/register",
         headers={"Authorization": f"Bearer {token}"},
-        data={"name": "Second Member", "email": "second@example.test", "location": "Rizal"},
+        data={"name": "Second Member", "email": "second@example.com", "location": "Rizal"},
         files={"id_image": ("id.png", BytesIO(PNG_BYTES), "image/png")},
     )
 
@@ -70,7 +70,7 @@ def test_librarian_registration_uses_random_temp_password_and_requires_change(cl
     assert first.json()["temporary_password"] != second.json()["temporary_password"]
     assert "default_password" not in first.json()
 
-    login_response = login(client, "first@example.test", first.json()["temporary_password"])
+    login_response = login(client, "first@example.com", first.json()["temporary_password"])
     assert login_response.json()["must_change_password"] is True
 
 
@@ -81,7 +81,7 @@ def test_librarian_registration_rejects_extension_spoofed_upload(client, db_sess
     response = client.post(
         "/api/librarian/users/register",
         headers={"Authorization": f"Bearer {token}"},
-        data={"name": "Bad Upload", "email": "bad@example.test", "location": "Rizal"},
+        data={"name": "Bad Upload", "email": "bad@example.com", "location": "Rizal"},
         files={"id_image": ("id.jpg", BytesIO(FAKE_JPG_BYTES), "image/jpeg")},
     )
 
