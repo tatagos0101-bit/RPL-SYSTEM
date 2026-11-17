@@ -285,12 +285,25 @@ service leaves old descriptions NULL and preserves existing values on repeat
 execution. Do not regenerate or reapply the initial schema SQL. Keep production
 `AUTO_MIGRATE=false`; no new environment variables or dependencies are required.
 
-Only the isolated local SQLite development database received the necessary
-additive column during this session, with repeat execution checked. Migration
-fixtures covered old SQLite rows and PostgreSQL DDL compilation; live PostgreSQL
-upgrade, concurrency and production deployment were not verified or performed.
-The complete migration entry point also contains earlier data backfills, so review
-its effects and rehearse the authorized target before a production upgrade.
+The initial November 16 verification added the column only to isolated local
+SQLite, with repeat execution checked. Migration fixtures covered old SQLite rows
+and PostgreSQL DDL compilation. The complete migration entry point also contains
+earlier data backfills, so review its effects and rehearse the authorized target
+before using that entry point for a production upgrade.
+
+On November 17, `main` commit `f8dfe68` was published to both Vercel projects.
+The live catalog returned HTTP 500 because the production column was missing.
+After explicit approval, the hosted `add_optional_book_description` migration on
+`supabase-rizal-library` added only nullable `public.books.description TEXT`, with
+no default, record updates, or unrelated backfills. Metadata checks confirmed the
+column type/nullability and unchanged table RLS, policy count, runtime privileges,
+and revoked browser-role privileges. The general `migrate.py` entry point was not
+run against production.
+
+After the fix, API health returned HTTP 200. Empty-result catalog searches returned
+HTTP 200 through both the direct API and the website proxy. Those checks did not retrieve
+patron records or verify authenticated workflows, PostgreSQL concurrency, or other
+pending schema upgrades.
 
 ### Personalized recommendation upgrade
 
