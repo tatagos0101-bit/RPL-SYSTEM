@@ -89,6 +89,53 @@ def test_receipts_and_exact_loan_returns(client, db_session):
     assert db_session.get(Book, book.id).copies_available == 1
 
 
+def test_member_return_list_is_librarian_only_and_keeps_exact_loans(client, db_session):
+    users, book, copies, headers = setup(db_session)
+    borrowed = []
+    for index in range(2):
+        response = post(client, 'borrow', headers[0], dict(user_id=users[index + 2].id,
+                        book_id=book.id, copy_id=copies[index].id))
+        assert response.status_code == 201
+        borrowed.append(response.json())
+    first_loan = db_session.get(Transaction, borrowed[0]['id'])
+    first_loan.due_date = now_ph() - timedelta(days=2)
+    legacy_book = Book(title='Synthetic legacy title', author='Synthetic', category='General',
+                       qr_code='RPL-00100', copies_total=1, copies_available=1)
+    db_session.add(legacy_book)
+    db_session.flush()
+    legacy_loan = Transaction(user_id=users[3].id, book_id=legacy_book.id, copy_id=None,
+                              borrow_date=now_ph() - timedelta(days=1), due_date=now_ph() + timedelta(days=5),
+                              status='active', type='borrow')
+    db_session.add(legacy_loan)
+    db_session.commit()
+    snapshot = [(tx.id, tx.status, tx.copy_id, tx.borrow_date) for tx in db_session.query(Transaction).order_by(Transaction.id)]
+    copy_snapshot = [(copy.id, copy.status) for copy in db_session.query(BookCopy).order_by(BookCopy.id)]
+    path = f'/api/librarian/member/{users[2].id}/active-loans'
+    assert client.get(path).status_code == 401
+    assert client.get(path, headers=headers[2]).status_code == 403
+    assert client.get(path, headers=headers[3]).status_code == 403
+    listed = client.get(path, headers=headers[0]).json()
+    assert len(listed) == 1
+    assert listed[0]['transaction_id'] == borrowed[0]['id']
+    assert listed[0]['copy_id'] == copies[0].id
+    assert listed[0]['book_id'] == book.id
+    assert listed[0]['status'] == 'overdue'
+    assert float(listed[0]['fine_amount']) > 0
+    assert not {'email', 'phone', 'password_hash', 'face_encoding'}.intersection(listed[0])
+    db_session.expire_all()
+    assert [(tx.id, tx.status, tx.copy_id, tx.borrow_date) for tx in db_session.query(Transaction).order_by(Transaction.id)] == snapshot
+    assert [(copy.id, copy.status) for copy in db_session.query(BookCopy).order_by(BookCopy.id)] == copy_snapshot
+    assert db_session.get(Book, legacy_book.id).copies_available == 1
+    returned = post(client, 'return', headers[0], dict(user_id=users[2].id, book_id=book.id,
+                    copy_id=listed[0]['copy_id'], transaction_id=listed[0]['transaction_id']))
+    assert returned.status_code == 200
+    assert client.get(path, headers=headers[0]).json() == []
+    assert db_session.get(Transaction, borrowed[1]['id']).status == 'active'
+    users[0].status = 'suspended'
+    db_session.commit()
+    assert client.get(path, headers=headers[0]).status_code == 401
+
+
 def test_mixed_borrowers_legacy_choices_fines_and_changed_availability(client, db_session):
     users, book, copies, headers = setup(db_session)
     loans = []

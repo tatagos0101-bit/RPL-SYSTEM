@@ -11,7 +11,7 @@ Covers:
 """
 from datetime import datetime, timedelta
 
-from timezone_utils import PH_TZ, now_ph
+from timezone_utils import PH_TZ, as_ph, now_ph
 from decimal import Decimal
 
 import uuid
@@ -48,7 +48,6 @@ from models.user import User
 from services.auth_sessions import revoke_user_sessions
 from services.loan_policy import sync_overdue_loans
 from services.manual_visitor_service import serialize_entry_log
-from services.book_copy_service import ensure_book_copies
 from services.reservation_policy import (
     promote_next_pending_reservation,
     renumber_pending_queue,
@@ -774,9 +773,8 @@ def member_active_loans(
     db:      Session = Depends(get_db),
     _:       User    = Depends(require_librarian),
 ):
-    """Return a member's currently active/overdue borrow transactions for the return flow."""
-    sync_overdue_loans(db, user_id=user_id)
-    ensure_book_copies(db)
+    """Read active loans without changing statuses, copies, or legacy assignments."""
+    now = _now()
     loans = (
         db.query(Transaction)
         .filter(
@@ -801,7 +799,7 @@ def member_active_loans(
             due_date       = tx.due_date,
             days_left      = _days_left(tx.due_date) if tx.due_date else 0,
             fine_amount    = _calc_fine(tx.due_date) if tx.due_date else Decimal(0),
-            status         = tx.status,
+            status         = "overdue" if tx.due_date and as_ph(tx.due_date) <= now else tx.status,
         )
         for tx in loans
     ]

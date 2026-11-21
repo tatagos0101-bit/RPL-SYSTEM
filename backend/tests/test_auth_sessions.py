@@ -81,7 +81,10 @@ def test_temporary_password_session_cannot_skip_server_restriction(client, db_se
     assert client.put("/api/user/change-password", headers=bearer(token), json={
         "current_password": "Password1", "new_password": "ChangedPassword2",
     }).status_code == 200
-    assert client.get("/api/user/notifications").status_code == 200
+    notification_path = "/api/librarian/notifications" if role == "librarian" else "/api/user/notifications"
+    assert client.get(notification_path).status_code == 200
+    if role == "librarian":
+        assert client.get("/api/user/notifications").status_code == 403
 
 
 def test_password_hash_binding_rejects_session_created_from_old_snapshot(client, db_session):
