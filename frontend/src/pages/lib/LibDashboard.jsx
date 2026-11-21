@@ -17,7 +17,6 @@ const cards = [
   ['borrows', 'Books borrowed', 'circulation', { date_basis: 'borrowed' }, false],
   ['returns', 'Books returned', 'circulation', { date_basis: 'returned' }, false],
   ['physical_copies', 'Physical copies held', 'collection', { date_scope: 'all', holdings: 'current' }, true],
-  ['acquired_copies', 'Verified acquisitions', 'acquisitions', { date_scope: 'period' }, false],
 ];
 const metricIcons = {
   titles: <BookOpen size={18} />,
@@ -73,12 +72,6 @@ export default function LibDashboard() {
         <div className="staff-chart-grid">{renderChart('collection', 'category-titles')}{renderChart('collection', 'least')}</div>
       </section>
       <details className="staff-panel staff-trends"><summary>Previous-period visits and circulation trends</summary><div className="staff-chart-grid"><ReportChart chart={{ title: 'Previous-period visits', type: 'line', points: data.previous_visits }} variant="staff" />{renderChart('circulation', 'borrows')}{renderChart('circulation', 'returns')}</div></details>
-      <section className="staff-section">
-        <div className="staff-section-heading"><h2 className="staff-section-title">Acquisitions</h2><Link to={reportHref(data.filters, 'acquisitions')}>Review and record acquisitions</Link></div>
-        <p>{data.metrics.new_catalog_titles} newly cataloged titles; {data.metrics.acquired_copies} copies with a verified acquisition date in this period. Catalog creation is not acquisition.</p>
-        <p className="staff-coverage">Coverage: {data.sections.acquisitions.summary.coverage_unknown_date} of {data.sections.acquisitions.summary.coverage_copies} copies have no acquisition date; {data.sections.acquisitions.summary.coverage_unknown_source} have unknown sources.</p>
-        <div className="staff-chart-grid">{renderChart('acquisitions', 'source')}{renderChart('acquisitions', 'acquired')}</div>
-      </section>
       <section className="staff-panel"><h2>Needs attention</h2><ul className="staff-attention-list">{data.alerts.map(alert => <li key={alert.label}><Link to={alert.href}><span>{alert.label}</span><strong>{alert.count}</strong></Link></li>)}</ul></section>
     </div>}
   </div>;

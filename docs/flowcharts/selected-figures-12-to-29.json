@@ -1,0 +1,3212 @@
+[
+  {
+    "section": "2.3.11",
+    "figure": 12,
+    "title": "Password Recovery and Librarian-Assisted Password Reset Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open Forgot Password",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "i",
+        "label": "Enter email or Member ID",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "d",
+        "label": "Verified email and delivery available?",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "send",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Send six-digit reset code",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "input",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "i",
+        "label": "Enter code and new password",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "v",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "d",
+        "label": "Code and password valid?",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "save",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Save password and revoke old sessions",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "login",
+        "col": 1.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "Return to sign-in",
+        "x": 650.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "help",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Visit librarian for identity check",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "reset",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Librarian resets temporary password",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "change",
+        "col": 0.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Sign in and replace temporary password",
+        "x": 230.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "err",
+        "col": 2.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Show error and retry within limits",
+        "x": 1070.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "send",
+        "label": "Yes"
+      },
+      {
+        "a": "q",
+        "b": "help",
+        "label": "No"
+      },
+      {
+        "a": "send",
+        "b": "input",
+        "label": ""
+      },
+      {
+        "a": "input",
+        "b": "v",
+        "label": ""
+      },
+      {
+        "a": "v",
+        "b": "save",
+        "label": "Yes"
+      },
+      {
+        "a": "v",
+        "b": "err",
+        "label": "No"
+      },
+      {
+        "a": "save",
+        "b": "login",
+        "label": ""
+      },
+      {
+        "a": "help",
+        "b": "reset",
+        "label": ""
+      },
+      {
+        "a": "reset",
+        "b": "change",
+        "label": ""
+      },
+      {
+        "a": "login",
+        "b": "end-login",
+        "label": ""
+      },
+      {
+        "a": "change",
+        "b": "end-change",
+        "label": ""
+      },
+      {
+        "a": "err",
+        "b": "end-err",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "login",
+      "change",
+      "err"
+    ],
+    "note": "Recovery uses a previously verified email. Registration SMS does not enable SMS password recovery."
+  },
+  {
+    "section": "2.3.12",
+    "figure": 13,
+    "title": "Profile Password Change Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open Profile",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "p",
+        "label": "Select Change Password",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "c",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Enter current password and repeat new password",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "d",
+        "label": "Password values valid?",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "save",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Save new password",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "revoke",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Revoke old sessions and replace current session",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "show",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Display success",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "err",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Show error and correct values",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "c",
+        "label": ""
+      },
+      {
+        "a": "c",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "save",
+        "label": "Yes"
+      },
+      {
+        "a": "q",
+        "b": "err",
+        "label": "No"
+      },
+      {
+        "a": "save",
+        "b": "revoke",
+        "label": ""
+      },
+      {
+        "a": "revoke",
+        "b": "show",
+        "label": ""
+      },
+      {
+        "a": "show",
+        "b": "end-show",
+        "label": ""
+      },
+      {
+        "a": "err",
+        "b": "end-err",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "show",
+      "err"
+    ],
+    "note": "New passwords require 8-128 characters and at least one digit. The current password must be correct."
+  },
+  {
+    "section": "2.3.13",
+    "figure": 14,
+    "title": "Member Profile and Profile Photo Management Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open Profile",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "name",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "p",
+        "label": "Display verified name as read-only",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "d",
+        "label": "Choose profile action",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "edit",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Edit phone or location",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "save",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Validate and save permitted details",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "photo",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Choose Add or Change photo",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "file",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "i",
+        "label": "Select valid image",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "upload",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Save private profile photo",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "remove",
+        "col": 2.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Choose Remove photo",
+        "x": 1070.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "confirm",
+        "col": 2.0,
+        "row": 5.0,
+        "kind": "i",
+        "label": "Confirm removal",
+        "x": 1070.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "delete",
+        "col": 2.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Remove owned photo and clear avatar",
+        "x": 1070.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "done1",
+        "col": 0.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Refresh confirmed profile details",
+        "x": 230.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "done2",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Refresh profile photo",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "done3",
+        "col": 2.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Show default profile avatar",
+        "x": 1070.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "name",
+        "label": ""
+      },
+      {
+        "a": "name",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "edit",
+        "label": "Contact details"
+      },
+      {
+        "a": "q",
+        "b": "photo",
+        "label": "Add / change photo"
+      },
+      {
+        "a": "q",
+        "b": "remove",
+        "label": "Remove photo"
+      },
+      {
+        "a": "edit",
+        "b": "save",
+        "label": ""
+      },
+      {
+        "a": "save",
+        "b": "done1",
+        "label": ""
+      },
+      {
+        "a": "photo",
+        "b": "file",
+        "label": ""
+      },
+      {
+        "a": "file",
+        "b": "upload",
+        "label": ""
+      },
+      {
+        "a": "upload",
+        "b": "done2",
+        "label": ""
+      },
+      {
+        "a": "remove",
+        "b": "confirm",
+        "label": ""
+      },
+      {
+        "a": "confirm",
+        "b": "delete",
+        "label": ""
+      },
+      {
+        "a": "delete",
+        "b": "done3",
+        "label": ""
+      },
+      {
+        "a": "done1",
+        "b": "end-done1",
+        "label": ""
+      },
+      {
+        "a": "done2",
+        "b": "end-done2",
+        "label": ""
+      },
+      {
+        "a": "done3",
+        "b": "end-done3",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "done1",
+      "done2",
+      "done3"
+    ],
+    "note": "Members cannot edit their name. Failed validation or storage operations show an error and retain the last confirmed state. Profile photos are separate from Face ID."
+  },
+  {
+    "section": "2.3.14",
+    "figure": 15,
+    "title": "Email Change and Verification Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open email controls",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "i",
+        "label": "Enter new email if changing and confirm current password",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "d",
+        "label": "Password and email valid?",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "save",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Save any email change as unverified",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "request",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Request verification code",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "input",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "i",
+        "label": "Enter received six-digit code",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "check",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "d",
+        "label": "Verification code valid?",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "verified",
+        "col": 1.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "Mark saved email verified",
+        "x": 650.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "err1",
+        "col": 0.0,
+        "row": 3.0,
+        "kind": "p",
+        "label": "Show error and correct input",
+        "x": 230.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "err2",
+        "col": 2.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Show error or request another code within limits",
+        "x": 1070.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "save",
+        "label": "Yes"
+      },
+      {
+        "a": "q",
+        "b": "err1",
+        "label": "No"
+      },
+      {
+        "a": "save",
+        "b": "request",
+        "label": ""
+      },
+      {
+        "a": "request",
+        "b": "input",
+        "label": ""
+      },
+      {
+        "a": "input",
+        "b": "check",
+        "label": ""
+      },
+      {
+        "a": "check",
+        "b": "verified",
+        "label": "Yes"
+      },
+      {
+        "a": "check",
+        "b": "err2",
+        "label": "No"
+      },
+      {
+        "a": "verified",
+        "b": "end-verified",
+        "label": ""
+      },
+      {
+        "a": "err1",
+        "b": "end-err1",
+        "label": ""
+      },
+      {
+        "a": "err2",
+        "b": "end-err2",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "verified",
+      "err1",
+      "err2"
+    ],
+    "note": "The code must match the current saved email and verification purpose. An entered email is not automatically verified."
+  },
+  {
+    "section": "2.3.15",
+    "figure": 16,
+    "title": "Reservation Queue, Cancellation, and Expiry Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open My Reservations",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "d",
+        "label": "Cancel a reservation?",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "cancel",
+        "col": 0.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Select Cancel and confirm",
+        "x": 230.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "release",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Cancel permitted reservation and release capacity",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "promote1",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Promote next eligible queued member",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "ready",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "d",
+        "label": "Reservation ready?",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "expired",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "d",
+        "label": "Pickup deadline passed?",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "pickup",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Pick up at counter before deadline",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "loan",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Librarian records loan and fulfills reservation",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "expire",
+        "col": 2.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Cancel expired ready hold",
+        "x": 1070.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "promote2",
+        "col": 2.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Release capacity and promote next queued member",
+        "x": 1070.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "queue",
+        "col": 2.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Pending request remains in queue",
+        "x": 1070.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "available",
+        "col": 2.0,
+        "row": 8.0,
+        "kind": "d",
+        "label": "Capacity available?",
+        "x": 1070.0,
+        "y": 1115.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "waiting",
+        "col": 1.0,
+        "row": 9.0,
+        "kind": "p",
+        "label": "Keep request queued",
+        "x": 650.0,
+        "y": 1235.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "promote3",
+        "col": 2.0,
+        "row": 9.0,
+        "kind": "p",
+        "label": "Mark next eligible request ready and set 24-hour deadline",
+        "x": 1070.0,
+        "y": 1235.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "cancel",
+        "label": "Yes"
+      },
+      {
+        "a": "cancel",
+        "b": "release",
+        "label": ""
+      },
+      {
+        "a": "release",
+        "b": "promote1",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "ready",
+        "label": "No"
+      },
+      {
+        "a": "ready",
+        "b": "expired",
+        "label": "Yes"
+      },
+      {
+        "a": "ready",
+        "b": "queue",
+        "label": "No"
+      },
+      {
+        "a": "expired",
+        "b": "pickup",
+        "label": "No"
+      },
+      {
+        "a": "expired",
+        "b": "expire",
+        "label": "Yes"
+      },
+      {
+        "a": "expire",
+        "b": "promote2",
+        "label": ""
+      },
+      {
+        "a": "pickup",
+        "b": "loan",
+        "label": ""
+      },
+      {
+        "a": "queue",
+        "b": "available",
+        "label": ""
+      },
+      {
+        "a": "available",
+        "b": "waiting",
+        "label": "No"
+      },
+      {
+        "a": "available",
+        "b": "promote3",
+        "label": "Yes"
+      },
+      {
+        "a": "promote1",
+        "b": "end-promote1",
+        "label": ""
+      },
+      {
+        "a": "loan",
+        "b": "end-loan",
+        "label": ""
+      },
+      {
+        "a": "promote2",
+        "b": "end-promote2",
+        "label": ""
+      },
+      {
+        "a": "waiting",
+        "b": "end-waiting",
+        "label": ""
+      },
+      {
+        "a": "promote3",
+        "b": "end-promote3",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "promote1",
+      "loan",
+      "promote2",
+      "waiting",
+      "promote3"
+    ],
+    "note": "Queued reservations do not hold a physical copy. Expiry and promotion are synchronized by relevant requests and inventory operations; refreshing does not extend a deadline."
+  },
+  {
+    "section": "2.3.16",
+    "figure": 17,
+    "title": "Inventory Editing, Stock Adjustment, and Book Deletion Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open librarian Inventory",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "i",
+        "label": "Search and select a book",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "d",
+        "label": "Delete title?",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "edit",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Edit metadata, description, cover or copy total",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "valid",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "d",
+        "label": "Changes allowed?",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "save",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Save metadata and adjust permitted physical stock",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "history",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Keep existing copy codes and loan history",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "refresh",
+        "col": 1.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "Refresh inventory",
+        "x": 650.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "delete",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Confirm title deletion",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "check",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Check loan and reservation history",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "outcome",
+        "col": 0.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Delete only if permitted or show history restriction",
+        "x": 230.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "error",
+        "col": 2.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Show validation or stock restriction",
+        "x": 1070.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "edit",
+        "label": "No"
+      },
+      {
+        "a": "q",
+        "b": "delete",
+        "label": "Yes"
+      },
+      {
+        "a": "edit",
+        "b": "valid",
+        "label": ""
+      },
+      {
+        "a": "valid",
+        "b": "save",
+        "label": "Yes"
+      },
+      {
+        "a": "valid",
+        "b": "error",
+        "label": "No"
+      },
+      {
+        "a": "save",
+        "b": "history",
+        "label": ""
+      },
+      {
+        "a": "history",
+        "b": "refresh",
+        "label": ""
+      },
+      {
+        "a": "delete",
+        "b": "check",
+        "label": ""
+      },
+      {
+        "a": "check",
+        "b": "outcome",
+        "label": ""
+      },
+      {
+        "a": "refresh",
+        "b": "end-refresh",
+        "label": ""
+      },
+      {
+        "a": "outcome",
+        "b": "end-outcome",
+        "label": ""
+      },
+      {
+        "a": "error",
+        "b": "end-error",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "refresh",
+      "outcome",
+      "error"
+    ],
+    "note": "Stock reduction retires eligible copies. Borrowed copies, ready-reservation capacity and historical identities remain protected."
+  },
+  {
+    "section": "2.3.17",
+    "figure": 18,
+    "title": "Bulk ISBN Lookup and Workbook Import Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open Add Book import tools",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "d",
+        "label": "Choose import method",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "isbn",
+        "col": 0.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Paste or extract multiple ISBNs",
+        "x": 230.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "lookup",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Look up books and preview results",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "review",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "i",
+        "label": "Review and select entries to add",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "add",
+        "col": 0.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Submit selected valid books",
+        "x": 230.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "result1",
+        "col": 0.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Show individual added, skipped or failed results",
+        "x": 230.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "file",
+        "col": 2.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Choose complete-record XLSX file",
+        "x": 1070.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "validate",
+        "col": 2.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Validate file and workbook headers",
+        "x": 1070.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "parse",
+        "col": 2.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Parse rows and validate values",
+        "x": 1070.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "import",
+        "col": 2.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Import valid rows and skip duplicate ISBNs",
+        "x": 1070.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "result2",
+        "col": 2.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Create copies and QR codes and show import summary",
+        "x": 1070.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "isbn",
+        "label": "ISBN lookup"
+      },
+      {
+        "a": "q",
+        "b": "file",
+        "label": "Full workbook"
+      },
+      {
+        "a": "isbn",
+        "b": "lookup",
+        "label": ""
+      },
+      {
+        "a": "lookup",
+        "b": "review",
+        "label": ""
+      },
+      {
+        "a": "review",
+        "b": "add",
+        "label": ""
+      },
+      {
+        "a": "add",
+        "b": "result1",
+        "label": ""
+      },
+      {
+        "a": "file",
+        "b": "validate",
+        "label": ""
+      },
+      {
+        "a": "validate",
+        "b": "parse",
+        "label": ""
+      },
+      {
+        "a": "parse",
+        "b": "import",
+        "label": ""
+      },
+      {
+        "a": "import",
+        "b": "result2",
+        "label": ""
+      },
+      {
+        "a": "result1",
+        "b": "end-result1",
+        "label": ""
+      },
+      {
+        "a": "result2",
+        "b": "end-result2",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "result1",
+      "result2"
+    ],
+    "note": "Invalid files stop with an error. Workbook results can contain partial row errors. Resolve uncertain saves using the original request before retrying."
+  },
+  {
+    "section": "2.3.18",
+    "figure": 19,
+    "title": "Member Suspension, Reactivation, and Account Deletion Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open Members",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "i",
+        "label": "Search and select member",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "d",
+        "label": "Choose account action",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "status",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Choose Suspend or Reactivate",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "save",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Save Active or Suspended status",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "revoke",
+        "col": 0.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Revoke sessions when suspending",
+        "x": 230.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "refresh",
+        "col": 0.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Refresh member status",
+        "x": 230.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "delete",
+        "col": 2.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Choose Delete Account and confirm librarian password",
+        "x": 1070.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "validate",
+        "col": 2.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Check outstanding loans and private-file ownership",
+        "x": 1070.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "allowed",
+        "col": 2.0,
+        "row": 6.0,
+        "kind": "d",
+        "label": "Deletion allowed?",
+        "x": 1070.0,
+        "y": 875.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "blocked",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Show restriction and resolve the issue",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "remove",
+        "col": 2.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Remove permitted private data and disable account",
+        "x": 1070.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "history",
+        "col": 2.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "Retain protected lending history",
+        "x": 1070.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "status",
+        "label": "Status"
+      },
+      {
+        "a": "q",
+        "b": "delete",
+        "label": "Delete"
+      },
+      {
+        "a": "status",
+        "b": "save",
+        "label": ""
+      },
+      {
+        "a": "save",
+        "b": "revoke",
+        "label": ""
+      },
+      {
+        "a": "revoke",
+        "b": "refresh",
+        "label": ""
+      },
+      {
+        "a": "delete",
+        "b": "validate",
+        "label": ""
+      },
+      {
+        "a": "validate",
+        "b": "allowed",
+        "label": ""
+      },
+      {
+        "a": "allowed",
+        "b": "blocked",
+        "label": "No"
+      },
+      {
+        "a": "allowed",
+        "b": "remove",
+        "label": "Yes"
+      },
+      {
+        "a": "remove",
+        "b": "history",
+        "label": ""
+      },
+      {
+        "a": "refresh",
+        "b": "end-refresh",
+        "label": ""
+      },
+      {
+        "a": "blocked",
+        "b": "end-blocked",
+        "label": ""
+      },
+      {
+        "a": "history",
+        "b": "end-history",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "refresh",
+      "blocked",
+      "history"
+    ],
+    "note": "Account deletion is blocked while books remain outstanding. Deletion follows the existing soft-deletion and private-upload ownership rules."
+  },
+  {
+    "section": "2.3.19",
+    "figure": 20,
+    "title": "Face Enrollment, Replacement, and Deletion Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Librarian selects verified member",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "d",
+        "label": "Choose Face ID action",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "capture",
+        "col": 0.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Capture and preview a live face",
+        "x": 230.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "submit",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Submit enrollment or replacement",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "valid",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "d",
+        "label": "Live and unique face?",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "save",
+        "col": 0.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Save protected face template",
+        "x": 230.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "stop",
+        "col": 0.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Refresh status and stop camera",
+        "x": 230.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "error",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Show failure and keep existing enrollment",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "delete",
+        "col": 2.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Choose Delete Face Data and enter librarian password",
+        "x": 1070.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "check",
+        "col": 2.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Verify password and member ownership",
+        "x": 1070.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "remove",
+        "col": 2.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Delete permitted face templates and snapshots",
+        "x": 1070.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "session",
+        "col": 2.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Revoke member sessions and refresh status",
+        "x": 1070.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "capture",
+        "label": "Enroll / replace"
+      },
+      {
+        "a": "capture",
+        "b": "submit",
+        "label": ""
+      },
+      {
+        "a": "submit",
+        "b": "valid",
+        "label": ""
+      },
+      {
+        "a": "valid",
+        "b": "save",
+        "label": "Yes"
+      },
+      {
+        "a": "valid",
+        "b": "error",
+        "label": "No"
+      },
+      {
+        "a": "save",
+        "b": "stop",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "delete",
+        "label": "Delete"
+      },
+      {
+        "a": "delete",
+        "b": "check",
+        "label": ""
+      },
+      {
+        "a": "check",
+        "b": "remove",
+        "label": ""
+      },
+      {
+        "a": "remove",
+        "b": "session",
+        "label": ""
+      },
+      {
+        "a": "stop",
+        "b": "end-stop",
+        "label": ""
+      },
+      {
+        "a": "error",
+        "b": "end-error",
+        "label": ""
+      },
+      {
+        "a": "session",
+        "b": "end-session",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "stop",
+      "error",
+      "session"
+    ],
+    "note": "Invalid librarian credentials prevent deletion. Face data is separate from a profile photo; face deletion does not remove loan history."
+  },
+  {
+    "section": "2.3.20",
+    "figure": 21,
+    "title": "Personalized Book Recommendations and Favorites Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open member Browse Books",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "d",
+        "label": "Borrowing history exists?",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "recs",
+        "col": 0.0,
+        "row": 3.0,
+        "kind": "p",
+        "label": "Display recommendations using available activity",
+        "x": 230.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "fallback",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Use content or popularity fallback when needed",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "trend",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Display Trending, What is new and Books we love",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "choose",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "i",
+        "label": "Choose title, category or sort",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "heart",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "d",
+        "label": "Change a favorite?",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "toggle",
+        "col": 1.0,
+        "row": 8.0,
+        "kind": "i",
+        "label": "Select heart to add or remove",
+        "x": 650.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "save",
+        "col": 1.0,
+        "row": 9.0,
+        "kind": "p",
+        "label": "Save own favorite and refresh confirmed state",
+        "x": 650.0,
+        "y": 1235.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "view",
+        "col": 2.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "View book details or continue browsing",
+        "x": 1070.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "recs",
+        "label": "Yes"
+      },
+      {
+        "a": "recs",
+        "b": "fallback",
+        "label": ""
+      },
+      {
+        "a": "fallback",
+        "b": "trend",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "trend",
+        "label": "No"
+      },
+      {
+        "a": "trend",
+        "b": "choose",
+        "label": ""
+      },
+      {
+        "a": "choose",
+        "b": "heart",
+        "label": ""
+      },
+      {
+        "a": "heart",
+        "b": "toggle",
+        "label": "Yes"
+      },
+      {
+        "a": "toggle",
+        "b": "save",
+        "label": ""
+      },
+      {
+        "a": "heart",
+        "b": "view",
+        "label": "No"
+      },
+      {
+        "a": "save",
+        "b": "end-save",
+        "label": ""
+      },
+      {
+        "a": "view",
+        "b": "end-view",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "save",
+      "view"
+    ],
+    "note": "Books we love and Most loved use favorites, not star ratings. New members start with Trending; recommendations use on-demand activity and fallback signals."
+  },
+  {
+    "section": "2.3.22",
+    "figure": 23,
+    "title": "Loan Issue Reporting and Notifications Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Member opens Dashboard",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "i",
+        "label": "Select Report Issue on an outstanding loan",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "c",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Choose reason and enter optional note",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "d",
+        "label": "Own outstanding loan?",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "notice",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Create librarian in-app notification",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "staff",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Librarian opens and reviews the issue",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "resolve",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Use supervised library resolution process",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "read",
+        "col": 1.0,
+        "row": 8.0,
+        "kind": "i",
+        "label": "Mark notification read",
+        "x": 650.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "error",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Show error without creating a report",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "c",
+        "label": ""
+      },
+      {
+        "a": "c",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "notice",
+        "label": "Yes"
+      },
+      {
+        "a": "q",
+        "b": "error",
+        "label": "No"
+      },
+      {
+        "a": "notice",
+        "b": "staff",
+        "label": ""
+      },
+      {
+        "a": "staff",
+        "b": "resolve",
+        "label": ""
+      },
+      {
+        "a": "resolve",
+        "b": "read",
+        "label": ""
+      },
+      {
+        "a": "read",
+        "b": "end-read",
+        "label": ""
+      },
+      {
+        "a": "error",
+        "b": "end-error",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "read",
+      "error"
+    ],
+    "note": "An issue report does not return a book, collect payment or create condition photos. In-app notifications do not imply email or SMS delivery."
+  },
+  {
+    "section": "2.3.23",
+    "figure": 24,
+    "title": "Bulk Physical-Copy QR Label Printing and Export Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Open Print QR",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "i",
+        "label": "Search matching physical copies",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "d",
+        "label": "Choose export scope",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "selected",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Select copies or Select Visible",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "limit",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Validate selection of 1-1,000 copies",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "pdf",
+        "col": 0.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Generate selected-copy PDF",
+        "x": 230.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "print1",
+        "col": 0.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Print and match labels to copies",
+        "x": 230.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "all",
+        "col": 2.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Choose Export all matching",
+        "x": 1070.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "snapshot",
+        "col": 2.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Capture matching physical-copy IDs",
+        "x": 1070.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "batches",
+        "col": 2.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Generate all label batches and verify count",
+        "x": 1070.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "zip",
+        "col": 2.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Build ZIP only after all batches succeed",
+        "x": 1070.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "print2",
+        "col": 2.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "Download and print matching labels",
+        "x": 1070.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "selected",
+        "label": "Selected"
+      },
+      {
+        "a": "q",
+        "b": "all",
+        "label": "All matching"
+      },
+      {
+        "a": "selected",
+        "b": "limit",
+        "label": ""
+      },
+      {
+        "a": "limit",
+        "b": "pdf",
+        "label": ""
+      },
+      {
+        "a": "pdf",
+        "b": "print1",
+        "label": ""
+      },
+      {
+        "a": "all",
+        "b": "snapshot",
+        "label": ""
+      },
+      {
+        "a": "snapshot",
+        "b": "batches",
+        "label": ""
+      },
+      {
+        "a": "batches",
+        "b": "zip",
+        "label": ""
+      },
+      {
+        "a": "zip",
+        "b": "print2",
+        "label": ""
+      },
+      {
+        "a": "print1",
+        "b": "end-print1",
+        "label": ""
+      },
+      {
+        "a": "print2",
+        "b": "end-print2",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "print1",
+      "print2"
+    ],
+    "note": "Invalid selections or failed batches show an error and preserve the selection for retry. Reprinting never creates stock or changes a physical-copy identity."
+  },
+  {
+    "section": "2.3.24",
+    "figure": 25,
+    "title": "System Settings and Entrance Station PIN Management Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Librarian opens Settings",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "d",
+        "label": "Choose setting",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "theme",
+        "col": 0.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Select Light or Dark appearance",
+        "x": 230.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "local",
+        "col": 0.0,
+        "row": 4.0,
+        "kind": "p",
+        "label": "Save browser appearance preference",
+        "x": 230.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "pin",
+        "col": 2.0,
+        "row": 3.0,
+        "kind": "p",
+        "label": "Check station PIN configured status",
+        "x": 1070.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "input",
+        "col": 2.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Enter current password and repeat new PIN",
+        "x": 1070.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "valid",
+        "col": 2.0,
+        "row": 5.0,
+        "kind": "d",
+        "label": "Password and PIN valid?",
+        "x": 1070.0,
+        "y": 755.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "error",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Show error and correct values",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "save",
+        "col": 2.0,
+        "row": 6.0,
+        "kind": "p",
+        "label": "Save protected PIN hash",
+        "x": 1070.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "unlock",
+        "col": 2.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Unlock station using new PIN",
+        "x": 1070.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "theme",
+        "label": "Appearance"
+      },
+      {
+        "a": "theme",
+        "b": "local",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "pin",
+        "label": "Station PIN"
+      },
+      {
+        "a": "pin",
+        "b": "input",
+        "label": ""
+      },
+      {
+        "a": "input",
+        "b": "valid",
+        "label": ""
+      },
+      {
+        "a": "valid",
+        "b": "error",
+        "label": "No"
+      },
+      {
+        "a": "valid",
+        "b": "save",
+        "label": "Yes"
+      },
+      {
+        "a": "save",
+        "b": "unlock",
+        "label": ""
+      },
+      {
+        "a": "local",
+        "b": "end-local",
+        "label": ""
+      },
+      {
+        "a": "error",
+        "b": "end-error",
+        "label": ""
+      },
+      {
+        "a": "unlock",
+        "b": "end-unlock",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "local",
+      "error",
+      "unlock"
+    ],
+    "note": "PINs contain 6-12 digits. The existing PIN is never displayed. Older station sessions fail a subsequent PIN check after replacement."
+  },
+  {
+    "section": "2.3.26",
+    "figure": 27,
+    "title": "Librarian Dashboard and Navigation Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Librarian signs in",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "p",
+        "label": "Open dashboard summaries and notifications",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "c",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "i",
+        "label": "Open the hidden sidebar menu",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "choose",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "i",
+        "label": "Choose Inventory, Members, Circulation, Reports or Settings",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "page",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Open authorized workspace",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "d",
+        "label": "Continue working?",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "again",
+        "col": 0.0,
+        "row": 7.0,
+        "kind": "p",
+        "label": "Choose another workspace through the menu",
+        "x": 230.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "logout",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "i",
+        "label": "Select Sign out",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "revoke",
+        "col": 1.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "Revoke current session and return to public portal",
+        "x": 650.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "c",
+        "label": ""
+      },
+      {
+        "a": "c",
+        "b": "choose",
+        "label": ""
+      },
+      {
+        "a": "choose",
+        "b": "page",
+        "label": ""
+      },
+      {
+        "a": "page",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "again",
+        "label": "Yes"
+      },
+      {
+        "a": "q",
+        "b": "logout",
+        "label": "No"
+      },
+      {
+        "a": "logout",
+        "b": "revoke",
+        "label": ""
+      },
+      {
+        "a": "again",
+        "b": "end-again",
+        "label": ""
+      },
+      {
+        "a": "revoke",
+        "b": "end-revoke",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "again",
+      "revoke"
+    ],
+    "note": "The sidebar starts hidden on desktop and mobile. Server authorization remains enforced for each workspace."
+  },
+  {
+    "section": "2.3.28",
+    "figure": 29,
+    "title": "Book Category Review and Catalog Visibility Flowchart",
+    "nodes": [
+      {
+        "id": "a",
+        "col": 1.0,
+        "row": 1.0,
+        "kind": "p",
+        "label": "Librarian opens Add Book",
+        "x": 650.0,
+        "y": 275.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "b",
+        "col": 1.0,
+        "row": 2.0,
+        "kind": "i",
+        "label": "Select Librarian category review",
+        "x": 650.0,
+        "y": 395.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "c",
+        "col": 1.0,
+        "row": 3.0,
+        "kind": "p",
+        "label": "Load hidden labels and master categories",
+        "x": 650.0,
+        "y": 515.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "q",
+        "col": 1.0,
+        "row": 4.0,
+        "kind": "d",
+        "label": "Pending labels found?",
+        "x": 650.0,
+        "y": 635.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "none",
+        "col": 0.0,
+        "row": 5.0,
+        "kind": "p",
+        "label": "Display no pending labels",
+        "x": 230.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "choose",
+        "col": 1.0,
+        "row": 5.0,
+        "kind": "i",
+        "label": "Choose supported master category",
+        "x": 650.0,
+        "y": 755.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "apply",
+        "col": 1.0,
+        "row": 6.0,
+        "kind": "i",
+        "label": "Select Apply mapping",
+        "x": 650.0,
+        "y": 875.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "valid",
+        "col": 1.0,
+        "row": 7.0,
+        "kind": "d",
+        "label": "Mapping accepted?",
+        "x": 650.0,
+        "y": 995.0,
+        "w": 300,
+        "h": 100
+      },
+      {
+        "id": "error",
+        "col": 2.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "Show error and retain unresolved state",
+        "x": 1070.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "save",
+        "col": 1.0,
+        "row": 8.0,
+        "kind": "p",
+        "label": "Update books with the exact original label",
+        "x": 650.0,
+        "y": 1115.0,
+        "w": 330,
+        "h": 78
+      },
+      {
+        "id": "visible",
+        "col": 1.0,
+        "row": 9.0,
+        "kind": "p",
+        "label": "Refresh visible category and catalog",
+        "x": 650.0,
+        "y": 1235.0,
+        "w": 330,
+        "h": 78
+      }
+    ],
+    "edges": [
+      {
+        "a": "s",
+        "b": "a",
+        "label": ""
+      },
+      {
+        "a": "a",
+        "b": "b",
+        "label": ""
+      },
+      {
+        "a": "b",
+        "b": "c",
+        "label": ""
+      },
+      {
+        "a": "c",
+        "b": "q",
+        "label": ""
+      },
+      {
+        "a": "q",
+        "b": "none",
+        "label": "No"
+      },
+      {
+        "a": "q",
+        "b": "choose",
+        "label": "Yes"
+      },
+      {
+        "a": "choose",
+        "b": "apply",
+        "label": ""
+      },
+      {
+        "a": "apply",
+        "b": "valid",
+        "label": ""
+      },
+      {
+        "a": "valid",
+        "b": "error",
+        "label": "No"
+      },
+      {
+        "a": "valid",
+        "b": "save",
+        "label": "Yes"
+      },
+      {
+        "a": "save",
+        "b": "visible",
+        "label": ""
+      },
+      {
+        "a": "none",
+        "b": "end-none",
+        "label": ""
+      },
+      {
+        "a": "visible",
+        "b": "end-visible",
+        "label": ""
+      },
+      {
+        "a": "error",
+        "b": "end-error",
+        "label": ""
+      },
+      {
+        "a": "finish",
+        "b": "end",
+        "label": ""
+      }
+    ],
+    "leaves": [
+      "none",
+      "visible",
+      "error"
+    ],
+    "note": "Category review resolves hidden labels to an existing master category. A suggestion alone does not save the mapping."
+  }
+]

@@ -1,0 +1,3584 @@
+{
+  "title": "Rizal Provincial Library System - Simple Flowcharts",
+  "edition": "17 November 2026",
+  "basis": "Current application source and existing regression coverage. These diagrams document implemented workflows; they do not certify every production integration.",
+  "flows": [
+    {
+      "id": "2.3.1",
+      "title": "Login and Role Routing",
+      "description": "Shows password or Face ID sign-in, account checks, first-login password replacement, and routing to the stored member or librarian role.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open sign-in page"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Enter password or scan face"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Login valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show login error"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Temporary password?"
+        },
+        {
+          "id": "change",
+          "type": "process",
+          "label": "Change password"
+        },
+        {
+          "id": "r",
+          "type": "decision",
+          "label": "Account role?"
+        },
+        {
+          "id": "member",
+          "type": "process",
+          "label": "Open member home"
+        },
+        {
+          "id": "staff",
+          "type": "process",
+          "label": "Open librarian home"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "t",
+          "label": "Yes"
+        },
+        {
+          "from": "t",
+          "to": "change",
+          "label": "Yes"
+        },
+        {
+          "from": "change",
+          "to": "r",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "r",
+          "label": "No"
+        },
+        {
+          "from": "r",
+          "to": "member",
+          "label": "Member"
+        },
+        {
+          "from": "r",
+          "to": "staff",
+          "label": "Librarian"
+        },
+        {
+          "from": "member",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "staff",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Public catalog browsing requires no account. The current website registers members through librarians; it has no public registration form.",
+        "Face ID is optional and requires existing enrollment. Failed or unavailable live-face verification does not grant access.",
+        "Member and librarian are the two stored roles. A website login does not record entrance attendance."
+      ],
+      "sources": [
+        "frontend/src/pages/public/LoginPage.jsx",
+        "frontend/src/App.jsx",
+        "backend/routers/auth.py",
+        "backend/tests/test_first_login_password.py",
+        "backend/tests/test_repair_attendance.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.2",
+      "title": "Borrower Navigation",
+      "description": "Shows navigation among the member dashboard, book discovery, My Reservations, and Profile.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open member home"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Choose a page"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Selected page?"
+        },
+        {
+          "id": "h",
+          "type": "process",
+          "label": "View dashboard"
+        },
+        {
+          "id": "browse",
+          "type": "process",
+          "label": "Browse books"
+        },
+        {
+          "id": "res",
+          "type": "process",
+          "label": "Open My Reservations"
+        },
+        {
+          "id": "p",
+          "type": "process",
+          "label": "View profile"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Continue using member portal"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "h",
+          "label": "Home"
+        },
+        {
+          "from": "q",
+          "to": "browse",
+          "label": "Browse"
+        },
+        {
+          "from": "q",
+          "to": "res",
+          "label": "Reservations"
+        },
+        {
+          "from": "q",
+          "to": "p",
+          "label": "Profile"
+        },
+        {
+          "from": "h",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "browse",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "res",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "p",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "The reserved-count button in Browse Books opens My Reservations.",
+        "Borrowers can report a loan issue from the dashboard; only librarians complete physical borrow and return transactions."
+      ],
+      "sources": [
+        "frontend/src/App.jsx",
+        "frontend/src/components/UserLayout.jsx",
+        "frontend/src/pages/user/UserHome.jsx",
+        "frontend/src/pages/user/UserBrowseBooks.jsx"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.3",
+      "title": "Browse Books and Add to Reservation Cart",
+      "description": "Shows public and member discovery, book details, and selection for later reservation confirmation.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Browse Books"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Search or choose a category"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "View book details"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Member signed in?"
+        },
+        {
+          "id": "login",
+          "type": "process",
+          "label": "Sign in first"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Can select book?"
+        },
+        {
+          "id": "cart",
+          "type": "process",
+          "label": "Add book to selection"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show limit or duplicate notice"
+        },
+        {
+          "id": "res",
+          "type": "process",
+          "label": "Open My Reservations"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "login",
+          "label": "No"
+        },
+        {
+          "from": "login",
+          "to": "t",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "t",
+          "label": "Yes"
+        },
+        {
+          "from": "t",
+          "to": "cart",
+          "label": "Yes"
+        },
+        {
+          "from": "t",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "cart",
+          "to": "res",
+          "label": ""
+        },
+        {
+          "from": "res",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Adding a selection does not hold stock, create a loan, or save a confirmed reservation.",
+        "Landing-page searches open the public catalog and highlight matching title or author text. Member Featured shelves scroll sideways; the desktop public catalog uses a vertical grid."
+      ],
+      "sources": [
+        "frontend/src/pages/public/PublicBrowse.jsx",
+        "frontend/src/pages/public/LandingPage.jsx",
+        "frontend/src/pages/user/UserBrowseBooks.jsx",
+        "frontend/src/api/reservationCart.js"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.4",
+      "title": "Reservation Checkout and Five-Book Limit",
+      "description": "Shows authenticated batch confirmation, explicit queue agreement, the combined five-book allowance, and safe retry handling.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open My Reservations"
+        },
+        {
+          "id": "b",
+          "type": "process",
+          "label": "Review selected books"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Queue needed?"
+        },
+        {
+          "id": "agree",
+          "type": "process",
+          "label": "Accept waiting list"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Within five-book limit?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show error and revise selection"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Confirm reservation"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save ready or queued reservations"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Display reservation status"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "agree",
+          "label": "Yes"
+        },
+        {
+          "from": "agree",
+          "to": "t",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "t",
+          "label": "No"
+        },
+        {
+          "from": "t",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "c",
+          "label": "Yes"
+        },
+        {
+          "from": "c",
+          "to": "save",
+          "label": ""
+        },
+        {
+          "from": "save",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "The current confirmation endpoint does not request a face scan. At physical pickup, librarians identify the member by Face ID or supervised manual ID.",
+        "Five-book limit = active/overdue loans + ready reservations + queued reservations + new selections. The server rechecks the limit and eligibility.",
+        "Unavailable titles require explicit queue agreement. Ready reservations have a 24-hour pickup deadline; no exact physical copy is allocated by reservation."
+      ],
+      "sources": [
+        "frontend/src/pages/user/UserReservations.jsx",
+        "backend/routers/reservations.py",
+        "backend/services/reservation_confirmation.py",
+        "backend/services/borrowing_capacity.py",
+        "backend/tests/test_reservation_policy.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.5",
+      "title": "Staff Logging and Entrance Attendance",
+      "description": "Shows PIN-controlled attendance scanning, live-face validation, and time-in/time-out for a distinct encounter.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Entrance Station"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Enter station PIN"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Start camera and scan face"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Valid live face?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show unsuccessful scan"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Member inside?"
+        },
+        {
+          "id": "out",
+          "type": "process",
+          "label": "Record time-out"
+        },
+        {
+          "id": "in",
+          "type": "process",
+          "label": "Record time-in"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Display attendance log"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "t",
+          "label": "Yes"
+        },
+        {
+          "from": "t",
+          "to": "out",
+          "label": "Yes"
+        },
+        {
+          "from": "t",
+          "to": "in",
+          "label": "No"
+        },
+        {
+          "from": "out",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "in",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "This is entrance attendance for recognized enrolled accounts, not a separate payroll or staff scheduling module.",
+        "The current station client debounces repeated frames and marks distinct encounters. Legacy clients retain the configured timing rules.",
+        "Station PIN access does not issue account login cookies. Scanning pauses when the page is hidden, and failed connections are not saved for offline replay."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/EntryGate.jsx",
+        "frontend/src/api/entryAttendance.js",
+        "backend/routers/kiosk.py",
+        "backend/services/entry_session_policy.py",
+        "backend/tests/test_entry_session_policy.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.6",
+      "title": "Add Book and QR Code Generation",
+      "description": "Shows manual or ISBN-assisted book entry, optional descriptions, validation, physical-copy creation, and label preparation.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Add Book"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Enter details or use ISBN lookup"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Add optional description and cover"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Book details valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display validation error"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save book and physical copies"
+        },
+        {
+          "id": "qr",
+          "type": "process",
+          "label": "Generate unique copy QR codes"
+        },
+        {
+          "id": "print",
+          "type": "process",
+          "label": "Download or print labels"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "qr",
+          "label": ""
+        },
+        {
+          "from": "qr",
+          "to": "print",
+          "label": ""
+        },
+        {
+          "from": "print",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "A description is optional, public catalog text. Manual descriptions are supported when no online description is available.",
+        "Each physical copy receives its own identity. QR image download/reprinting does not create more copies.",
+        "If the book saves but its cover fails, retry only the cover upload. Resolve an unknown save outcome before submitting another book."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibAddBook.jsx",
+        "frontend/src/components/BookDescriptionField.jsx",
+        "backend/routers/inventory.py",
+        "backend/services/book_copy_service.py",
+        "backend/tests/test_book_description.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.7a",
+      "title": "Borrow Transaction",
+      "description": "Shows member identification, automatic selection from ready reservations, optional scanning for walk-ins, and reviewed lending.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Borrow mode"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Identify member by face or manual ID"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Ready reservation?"
+        },
+        {
+          "id": "res",
+          "type": "process",
+          "label": "Select Add to list"
+        },
+        {
+          "id": "walk",
+          "type": "io",
+          "label": "Scan QR or enter book code"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Review member and exact copies"
+        },
+        {
+          "id": "d",
+          "type": "io",
+          "label": "Confirm borrowing"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Borrowing rules pass?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show rejected item"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Record loan and due date"
+        },
+        {
+          "id": "stock",
+          "type": "process",
+          "label": "Update copy and reservation status"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "res",
+          "label": "Yes"
+        },
+        {
+          "from": "q",
+          "to": "walk",
+          "label": "No"
+        },
+        {
+          "from": "res",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "walk",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "d",
+          "label": ""
+        },
+        {
+          "from": "d",
+          "to": "t",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "stock",
+          "label": ""
+        },
+        {
+          "from": "stock",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Ready reservations use Add to list without mandatory QR scanning or code selection. Staff may change the copy before review and must hand over the copy shown. Queued requests are not ready loans.",
+        "Selections and scans do not commit a loan. A ready reservation converts to a loan without consuming a second slot.",
+        "Multi-book submissions are sequential independent requests. No silent copy substitution occurs if a selected copy becomes unavailable.",
+        "Final server checks cover account status, overdue loans, the combined allowance, ready-hold capacity, duplicate title loans and exact-copy availability."
+      ],
+      "sources": [
+        "frontend/src/components/CirculationDialog.jsx",
+        "frontend/src/components/BorrowBookSelection.jsx",
+        "frontend/src/components/CirculationMember.jsx",
+        "backend/routers/transactions.py",
+        "backend/tests/test_circulation_atomicity.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.7b",
+      "title": "Return Transaction",
+      "description": "Shows exact-copy lookup, explicit selection of ambiguous legacy loans, review, and updating the original loan.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Return mode"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Scan QR or enter book code"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Identify original loan"
+        },
+        {
+          "id": "d",
+          "type": "process",
+          "label": "Review borrower and copy"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Return details valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display return error"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Record return on original loan"
+        },
+        {
+          "id": "stock",
+          "type": "process",
+          "label": "Update availability"
+        },
+        {
+          "id": "queue",
+          "type": "process",
+          "label": "Promote waiting reservation"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "d",
+          "label": ""
+        },
+        {
+          "from": "d",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "stock",
+          "label": ""
+        },
+        {
+          "from": "stock",
+          "to": "queue",
+          "label": ""
+        },
+        {
+          "from": "queue",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "A return closes the original loan; it does not create an unrelated return row or erase borrowing history.",
+        "Return mode starts with book lookup and can contain different borrowers. Members do not self-confirm physical returns.",
+        "An assessed fine is not payment collection. The current interface hides fine panels."
+      ],
+      "sources": [
+        "frontend/src/components/CirculationDialog.jsx",
+        "backend/routers/transactions.py",
+        "backend/services/reservation_policy.py",
+        "backend/tests/test_circulation_scanning.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.8",
+      "title": "Report Generation",
+      "description": "Shows authorized reporting, Philippine-time filters, paged previews, and validated exports or print output.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Reports and Analytics"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Select report and date range"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Apply filters"
+        },
+        {
+          "id": "d",
+          "type": "process",
+          "label": "Retrieve matching records"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Display report preview"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Export report?"
+        },
+        {
+          "id": "file",
+          "type": "process",
+          "label": "Choose PDF, Excel, CSV or Print"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Generate selected report"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "d",
+          "label": ""
+        },
+        {
+          "from": "d",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "e",
+          "label": "No"
+        },
+        {
+          "from": "q",
+          "to": "file",
+          "label": "Yes"
+        },
+        {
+          "from": "file",
+          "to": "save",
+          "label": ""
+        },
+        {
+          "from": "save",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Monthly PDF uses its own Month and Year controls. Report previews and exports preserve applied filters, not unsaved draft changes.",
+        "Period circulation counts use borrow dates including returned loans. Current overdue and stock figures are snapshots. Export scope and row limits must be checked.",
+        "Reports are librarian-only. Acquisition reporting needs its separate schema upgrade; these diagrams do not establish that every production prerequisite is complete."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibReports.jsx",
+        "backend/routers/reporting.py",
+        "backend/routers/reports.py",
+        "backend/services/reporting.py",
+        "backend/tests/test_reporting_center.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.9",
+      "title": "Due Books Monitoring",
+      "description": "Shows refresh-time overdue evaluation, due-date filtering, librarian review, and the link to physical return processing.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Librarian opens Due Books"
+        },
+        {
+          "id": "b",
+          "type": "process",
+          "label": "System checks outstanding loans"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Apply selected due-date filter"
+        },
+        {
+          "id": "d",
+          "type": "process",
+          "label": "Display due and overdue books"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "d",
+          "label": ""
+        },
+        {
+          "from": "d",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Due Soon is the next three days. The default All due-book query includes overdue loans and loans due within seven days; broader loan records are separate.",
+        "Overdue loans can prevent new borrowing. Email/SMS overdue reminders are currently unavailable, so this chart does not claim automatic message delivery."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibDueBooks.jsx",
+        "backend/routers/librarian.py",
+        "backend/services/loan_policy.py",
+        "backend/tests/test_overdue_policy.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.10",
+      "title": "Member Registration and Temporary Password Delivery",
+      "description": "Shows librarian registration with optional identification uploads, email-first credential delivery, and supervised fallback.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Register Member"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Enter member details and optional ID"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Create member and temporary password"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Email provided?"
+        },
+        {
+          "id": "mail",
+          "type": "process",
+          "label": "Send by configured email"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Phone provided?"
+        },
+        {
+          "id": "sms",
+          "type": "process",
+          "label": "Send by configured SMS"
+        },
+        {
+          "id": "hand",
+          "type": "process",
+          "label": "Provide password through librarian"
+        },
+        {
+          "id": "ok",
+          "type": "decision",
+          "label": "Delivery accepted?"
+        },
+        {
+          "id": "change",
+          "type": "process",
+          "label": "Member changes password at first login"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "mail",
+          "label": "Yes"
+        },
+        {
+          "from": "q",
+          "to": "t",
+          "label": "No"
+        },
+        {
+          "from": "t",
+          "to": "sms",
+          "label": "Yes"
+        },
+        {
+          "from": "t",
+          "to": "hand",
+          "label": "No"
+        },
+        {
+          "from": "mail",
+          "to": "ok",
+          "label": ""
+        },
+        {
+          "from": "sms",
+          "to": "ok",
+          "label": ""
+        },
+        {
+          "from": "ok",
+          "to": "change",
+          "label": "Yes"
+        },
+        {
+          "from": "ok",
+          "to": "hand",
+          "label": "No"
+        },
+        {
+          "from": "hand",
+          "to": "change",
+          "label": ""
+        },
+        {
+          "from": "change",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Government ID upload is optional. If supplied, private upload validation still applies.",
+        "SMS is selected only when no email is supplied. Failed email delivery does not automatically switch to the phone. Missing or failed delivery falls back to private librarian handoff.",
+        "Provider acceptance is not proof that a message reached the inbox or handset. Entered contacts remain unverified until the separate email verification procedure."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibUsers.jsx",
+        "backend/routers/librarian.py",
+        "backend/services/registration_delivery.py",
+        "backend/tests/test_auth_registration_uploads.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.11",
+      "title": "Forgotten Password and Librarian-Assisted Recovery",
+      "description": "Shows recovery through a previously verified email or supervised librarian reset when email recovery is unavailable.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Forgot Password"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Enter email or Member ID"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Verified email available?"
+        },
+        {
+          "id": "mail",
+          "type": "process",
+          "label": "Send reset code"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Enter code and new password"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Reset code valid?"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save password and revoke old sessions"
+        },
+        {
+          "id": "staff",
+          "type": "process",
+          "label": "Request supervised librarian reset"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display error"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "mail",
+          "label": "Yes"
+        },
+        {
+          "from": "q",
+          "to": "staff",
+          "label": "No"
+        },
+        {
+          "from": "staff",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "mail",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "t",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "t",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "save",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Self-service recovery uses a previously verified email. A phone number or registration SMS does not enable SMS password recovery.",
+        "Public responses and errors avoid confirming which accounts exist. Code expiry, resend limits and attempt limits remain enforced.",
+        "Librarian reset credentials can have a different length from the 10-character initial-registration password."
+      ],
+      "sources": [
+        "frontend/src/pages/public/ForgotPasswordPage.jsx",
+        "backend/routers/auth.py",
+        "backend/services/password_reset.py",
+        "backend/routers/librarian.py",
+        "backend/tests/test_password_recovery.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.12",
+      "title": "First-Login and Voluntary Password Change",
+      "description": "Shows mandatory replacement of temporary passwords and authenticated password changes.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Change Password"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Enter current and new passwords"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Passwords valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display validation error"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save new password"
+        },
+        {
+          "id": "revoke",
+          "type": "process",
+          "label": "Revoke old sessions"
+        },
+        {
+          "id": "next",
+          "type": "process",
+          "label": "Continue to account home"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "revoke",
+          "label": ""
+        },
+        {
+          "from": "revoke",
+          "to": "next",
+          "label": ""
+        },
+        {
+          "from": "next",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "New passwords require 8-128 characters including at least one digit.",
+        "Until a required replacement succeeds, ordinary protected actions are blocked. Session/profile retrieval, password change and logout remain available."
+      ],
+      "sources": [
+        "frontend/src/pages/ChangePasswordPage.jsx",
+        "frontend/src/pages/user/UserProfile.jsx",
+        "backend/routers/users.py",
+        "backend/dependencies.py",
+        "backend/tests/test_first_login_password.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.13",
+      "title": "Profile Details and Optional Profile Photo",
+      "description": "Shows permitted member contact edits, a locked verified name, and adding, changing or removing an avatar.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Profile"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Choose contact or photo change"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Keep verified name read-only"
+        },
+        {
+          "id": "d",
+          "type": "io",
+          "label": "Edit allowed fields or add/remove photo"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Change valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display error"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save profile change"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Refresh profile display"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "d",
+          "label": ""
+        },
+        {
+          "from": "d",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Members cannot change their verified name in the form or by sending a different name to the server. Name corrections require library assistance.",
+        "A profile photo is optional and separate from face-recognition enrollment. Removing an avatar does not delete the Face ID template.",
+        "Only confirmed changes refresh the interface. Invalid or unavailable storage operations do not report a successful removal."
+      ],
+      "sources": [
+        "frontend/src/pages/user/UserProfile.jsx",
+        "backend/routers/users.py",
+        "backend/services/member_deletion.py",
+        "frontend/src/api/profileUpdates.js"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.14",
+      "title": "Email Change and Contact Verification",
+      "description": "Shows password-confirmed email changes and separate verification before the address can be used for recovery.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open email settings"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Enter email and current password"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Save email as unverified"
+        },
+        {
+          "id": "d",
+          "type": "process",
+          "label": "Request verification code"
+        },
+        {
+          "id": "input",
+          "type": "io",
+          "label": "Enter received code"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Code valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display verification error"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Mark email verified"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "d",
+          "label": ""
+        },
+        {
+          "from": "d",
+          "to": "input",
+          "label": ""
+        },
+        {
+          "from": "input",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Typing an email during registration or profile editing does not verify ownership.",
+        "A changed email remains unverified until the purpose/contact-bound code succeeds. Never publish verification codes in documentation or screenshots."
+      ],
+      "sources": [
+        "frontend/src/components/EmailContact.jsx",
+        "backend/routers/auth.py",
+        "backend/routers/users.py",
+        "backend/services/password_reset.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.15",
+      "title": "Reservation Queue, Pickup, Cancellation and Expiry",
+      "description": "Shows the lifecycle of ready and queued reservations, including FIFO promotion and cancellation.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Reservation confirmed"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Available title capacity?"
+        },
+        {
+          "id": "ready",
+          "type": "process",
+          "label": "Mark ready for pickup"
+        },
+        {
+          "id": "wait",
+          "type": "process",
+          "label": "Add to waiting list"
+        },
+        {
+          "id": "free",
+          "type": "process",
+          "label": "Wait until capacity is available"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Picked up within 24 hours?"
+        },
+        {
+          "id": "loan",
+          "type": "process",
+          "label": "Issue book and fulfill reservation"
+        },
+        {
+          "id": "cancel",
+          "type": "process",
+          "label": "Cancel or expire hold"
+        },
+        {
+          "id": "promote",
+          "type": "process",
+          "label": "Promote next waiting member"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "ready",
+          "label": "Yes"
+        },
+        {
+          "from": "q",
+          "to": "wait",
+          "label": "No"
+        },
+        {
+          "from": "wait",
+          "to": "free",
+          "label": ""
+        },
+        {
+          "from": "free",
+          "to": "ready",
+          "label": ""
+        },
+        {
+          "from": "ready",
+          "to": "t",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "loan",
+          "label": "Yes"
+        },
+        {
+          "from": "loan",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "cancel",
+          "label": "No"
+        },
+        {
+          "from": "cancel",
+          "to": "promote",
+          "label": ""
+        },
+        {
+          "from": "promote",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Only ready reservations hold title-level capacity. Pending requests do not allocate stock, and no reservation guarantees a particular physical copy.",
+        "Expiry/promotion runs when relevant requests or stock-changing operations synchronize policy; there is no claim of a continuously running expiry scheduler.",
+        "Both ready and queued reservations count toward the combined five-book allowance. Refreshing a page does not extend a pickup deadline."
+      ],
+      "sources": [
+        "backend/services/reservation_policy.py",
+        "backend/services/reservation_confirmation.py",
+        "backend/routers/reservations.py",
+        "frontend/src/pages/lib/LibReservations.jsx",
+        "backend/tests/test_reservation_policy.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.16",
+      "title": "Inventory Editing, Stock Adjustment and Title Deletion",
+      "description": "Shows updating book metadata or covers, safe stock changes, and history-protected title deletion.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open librarian inventory"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Search and select book"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Choose Edit, Cover or Delete"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Change allowed?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display stock or history restriction"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save permitted changes"
+        },
+        {
+          "id": "copies",
+          "type": "process",
+          "label": "Keep copy identities and loan history"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Refresh inventory"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "copies",
+          "label": ""
+        },
+        {
+          "from": "copies",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Reducing stock retires eligible physical copies; it does not delete or recycle their QR identities. Borrowed copies and ready-reservation capacity remain protected.",
+        "View details is read-only. Books with historical loan or reservation dependencies cannot be casually deleted.",
+        "Category review has its own workflow (2.3.28). Acquisition metadata is maintained through Reports, not an Acquisitions button in the inventory row."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibInventory.jsx",
+        "frontend/src/components/BookEditDialog.jsx",
+        "backend/routers/inventory.py",
+        "backend/services/book_copy_service.py",
+        "backend/tests/test_book_edit.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.17",
+      "title": "ISBN Lookup and Workbook Book Import",
+      "description": "Shows multiple ISBN-assisted additions and complete-record XLSX import with separate results for valid, duplicate and rejected rows.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open book import tools"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Select ISBN list or XLSX file"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Preview ISBN matches or validate workbook"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Input valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show file or entry errors"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Add valid new books"
+        },
+        {
+          "id": "copy",
+          "type": "process",
+          "label": "Create physical copies and QR codes"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Show added, skipped and failed rows"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "copy",
+          "label": ""
+        },
+        {
+          "from": "copy",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Full inventory import uses XLSX; legacy XLS must be converted. The current server limit is 10 MB. ISBN-only extraction/lookup is a different workflow.",
+        "A workbook can report partial row errors. Preserve successful results; do not assume that one bad row rolls back every imported book.",
+        "Retryable workbook requests are bound to the original file fingerprint and request ID. Acquisition-metadata CSV/XLSX import is separate (2.3.25)."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibAddBook.jsx",
+        "backend/routers/inventory.py",
+        "backend/services/excel_service.py",
+        "frontend/src/api/inventoryWrites.js"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.18",
+      "title": "Member Status, Password Reset and Account Removal",
+      "description": "Shows supervised account administration with separate status, reset and deletion actions.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Members"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Search and select member"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Choose status, reset or deletion"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Action permitted?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show restriction"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save account action"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Refresh member list"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "A librarian password is required for destructive member/face deletion. Account deletion is blocked while books remain outstanding.",
+        "Member account removal follows the implemented soft-deletion and private-file ownership checks; it is not arbitrary deletion of lending history.",
+        "Resetting a member password is distinct from registration email/SMS delivery. Use the credential actually returned for the reset operation."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibUsers.jsx",
+        "backend/routers/librarian.py",
+        "backend/services/member_deletion.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.19",
+      "title": "Librarian-Assisted Face Enrollment and Face Removal",
+      "description": "Shows supervised enrollment or replacement with live-face and duplicate-account checks, plus explicit face-data removal.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Select member Face ID controls"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Remove Face ID?"
+        },
+        {
+          "id": "password",
+          "type": "io",
+          "label": "Confirm librarian password"
+        },
+        {
+          "id": "remove",
+          "type": "process",
+          "label": "Delete permitted face data"
+        },
+        {
+          "id": "capture",
+          "type": "io",
+          "label": "Capture live face"
+        },
+        {
+          "id": "r",
+          "type": "decision",
+          "label": "Live and unique face?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show enrollment error"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save face enrollment"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Refresh enrollment status"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "password",
+          "label": "Yes"
+        },
+        {
+          "from": "password",
+          "to": "remove",
+          "label": ""
+        },
+        {
+          "from": "remove",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "capture",
+          "label": "No"
+        },
+        {
+          "from": "capture",
+          "to": "r",
+          "label": ""
+        },
+        {
+          "from": "r",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "r",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Enrollment is librarian-assisted and distinct from a profile photo. A failed PAD/quality check must not become a successful enrollment.",
+        "Duplicate-face checks prevent enrollment to another account. Existing recognition compatibility and encrypted biometric storage remain in place.",
+        "Face-data removal does not delete loan history or the entire member account. It is a separate explicit operation."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibUsers.jsx",
+        "backend/routers/librarian.py",
+        "backend/services/face_engine_service.py",
+        "backend/services/member_deletion.py",
+        "backend/tests/test_face_engine_upgrade.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.20",
+      "title": "Recommendations, Trending and Favorites",
+      "description": "Shows history-dependent Featured shelves, favorites, and genre sorting without inventing a star-rating feature.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open member Browse Books"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Borrowing history exists?"
+        },
+        {
+          "id": "rec",
+          "type": "process",
+          "label": "Display recommendations"
+        },
+        {
+          "id": "trend",
+          "type": "process",
+          "label": "Display Trending"
+        },
+        {
+          "id": "other",
+          "type": "process",
+          "label": "Display What is new and Books we love"
+        },
+        {
+          "id": "select",
+          "type": "io",
+          "label": "Choose category or sort"
+        },
+        {
+          "id": "heart",
+          "type": "io",
+          "label": "Add or remove a favorite"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Refresh books and favorite status"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "rec",
+          "label": "Yes"
+        },
+        {
+          "from": "rec",
+          "to": "trend",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "trend",
+          "label": "No"
+        },
+        {
+          "from": "trend",
+          "to": "other",
+          "label": ""
+        },
+        {
+          "from": "other",
+          "to": "select",
+          "label": ""
+        },
+        {
+          "from": "select",
+          "to": "heart",
+          "label": ""
+        },
+        {
+          "from": "heart",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Members with borrowing history see Recommended for you above Trending. New members begin with Trending. Featured collections scroll sideways.",
+        "Books we love and Most loved use recorded favorites; there is no star-rating or separate editorial-review feature.",
+        "Recommendations are calculated on demand with collaborative, content and popularity fallbacks. The system does not claim a separately trained model or measured reader accuracy."
+      ],
+      "sources": [
+        "frontend/src/pages/user/UserBrowseBooks.jsx",
+        "backend/routers/recommendations.py",
+        "backend/routers/books.py",
+        "frontend/src/api/useBookRecommendations.js"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.21",
+      "title": "Reading Activity and Goals",
+      "description": "Shows viewing recorded reading/visit information, saving goals, and downloading the account-owned transcript.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open member Dashboard"
+        },
+        {
+          "id": "b",
+          "type": "process",
+          "label": "Display borrowing, visits and reading goals"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Update goals?"
+        },
+        {
+          "id": "input",
+          "type": "io",
+          "label": "Enter new targets"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save valid goals"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Refresh progress"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "e",
+          "label": "No"
+        },
+        {
+          "from": "q",
+          "to": "input",
+          "label": "Yes"
+        },
+        {
+          "from": "input",
+          "to": "save",
+          "label": ""
+        },
+        {
+          "from": "save",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Visits are attendance sessions, not proof that a particular book was read. Charts summarize recorded activity.",
+        "Transcripts are owner-scoped. Members cannot download another member profile or transcript by changing an identifier.",
+        "The owner-scoped transcript API exists, but the current member pages do not show a transcript download button. That branch describes the supported service."
+      ],
+      "sources": [
+        "frontend/src/pages/user/UserHome.jsx",
+        "frontend/src/pages/user/UserProfile.jsx",
+        "backend/routers/recommendations.py",
+        "backend/routers/reports.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.22",
+      "title": "Loan Issue Reports and In-App Notifications",
+      "description": "Shows member reporting of a current loan problem and librarian review of the resulting in-app notification.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open own outstanding loan"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Select Report Issue"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Choose reason and add note"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Loan belongs to member?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display error"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Create librarian notification"
+        },
+        {
+          "id": "staff",
+          "type": "process",
+          "label": "Librarian reviews issue"
+        },
+        {
+          "id": "read",
+          "type": "process",
+          "label": "Mark notification read"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "staff",
+          "label": ""
+        },
+        {
+          "from": "staff",
+          "to": "read",
+          "label": ""
+        },
+        {
+          "from": "read",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Submitting an issue is not a return, copy replacement, fine settlement or payment. Book-condition photo capture is not implemented.",
+        "Members also receive their own in-app notices, such as reservation status updates, and can mark them read. Read status is account-scoped.",
+        "No email/SMS delivery is implied by an in-app notice."
+      ],
+      "sources": [
+        "frontend/src/pages/user/UserHome.jsx",
+        "backend/routers/transactions.py",
+        "backend/routers/users.py",
+        "backend/routers/librarian.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.23",
+      "title": "Physical-Copy QR Label Download and Bulk Export",
+      "description": "Shows individual PNG labels, selected-copy PDFs, and complete matching-copy exports with bounded batches.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Print QR"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Search physical copies"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Select one, selected or all matching copies"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Label selection valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display error"
+        },
+        {
+          "id": "file",
+          "type": "process",
+          "label": "Generate PNG, PDF or ZIP"
+        },
+        {
+          "id": "print",
+          "type": "process",
+          "label": "Print exact-copy labels"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "file",
+          "label": "Yes"
+        },
+        {
+          "from": "file",
+          "to": "print",
+          "label": ""
+        },
+        {
+          "from": "print",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "A printed code identifies one physical copy. Reprinting does not add stock, change copy identity, or record a loan.",
+        "Complete matching export uses label batches of 200 and fails visibly if any expected identity or batch is missing. Do not treat an interrupted download as complete."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibQRBulk.jsx",
+        "frontend/src/api/librarian.js",
+        "backend/routers/inventory.py",
+        "backend/services/book_copy_service.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.24",
+      "title": "Appearance Settings and Entrance Station PIN Replacement",
+      "description": "Shows browser appearance preferences and password-confirmed replacement of the staff station PIN.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Settings"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Change station PIN?"
+        },
+        {
+          "id": "theme",
+          "type": "process",
+          "label": "Select Light or Dark mode"
+        },
+        {
+          "id": "input",
+          "type": "io",
+          "label": "Enter password and new PIN"
+        },
+        {
+          "id": "t",
+          "type": "decision",
+          "label": "Password and PIN valid?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Display error"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save protected PIN"
+        },
+        {
+          "id": "unlock",
+          "type": "process",
+          "label": "Unlock station with new PIN"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "theme",
+          "label": "No"
+        },
+        {
+          "from": "theme",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "input",
+          "label": "Yes"
+        },
+        {
+          "from": "input",
+          "to": "t",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "t",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "unlock",
+          "label": ""
+        },
+        {
+          "from": "unlock",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Only librarians manage the station PIN. The existing PIN is never displayed; replacement requires the librarian password, not the old PIN.",
+        "A configured database PIN takes precedence over the server fallback and is checked on each station request. Station PINs and account passwords serve different purposes."
+      ],
+      "sources": [
+        "frontend/src/pages/lib/LibSettings.jsx",
+        "frontend/src/components/UserLayout.jsx",
+        "backend/routers/librarian_settings.py",
+        "backend/services/entry_station_pin.py",
+        "backend/tests/test_entry_station_pin.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.25",
+      "title": "Acquisition Metadata Entry and Import",
+      "description": "Shows recording verified acquisition details on existing physical copies through the reporting workspace.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open Reports: Acquisitions"
+        },
+        {
+          "id": "b",
+          "type": "io",
+          "label": "Enter copy ID or upload metadata"
+        },
+        {
+          "id": "c",
+          "type": "process",
+          "label": "Review existing copy and details"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Records valid and current?"
+        },
+        {
+          "id": "err",
+          "type": "process",
+          "label": "Show error and reload"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Confirm and save metadata"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Refresh acquisition report"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "err",
+          "label": "No"
+        },
+        {
+          "from": "err",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "This reporting workflow requires the separate reporting schema. It is not the removed Acquisition details section of Add Book.",
+        "Acquisition imports are limited to 500 rows and 1 MB. Blank imported cells clear existing acquisition fields; preview does not save anything.",
+        "Metadata refers to existing physical-copy IDs, not a printed QR string. It does not create stock or reassign physical-copy codes."
+      ],
+      "sources": [
+        "frontend/src/components/reporting/AcquisitionEditor.jsx",
+        "backend/routers/reporting.py",
+        "backend/schemas/reporting.py",
+        "backend/tests/test_reporting_center.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.26",
+      "title": "Librarian Workspace, Dashboard and Navigation",
+      "description": "Shows the initially hidden sidebar, dashboard summaries and access to each librarian workspace.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Open librarian dashboard"
+        },
+        {
+          "id": "b",
+          "type": "process",
+          "label": "View summaries and notices"
+        },
+        {
+          "id": "c",
+          "type": "io",
+          "label": "Open sidebar menu"
+        },
+        {
+          "id": "d",
+          "type": "io",
+          "label": "Choose work area"
+        },
+        {
+          "id": "open",
+          "type": "process",
+          "label": "Open selected librarian page"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "b",
+          "label": ""
+        },
+        {
+          "from": "b",
+          "to": "c",
+          "label": ""
+        },
+        {
+          "from": "c",
+          "to": "d",
+          "label": ""
+        },
+        {
+          "from": "d",
+          "to": "open",
+          "label": ""
+        },
+        {
+          "from": "open",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "The sidebar starts hidden on desktop and mobile. Selecting navigation opens the chosen workspace without changing its authorization requirements.",
+        "Dashboard notifications and shortcuts link to the relevant workflows. A summary card is not itself a circulation submission."
+      ],
+      "sources": [
+        "frontend/src/components/LibLayout.jsx",
+        "frontend/src/pages/lib/LibDashboard.jsx",
+        "frontend/src/App.jsx",
+        "backend/routers/auth.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.27",
+      "title": "Safe Submission, Partial Results and Unknown Outcome Recovery",
+      "description": "Shows how reservation, inventory and circulation writes preserve request identity and avoid accidental duplicate actions.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "Review and submit operation"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Result confirmed?"
+        },
+        {
+          "id": "keep",
+          "type": "process",
+          "label": "Keep original request and stop next items"
+        },
+        {
+          "id": "recover",
+          "type": "process",
+          "label": "Check or retry original request"
+        },
+        {
+          "id": "result",
+          "type": "process",
+          "label": "Display confirmed result"
+        },
+        {
+          "id": "next",
+          "type": "process",
+          "label": "Keep successful items and identify remaining items"
+        },
+        {
+          "id": "known",
+          "type": "decision",
+          "label": "Outcome now known?"
+        },
+        {
+          "id": "unknown",
+          "type": "process",
+          "label": "Keep request pending and seek assistance"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "keep",
+          "label": "No"
+        },
+        {
+          "from": "keep",
+          "to": "recover",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "result",
+          "label": "Yes"
+        },
+        {
+          "from": "result",
+          "to": "next",
+          "label": ""
+        },
+        {
+          "from": "next",
+          "to": "e",
+          "label": ""
+        },
+        {
+          "from": "recover",
+          "to": "known"
+        },
+        {
+          "from": "known",
+          "to": "result",
+          "label": "Yes"
+        },
+        {
+          "from": "known",
+          "to": "unknown",
+          "label": "No"
+        },
+        {
+          "from": "unknown",
+          "to": "e"
+        }
+      ],
+      "notes": [
+        "Do not clear pending recovery information, invent a new key, or infer success from a similar-looking loan. An unknown result is not a confirmed failure.",
+        "Circulation lists send independent sequential requests; earlier successes remain valid. Reservation confirmation is an atomic batch.",
+        "There is no durable offline queue or automatic write replay. Recovery and retry require a server connection and the original operation identity."
+      ],
+      "sources": [
+        "frontend/src/api/circulationRecovery.js",
+        "frontend/src/api/inventoryWrites.js",
+        "frontend/src/pages/user/UserReservations.jsx",
+        "backend/services/inventory_writes.py",
+        "backend/tests/test_circulation_atomicity.py"
+      ],
+      "rank": []
+    },
+    {
+      "id": "2.3.28",
+      "title": "Category Normalization and Librarian Review",
+      "description": "Shows automatic server category mapping and the Add Book review panel for unresolved imported labels.",
+      "nodes": [
+        {
+          "id": "s",
+          "type": "start",
+          "label": "Start"
+        },
+        {
+          "id": "a",
+          "type": "process",
+          "label": "System reads book category"
+        },
+        {
+          "id": "q",
+          "type": "decision",
+          "label": "Category recognized?"
+        },
+        {
+          "id": "save",
+          "type": "process",
+          "label": "Save visible category"
+        },
+        {
+          "id": "hide",
+          "type": "process",
+          "label": "Keep unresolved book hidden"
+        },
+        {
+          "id": "review",
+          "type": "process",
+          "label": "Open Add Book category review"
+        },
+        {
+          "id": "choose",
+          "type": "io",
+          "label": "Choose supported category"
+        },
+        {
+          "id": "apply",
+          "type": "process",
+          "label": "Save review resolution"
+        },
+        {
+          "id": "show",
+          "type": "process",
+          "label": "Refresh catalog category"
+        },
+        {
+          "id": "e",
+          "type": "end",
+          "label": "End"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s",
+          "to": "a",
+          "label": ""
+        },
+        {
+          "from": "a",
+          "to": "q",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "save",
+          "label": "Yes"
+        },
+        {
+          "from": "save",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "q",
+          "to": "hide",
+          "label": "No"
+        },
+        {
+          "from": "hide",
+          "to": "review",
+          "label": ""
+        },
+        {
+          "from": "review",
+          "to": "choose",
+          "label": ""
+        },
+        {
+          "from": "choose",
+          "to": "apply",
+          "label": ""
+        },
+        {
+          "from": "apply",
+          "to": "show",
+          "label": ""
+        },
+        {
+          "from": "show",
+          "to": "e",
+          "label": ""
+        }
+      ],
+      "notes": [
+        "Raw labels are reconciled to the supported genre vocabulary. Unresolved books retain the original label and remain hidden until an authorized resolution.",
+        "The Category review panel appears on Add Book. Choosing a master category resolves hidden books with the same exact original label; a suggestion alone does not save a resolution."
+      ],
+      "sources": [
+        "frontend/src/components/CategoryReview.jsx",
+        "frontend/src/pages/lib/LibAddBook.jsx",
+        "backend/routers/inventory.py",
+        "backend/services/category_service.py"
+      ],
+      "rank": []
+    }
+  ],
+  "style": "Plain black-and-white academic diagrams based on supplied samples"
+}

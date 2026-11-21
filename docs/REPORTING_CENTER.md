@@ -6,9 +6,10 @@ No production migration, deployment, commit, or push is included.
 
 ## Staff experience
 
-`/librarian/home` now provides ten linked measures, period comparisons, attendance
+`/librarian/home` now provides nine linked measures, period comparisons, attendance
 and circulation trends, current collection status, title rankings (including zero
-borrows), acquisition coverage, alerts, and recent activity. The existing drawer,
+borrows), alerts, and recent activity. The Acquisitions section and its linked
+summary measure have been removed from the dashboard. The existing drawer,
 theme tokens, font stack, member-registration workflow, and operational routes
 remain. The homepage has a fixed current-month overview and no filter controls. Refresh
 occurs on page entry, registration, or manual refresh; chart queries are no longer polled every ten seconds.

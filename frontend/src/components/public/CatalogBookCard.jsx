@@ -4,7 +4,7 @@ import SearchHighlight from './SearchHighlight';
 export default function CatalogBookCard({ book, onClick, query = '' }) {
   const title = book.title || book.name;
   return (
-    <button type="button" className="catalog-book" aria-label={`View details for ${title}`} onClick={onClick}>
+    <button type="button" className="catalog-book catalog-public-book" aria-label={`View details for ${title}`} onClick={onClick}>
       <span className="catalog-book-cover">
         <BookCover src={book.cover_url || book.cover} alt={title} className="catalog-cover-image" iconSize={28} />
       </span>

@@ -30,7 +30,12 @@ ADDITIONS = {
         ("delivered_at", DateTime(timezone=True), None),
     ],
     "books": [("category_override", String(80), None), ("raw_api_label", String(1000), None), ("is_hidden", Boolean, true()), ("description", Text, None)],
-    "entry_logs": [("time_out", DateTime(timezone=True), None)],
+    "entry_logs": [
+        ("time_out", DateTime(timezone=True), None),
+        ("visitor_name", String(150), None),
+        ("visitor_location", String(200), None),
+        ("manual_request_id", String(36), None),
+    ],
     "notifications": [("user_id", Integer, None)],
     "users": [
         ("deleted_at", DateTime(timezone=True), None),
@@ -57,6 +62,7 @@ def upgrade_schema(conn, metadata) -> None:
 
     # create_all does not add indexes to tables that already exist.
     for table_name, index_name in (
+        ("entry_logs", "uq_entry_logs_manual_request_id"),
         ("transactions", "ix_transactions_recommendation_history"),
         ("reservations", "ix_reservations_member_status_book"),
         ("reservations", "uq_reservations_active_member_book"),

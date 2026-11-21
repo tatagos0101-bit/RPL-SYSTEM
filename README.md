@@ -58,7 +58,9 @@ librarian administration, circulation, reporting, QR labels, and attendance.
   replace/delete enrolled face data, delete member accounts after all books are
   returned, suspend/reactivate accounts, issue temporary password resets, manage inventory,
   import `.xlsx` workbooks with per-row validation/savepoints, and process
-  borrowing/returns for individual copies. Borrowing automatically lists the
+  borrowing/returns for individual copies. Borrowing starts facial recognition
+  automatically with scan-status feedback and retries; supervised email/Member ID
+  lookup remains available as a fallback. Borrowing automatically lists the
   identified member's reservations, with exact-copy selection for ready pickups;
   QR/code entry remains available for pickups and walk-ins. Failed cover uploads can be retried
   after a successful book save without creating another title. Book creation and
@@ -76,7 +78,10 @@ librarian administration, circulation, reporting, QR labels, and attendance.
 - **Entrance station:** a station PIN unlocks camera scanning and recent entry
   logs. Recognized enrolled faces create time-in/out sessions; frames can contain
   multiple people. Kiosk scans do not issue login tokens; website face login does
-  not create attendance. Entry transitions serialize per member.
+  not create attendance. Entry transitions serialize per member. Camera guidance
+  appears below the continuous preview. Manual visitors can record name, location,
+  time-in and staff-confirmed time-out; open visits remain searchable across days.
+  See [entrance station operation and upgrade](docs/ENTRANCE_STATION.md).
 - **Reports:** member reading transcripts and monthly circulation PDFs, plus
   librarian CSV exports, printable reports, and QR label images/PDFs. These are
   library records; the application does not certify academic credits.

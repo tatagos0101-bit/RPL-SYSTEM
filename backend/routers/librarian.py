@@ -47,6 +47,7 @@ from models.transaction import Transaction
 from models.user import User
 from services.auth_sessions import revoke_user_sessions
 from services.loan_policy import sync_overdue_loans
+from services.manual_visitor_service import serialize_entry_log
 from services.book_copy_service import ensure_book_copies
 from services.reservation_policy import (
     promote_next_pending_reservation,
@@ -281,20 +282,7 @@ def entry_logs(
         .all()
     )
 
-    result = []
-    for log in logs:
-        result.append(EntryLogOut(
-            id          = log.id,
-            member_name = log.user.name              if log.user else None,
-            member_id   = (log.user.member_id or f"RPL-{log.user.id:05d}") if log.user else None,
-            entry_type  = log.entry_type,
-            granted     = log.granted,
-            is_inside   = bool(log.granted and log.time_out is None),
-            note        = log.note,
-            accessed_at = log.accessed_at,
-            time_out    = log.time_out,
-        ))
-    return result
+    return [serialize_entry_log(log) for log in logs]
 
 
 # ── Members list ──────────────────────────────────────────────────────────────

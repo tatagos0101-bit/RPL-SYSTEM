@@ -1,7 +1,19 @@
-from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 from decimal import Decimal
+from unicodedata import category
+
+from pydantic import BaseModel, Field, UUID4, field_validator
+
+
+def _normalize_visitor_text(value):
+    if not isinstance(value, str):
+        return value
+    for char in value:
+        kind = category(char)
+        if kind in {"Cc", "Cs", "Zl", "Zp"} or (kind == "Cf" and char not in "\u200c\u200d"):
+            raise ValueError("Visitor details must be single-line text without control characters.")
+    return value.strip()
 
 
 class MemberDeletionRequest(BaseModel):
@@ -46,12 +58,36 @@ class EntryLogOut(BaseModel):
     id:          int
     member_name: Optional[str]   # None if unknown visitor
     member_id:   Optional[str]
+    visitor_name: Optional[str] = None
+    visitor_location: Optional[str] = None
     entry_type:  str
     granted:     bool
     is_inside:   bool = False
     note:        Optional[str]
     accessed_at: datetime          # time_in — first detection this session
     time_out:    Optional[datetime] = None  # time_out — last detection this session
+
+
+class ManualVisitorEntryRequest(BaseModel):
+    request_id: UUID4
+    visitor_name: str = Field(min_length=1, max_length=150)
+    visitor_location: str = Field(min_length=1, max_length=200)
+
+    _normalize_text = field_validator("visitor_name", "visitor_location", mode="before")(_normalize_visitor_text)
+
+
+class ManualVisitorEntryPage(BaseModel):
+    items: list[EntryLogOut]
+    total: int
+
+
+class ManualVisitorSearch(BaseModel):
+    open_only: bool = True
+    search: str = Field(default="", max_length=200)
+    skip: int = Field(default=0, ge=0, le=2_147_483_647)
+    limit: int = Field(default=20, ge=1, le=100)
+
+    _normalize_search = field_validator("search", mode="before")(_normalize_visitor_text)
 
 
 class LibMemberOut(BaseModel):

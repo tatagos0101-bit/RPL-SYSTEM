@@ -25,6 +25,16 @@ and verify approved test recipients separately; see
 [registration credential delivery](CONTACT_VERIFICATION.md#new-member-registration-credentials).
 No live sending or production configuration was performed in the local session.
 
+## Entrance station manual attendance prerequisite
+
+The November 20 entrance-station revision adds manual visitor name/location,
+time-in/out and retry-safe request IDs. Before deploying the updated API, apply
+the additive `entry_logs` column/index upgrade through the established migration
+path on the explicitly authorized database. Preserve existing attendance rows and
+keep production `AUTO_MIGRATE=false`. See [entrance station operation and upgrade](ENTRANCE_STATION.md)
+for the fields, index, acceptance checks and limitations. Local startup/tests do
+not establish that the production schema has been upgraded.
+
 ## Catalog discovery compatibility prerequisite (local only)
 
 The November16 local catalog revision adds server-side `sort` and `favorites_only`

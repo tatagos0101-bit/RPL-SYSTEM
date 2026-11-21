@@ -285,6 +285,56 @@
 .rpl-catalog .catalog-book-availability { font-size: .75rem; color: var(--rpl-muted); line-height: 1.4; }
 .rpl-catalog .catalog-book-action { display: flex; align-items: center; justify-content: center; border: 1px solid var(--rpl-line); border-radius: 8px; background: var(--rpl-panel); font-size: .8125rem; font-weight: 500; transition: background 160ms ease, border-color 160ms ease; }
 .rpl-catalog .catalog-book:hover .catalog-book-action { background: var(--rpl-info-soft); border-color: #ab8759; }
+
+/* Public cards reveal one continuous panel without moving the shelf layout. */
+.rpl-public.rpl-catalog .catalog-rail-books .catalog-rail-track { padding: 12px 12px 18px; }
+.rpl-public.rpl-catalog .catalog-public-book {
+  --catalog-public-cover-height: 240px;
+  position: relative;
+  isolation: isolate;
+  border-radius: 10px;
+  flex-basis: 168px;
+  grid-template-rows: var(--catalog-public-cover-height) 2.7em 1.5em 1.4em 48px;
+}
+.rpl-catalog .catalog-public-book::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid var(--rpl-line);
+  border-radius: 16px;
+  background: var(--rpl-panel);
+  box-shadow: 0 6px 14px rgb(48 38 31 / 9%);
+  opacity: 0;
+  transition: opacity 180ms ease, border-color 180ms ease;
+}
+.rpl-catalog .catalog-public-book .catalog-book-cover { height: var(--catalog-public-cover-height); border-radius: 10px; }
+.rpl-catalog .catalog-public-book .catalog-book-title { font-size: 1rem; }
+.rpl-catalog .catalog-public-book .catalog-book-author { font-size: .875rem; }
+.rpl-catalog .catalog-public-book .catalog-book-availability { font-size: .8125rem; }
+.rpl-catalog .catalog-public-book .catalog-book-action { min-height: 48px; font-size: .875rem; }
+.rpl-catalog .catalog-public-book .catalog-cover-image {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 10px;
+}
+.rpl-catalog .catalog-public-book:focus-visible { outline-offset: 10px; }
+.rpl-catalog .catalog-public-book:focus-visible::before { opacity: 1; border-color: var(--rpl-link); }
+.rpl-catalog .catalog-public-book:focus-visible .catalog-book-action { background: var(--rpl-info-soft); border-color: var(--rpl-link); }
+@media (hover: hover) and (pointer: fine) {
+  .rpl-catalog .catalog-public-book:hover::before { opacity: 1; border-color: var(--rpl-link); }
+  .rpl-catalog .catalog-public-book:hover .catalog-book-action { background: var(--rpl-info-soft); border-color: var(--rpl-link); }
+}
+@media (min-width: 800px) {
+  .rpl-public.rpl-catalog .catalog-content { width: min(1760px, calc(100% - 64px)); }
+}
+@media (min-width: 800px) and (hover: hover) and (pointer: fine) {
+  .rpl-public.rpl-catalog .catalog-rail-books .catalog-rail-track { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 32px 28px; }
+  .rpl-public.rpl-catalog .catalog-public-book { --catalog-public-cover-height: 300px; }
+}
 .rpl-catalog .catalog-shelf-state { flex: 0 0 100%; min-width: 0; display: flex; align-items: center; justify-content: center; min-height: 280px; }
 .rpl-catalog .catalog-empty { flex-direction: column; gap: 14px; color: var(--rpl-muted); }
 .rpl-catalog .catalog-empty button, .rpl-catalog .catalog-category-error button { color: var(--rpl-link); text-decoration: underline; text-underline-offset: 3px; min-height: 44px; }

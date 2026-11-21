@@ -28,8 +28,8 @@ export const enrollFace = (imageBase64) =>
 export const faceAuth = (imageBase64, expectedRole) =>
   client.post('/api/auth/face', { image: imageBase64, expected_role: expectedRole }, { timeout: 30000 });
 
-export const faceLookup = (imageBase64) =>
-  client.post('/api/auth/face-lookup', { image: imageBase64 });
+export const faceLookup = (imageBase64, config) =>
+  client.post('/api/auth/face-lookup', { image: imageBase64 }, config);
 
 export const logout = () =>
   client.post('/api/auth/logout');

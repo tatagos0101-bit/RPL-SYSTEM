@@ -99,8 +99,10 @@ keeps the drawer closed and inert initially at every viewport, including desktop
 the menu, close, overlay and navigation-link controls still operate it. Notification
 bounds follow measured header size, with subscriptions cleaned up on unmount.
 
-[LibDashboard](../frontend/src/pages/lib/LibDashboard.jsx) reorders the same ten
-metric drill-downs and existing charts/activity/attention content. [LibReports](../frontend/src/pages/lib/LibReports.jsx)
+[LibDashboard](../frontend/src/pages/lib/LibDashboard.jsx) displays nine
+metric drill-downs and collection, circulation, activity and attention content.
+The Acquisitions section and its summary tile are no longer shown on the dashboard.
+[LibReports](../frontend/src/pages/lib/LibReports.jsx)
 now displays chart payloads already returned with the matching records; it adds
 no requests, calculations or report categories. Its filter/export/pagination
 handlers and signed snapshot context remain unchanged. The staff-only
@@ -207,7 +209,7 @@ describe 17 application tables after the session, recommendation, repair and rep
 | `reservations`, `notifications` | Reservations link members to titles with queue/status/expiry information. Notifications may target a user; null user IDs denote librarian notifications. |
 | `reservation_confirmations` | Member/request ID primary key, canonical payload fingerprint and resulting reservation IDs for atomic confirmation retries. Private backend-only access. |
 | `inventory_writes` | Librarian/request ID primary key, operation, payload fingerprint and committed book/import result. The receipt commits with inventory; only its owner can reconcile it. Browser roles have no table access. |
-| `entry_logs`, `reading_goals` | Attendance sessions and annual user goals. Entry logs permit a null user for unidentified visitors and distinguish granted/denied access. |
+| `entry_logs`, `reading_goals` | Attendance sessions and annual user goals. Entry logs permit a null user for unidentified visitors and distinguish granted/denied access. The November 20 local upgrade adds nullable manual visitor name/location and a unique request ID for retry-safe manual attendance; see [entrance station](ENTRANCE_STATION.md). |
 | `password_reset_codes`, `security_alerts`, `library_settings` | Hashed expiring reset codes, security events that may include face snapshots, and key/value settings. A table's presence does not prove a complete UI or operational workflow. |
 
 [database.py](../backend/database.py) creates metadata and invokes additive upgrades;
