@@ -2,6 +2,7 @@ import ModalFrame from '../../components/ModalFrame';
 import { loadSections } from '../../api/loadSections';
 import { SHOW_FINES } from '../../api/fineVisibility';
 import FineContent from '../../components/FineContent';
+import AccountNotice from '../../components/AccountNotice';
 import { createElement, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -255,6 +256,7 @@ const UserHome = () => {
 
   return (
     <div className="min-w-0 [overflow-wrap:anywhere] px-4 py-6 pb-16 sm:px-6 lg:px-10">
+      <AccountNotice />
       {failedSections.length > 0 && <p role="alert" className="text-danger">Unavailable: {failedSections.join(', ')}. Displayed values may be incomplete. <button className="underline" onClick={() => setRetry(value => value + 1)}>Retry dashboard</button></p>}
       <header className="mb-6">
         <p className="mb-2 text-sm font-semibold tracking-normal text-muted">

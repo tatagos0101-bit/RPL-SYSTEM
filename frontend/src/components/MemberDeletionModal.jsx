@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import ModalFrame from './ModalFrame';
 import { deleteMemberAccount, deleteMemberFace } from '../api/librarian';
+import { approveAccountDeletion } from '../api/accountNotices';
 
-export default function MemberDeletionModal({ user, kind, onClose, onSuccess }) {
+export default function MemberDeletionModal({ user, kind, noticeId, onClose, onSuccess }) {
   const account = kind === 'account';
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -11,7 +12,7 @@ export default function MemberDeletionModal({ user, kind, onClose, onSuccess }) 
   const [error, setError] = useState('');
   const submitting = useRef(false);
   const blocked = account && user.active_loans > 0;
-  const title = account ? 'Delete Account' : 'Delete Face Data';
+  const title = account ? noticeId ? 'Approve Account Deletion' : 'Delete Account' : 'Delete Face Data';
   const close = () => { if (!submitting.current) onClose(); };
 
   const submit = async event => {
@@ -21,7 +22,8 @@ export default function MemberDeletionModal({ user, kind, onClose, onSuccess }) 
     setBusy(true);
     setError('');
     try {
-      await (account ? deleteMemberAccount : deleteMemberFace)(user.id, password);
+      if (account && noticeId) await approveAccountDeletion(noticeId, password);
+      else await (account ? deleteMemberAccount : deleteMemberFace)(user.id, password);
       setPassword('');
       setDone(true);
       onSuccess();
@@ -49,6 +51,7 @@ export default function MemberDeletionModal({ user, kind, onClose, onSuccess }) 
               : 'Permanently remove all enrolled face templates and linked face snapshots, and sign out the member on all devices. Their account and library history remain. Password login remains available.'}
           </p>
           {blocked && <p role="alert" className="mb-4 text-danger">Return all outstanding books before deleting this account.</p>}
+          {account && <p className="mb-4 text-sm text-muted">{noticeId ? 'The server will recheck the response deadline and renewed activity before approving deletion.' : 'This is an immediate manual deletion. It bypasses the notice waiting period.'}</p>}
           {!blocked && <>
             <label className="block text-sm">Your librarian password
               <input type="password" autoComplete="current-password" required disabled={busy} value={password} onChange={e => setPassword(e.target.value)}

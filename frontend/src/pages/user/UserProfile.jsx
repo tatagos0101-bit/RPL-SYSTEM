@@ -10,6 +10,7 @@ import { getProfile, getBiometricStatus, updateProfile, changePassword, uploadAv
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 import UserAvatar from '../../components/UserAvatar';
 import EmailContact from '../../components/EmailContact';
+import AccountNotice from '../../components/AccountNotice';
 import { avatarFileError, publishProfileUpdate, PROFILE_UPDATED, PROFILE_REVISION_KEY } from '../../api/profileUpdates';
 
 // Apply only confirmed photo changes; failures keep the previous photo.
@@ -325,6 +326,7 @@ export default function UserProfile() {
   return (
     <div className="rpl-page rpl-profile min-h-screen bg-canvas text-ink pb-24 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 md:px-8 pt-8 space-y-5">
+        <AccountNotice />
 
         {/* Page title */}
         <div>

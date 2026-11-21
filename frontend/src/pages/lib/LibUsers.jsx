@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import FaceEnrollModal from '../../components/FaceEnrollModal';
 import MemberDeletionModal from '../../components/MemberDeletionModal';
+import AccountActivityReview, { AccountNoticeQueue } from '../../components/AccountActivityReview';
 import FloatingActions from '../../components/FloatingActions';
 import {
   getMemberStats,
@@ -366,6 +367,8 @@ export default function LibUsers() {
   const closeActionMenu = useCallback(() => setActionMenu(null), []);
   const [enrollTarget, setEnrollTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [accountReview, setAccountReview] = useState(null);
+  const [noticeRevision, setNoticeRevision] = useState(0);
   const [resetTarget,  setResetTarget]  = useState(null);
   const [showRegister, setShowRegister] = useState(false);
 
@@ -420,6 +423,8 @@ export default function LibUsers() {
             </div>
           ))}
         </div>
+
+        <AccountNoticeQueue revision={noticeRevision} onReview={setAccountReview} />
 
         {/* Table */}
         <div className="bg-panel border border-line rounded-xl overflow-hidden shadow-sm">
@@ -498,7 +503,7 @@ export default function LibUsers() {
                               className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-danger hover:bg-danger-soft">
                               <Trash2 size={13}/> Delete Face Data
                             </button>}
-                            <button onClick={() => { setActionMenu(null); setDeleteTarget({ user: u, kind: 'account' }); }}
+                            <button onClick={() => { setActionMenu(null); setAccountReview(u); }}
                               className="flex w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-danger hover:bg-danger-soft">
                               <Trash2 size={13}/> Delete Account
                             </button>
@@ -542,7 +547,12 @@ export default function LibUsers() {
           onSuccess={fetchMembers}
         />
       )}
-      {deleteTarget && <MemberDeletionModal {...deleteTarget} onClose={() => setDeleteTarget(null)} onSuccess={fetchMembers}/>}
+      {deleteTarget && <MemberDeletionModal {...deleteTarget} onClose={() => setDeleteTarget(null)}
+        onSuccess={() => { fetchMembers(); setNoticeRevision(value => value + 1); }} />}
+      {accountReview && <AccountActivityReview user={accountReview} onClose={() => setAccountReview(null)}
+        onChanged={() => { fetchMembers(); setNoticeRevision(value => value + 1); }}
+        onDeleteNow={user => { setAccountReview(null); setDeleteTarget({ user, kind: 'account' }); }}
+        onApprove={(user, noticeId) => { setAccountReview(null); setDeleteTarget({ user, kind: 'account', noticeId }); }} />}
       {resetTarget && (
         <PasswordResetModal
           user={resetTarget}

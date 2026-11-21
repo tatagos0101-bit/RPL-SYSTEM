@@ -14,6 +14,9 @@ export function notificationHref(role, id) {
 export function notificationContext(notification, role) {
   notificationBase(role);
   const staff = role === 'librarian';
+  if (notification.type === 'account_inactivity') {
+    return { title: 'A friendly membership check-in', to: staff ? '/librarian/users' : '/user/profile', label: staff ? 'Review member accounts' : 'Review my account notice' };
+  }
   if (['reservation', 'reservation_ready'].includes(notification.type)) {
     return { title: notification.type === 'reservation_ready' ? 'Reservation ready for pickup' : 'Reservation update',
       to: staff ? '/librarian/reservations' : '/user/reservations', label: staff ? 'Open reservations' : 'Open My Reservations' };

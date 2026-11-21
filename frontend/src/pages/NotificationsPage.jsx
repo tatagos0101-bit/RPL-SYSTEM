@@ -5,6 +5,7 @@ import { getNotification, listNotifications, readAllNotifications, readNotificat
 import { notificationBase, notificationContext, notificationHref, notifyNotificationsUpdated, NOTIFICATIONS_UPDATED } from '../api/notificationLinks';
 import { parseApiDateTime } from '../api/dateTime';
 import '../styles/notifications.css';
+import AccountNotice from '../components/AccountNotice';
 
 const pageSize = 20;
 const dateFormat = new Intl.DateTimeFormat('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' });
@@ -86,6 +87,7 @@ export default function NotificationsPage({ role }) {
       <h2>{context.title}</h2>
       {(data.book_title || data.member_name) && <dl>{data.book_title && <div><dt>Book</dt><dd>{data.book_title}</dd></div>}{role === 'librarian' && data.member_name && <div><dt>Member</dt><dd>{data.member_name}</dd></div>}</dl>}
       <p className="notification-message">{data.message}</p>
+      {role === 'member' && data.type === 'account_inactivity' && <AccountNotice notificationId={notificationId} showResolved />}
       {context.to && <Link className="notification-related" to={context.to}>{context.label}<ArrowRight size={17} /></Link>}
     </article>}
     {!notificationId && current && !result.error && <>
