@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, ArrowUpRight, BookOpen, Users, ArrowLeftRight, AlertTriangle } from 'lucide-react';
+import { RefreshCw, ArrowUpRight, BookOpen, Users, ArrowLeftRight, AlertTriangle, CalendarDays, Clock3 } from 'lucide-react';
 import { getAnalytics, reportError } from '../../api/reporting';
 import { defaultFilters, reportHref, periodDates, formatReportValue } from '../../api/reportingFilters';
 import ReportChart from '../../components/reporting/ReportChart';
@@ -39,14 +39,22 @@ export default function LibDashboard() {
   const chart = (section, id) => data?.sections[section]?.charts.find(c => c.id === id);
   const renderChart = (section, id) => chart(section, id) ? <ReportChart key={`${section}-${id}`} chart={chart(section, id)} variant="staff" /> : null;
   return <div className="staff-page staff-dashboard">
-    <header className="staff-page-header">
-      <div><h1>Dashboard</h1><p>Understand attendance, circulation and collection use. Select a measure to explore its records.</p></div>
-      <div className="staff-page-actions"><RegisterMemberButton onRegistered={load} /><Link className={buttonClass} to="/librarian/reports">Reporting center</Link></div>
-    </header>
-    <div className="staff-overview-meta">
-      <p>This month’s overview · Philippine time{data && ` · Updated ${formatReportValue(data.as_of)}`}. Use Reports to choose another period or download records.</p>
-      <button className={`${buttonClass} staff-action`} onClick={load} disabled={busy}><RefreshCw size={14} className={busy ? 'animate-spin' : ''} />{busy ? 'Loading…' : 'Refresh overview'}</button>
-    </div>
+    <section className="staff-dashboard-intro" aria-labelledby="dashboard-title">
+      <header className="staff-page-header staff-dashboard-heading">
+        <div className="staff-dashboard-title">
+          <span className="staff-dashboard-emblem" aria-hidden="true"><BookOpen size={30} strokeWidth={1.5} /></span>
+          <div className="staff-dashboard-copy"><h1 id="dashboard-title">Dashboard</h1><p>Understand attendance, circulation and collection use. Select a measure to explore its records.</p></div>
+        </div>
+        <div className="staff-page-actions"><RegisterMemberButton onRegistered={load} /><Link className={buttonClass} to="/librarian/reports" title="Choose another period or download records">Reporting center<ArrowUpRight size={15} aria-hidden="true" /></Link></div>
+      </header>
+      <div className="staff-overview-meta">
+        <div className="staff-overview-details">
+          <p className="staff-overview-period"><CalendarDays size={17} aria-hidden="true" /><span><strong>This month’s overview</strong><small>Philippine time</small></span></p>
+          {data && <p className="staff-overview-updated"><Clock3 size={15} aria-hidden="true" /><span>Updated <time dateTime={data.as_of}>{formatReportValue(data.as_of)}</time></span></p>}
+        </div>
+        <button className={`${buttonClass} staff-action`} onClick={load} disabled={busy}><RefreshCw size={14} className={busy ? 'animate-spin' : ''} />{busy ? 'Loading…' : 'Refresh overview'}</button>
+      </div>
+    </section>
     {error && <p role="alert" className="mb-5 rounded-xl border border-danger bg-danger-soft p-4 text-danger">{error} {data && 'Previously loaded values are shown below.'}</p>}
     {!data && busy && <p role="status" className="py-16 text-center text-muted">Loading library analytics…</p>}
     {data && <div className="staff-dashboard-content" aria-busy={busy}>
