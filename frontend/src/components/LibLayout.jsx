@@ -5,6 +5,7 @@ import { getLibrarianShellClasses } from '../api/librarianShell';
 import { STAFF_LIBRARIAN_NAV_LINKS } from '../api/librarianNavigation';
 import { parseApiDateTime } from '../api/dateTime';
 import { isPasswordChangePath } from '../api/authRoutes';
+import { notificationHref, notifyNotificationsUpdated, NOTIFICATIONS_UPDATED } from '../api/notificationLinks';
 import {
   BookOpen, PlusSquare, Users, LayoutDashboard, ArrowLeftRight,
   QrCode, FileText,
@@ -49,6 +50,12 @@ const LibLayout = () => {
   }, []);
 
   useEffect(() => {
+    const changed = event => { if (event.detail?.role === 'librarian' && !changingPassword) fetchNotifications(); };
+    window.addEventListener(NOTIFICATIONS_UPDATED, changed);
+    return () => window.removeEventListener(NOTIFICATIONS_UPDATED, changed);
+  }, [fetchNotifications, changingPassword]);
+
+  useEffect(() => {
     if (changingPassword) return;
     const initialId = setTimeout(fetchNotifications, 0);
     const id = setInterval(fetchNotifications, 30_000);
@@ -81,11 +88,13 @@ const LibLayout = () => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
     );
+    notifyNotificationsUpdated('librarian');
   };
 
   const handleMarkAllRead = async () => {
     await markAllNotificationsRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    notifyNotificationsUpdated('librarian');
   };
 
   const timeAgo = (isoStr) => {
@@ -190,14 +199,14 @@ const LibLayout = () => {
                       >
                         {/* Dot indicator */}
                         <div className={`mt-1.5 flex-shrink-0 w-1.5 h-1.5 rounded-full ${n.is_read ? 'bg-transparent' : 'bg-blue-500'}`} />
-                        <div className="flex-1 min-w-0">
+                        <Link to={notificationHref('librarian', n.id)} onClick={() => setBellOpen(false)} className="flex-1 min-w-0 hover:underline">
                           <p className="text-sm text-link text-ink leading-snug">
                             {n.message}
                           </p>
                           <p className="text-sm font-semibold tracking-normal text-link text-muted mt-0.5">
                             {timeAgo(n.created_at)}
                           </p>
-                        </div>
+                        </Link>
                         {!n.is_read && (
                           <button
                             onClick={() => handleMarkRead(n.id)}
@@ -211,6 +220,7 @@ const LibLayout = () => {
                     ))
                   )}
                 </div>
+                <Link to="/librarian/notifications" onClick={() => setBellOpen(false)} className="block border-t border-line px-4 py-3 text-center text-sm font-semibold text-link">View all notifications</Link>
               </div>
             )}
           </div>

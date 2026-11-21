@@ -3,7 +3,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuth } from '../api/auth';
 import { isPasswordChangePath } from '../api/authRoutes';
-import { getNotifications, markNotificationRead, markAllNotificationsRead, getFines, getProfile } from '../api/user';
+import { getNotifications, markAllNotificationsRead, getFines, getProfile } from '../api/user';
+import { notificationHref, notifyNotificationsUpdated, NOTIFICATIONS_UPDATED } from '../api/notificationLinks';
 import { PROFILE_UPDATED, PROFILE_REVISION_KEY } from '../api/profileUpdates';
 import UserAvatar from './UserAvatar';
 import { parseApiDateTime } from '../api/dateTime';
@@ -51,6 +52,12 @@ const UserLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const changingPassword = isPasswordChangePath(location.pathname);
+
+  useEffect(() => {
+    const changed = event => { if (event.detail?.role === 'member') setHeaderVersion(value => value + 1); };
+    window.addEventListener(NOTIFICATIONS_UPDATED, changed);
+    return () => window.removeEventListener(NOTIFICATIONS_UPDATED, changed);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -104,18 +111,11 @@ const UserLayout = () => {
 
   const unreadCount = notifs.filter((n) => !n.is_read).length;
 
-  const handleMarkRead = async (id) => {
-    try {
-      await markNotificationRead(id);
-      setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
-      setHeaderError('');
-    } catch { setHeaderError('Notification update was not confirmed. Reload and try again.'); }
-  };
-
   const handleMarkAllRead = async () => {
     try {
       await markAllNotificationsRead();
       setNotifs((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      notifyNotificationsUpdated('member');
       setHeaderError('');
     } catch { setHeaderError('Notification update was not confirmed. Reload and try again.'); }
   };
@@ -229,9 +229,10 @@ const UserLayout = () => {
                     <p className="px-4 py-8 text-center text-sm text-muted font-medium">No notifications yet</p>
                   ) : (
                     notifs.map((n) => (
-                      <button
+                      <Link
                         key={n.id}
-                        onClick={() => handleMarkRead(n.id)}
+                        to={notificationHref('member', n.id)}
+                        onClick={() => setNotifOpen(false)}
                         className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-line last:border-0 hover:bg-panel transition-colors ${
                           !n.is_read ? 'bg-info-soft' : ''
                         }`}
@@ -248,10 +249,11 @@ const UserLayout = () => {
                         {!n.is_read && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0" />
                         )}
-                      </button>
+                      </Link>
                     ))
                   )}
                 </div>
+                <Link to="/user/notifications" onClick={() => setNotifOpen(false)} className="block border-t border-line px-4 py-3 text-center text-sm font-semibold text-link">View all notifications</Link>
               </div>
             )}
           </div>

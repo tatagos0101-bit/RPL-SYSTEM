@@ -16,6 +16,7 @@ const LoginPage = lazy(() => import('./pages/public/LoginPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/public/ForgotPasswordPage'));
 const LibrarianLanding = lazy(() => import('./pages/public/LibrarianLanding'));
 const ChangePasswordPage = lazy(() => import('./pages/ChangePasswordPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
 const UserHome = lazy(() => import('./pages/user/UserHome'));
 const UserBrowseBooks = lazy(() => import('./pages/user/UserBrowseBooks'));
@@ -82,6 +83,8 @@ const AppContent = () => {
               <Route path="/user/browse" element={<UserBrowseBooks />} />
               <Route path="/user/reservations" element={<UserReservations />} />
               <Route path="/user/profile" element={<UserProfile />} />
+              <Route path="/user/notifications" element={<NotificationsPage role="member" />} />
+              <Route path="/user/notifications/:notificationId" element={<NotificationsPage role="member" />} />
               <Route path="/user/change-password" element={<ChangePasswordPage />} />
             </Route>
           </Route>
@@ -98,6 +101,8 @@ const AppContent = () => {
               <Route path="/librarian/reservations" element={<LibReservations />} />
               <Route path="/librarian/reports" element={<LibReports />} />
               <Route path="/librarian/settings" element={<LibSettings />} />
+              <Route path="/librarian/notifications" element={<NotificationsPage role="librarian" />} />
+              <Route path="/librarian/notifications/:notificationId" element={<NotificationsPage role="librarian" />} />
               <Route path="/librarian/entry" element={<Navigate to="/entry-station" replace />} />
               <Route path="/librarian/change-password" element={<ChangePasswordPage />} />
             </Route>

@@ -99,6 +99,12 @@ keeps the drawer closed and inert initially at every viewport, including desktop
 the menu, close, overlay and navigation-link controls still operate it. Notification
 bounds follow measured header size, with subscriptions cleaned up on unmount.
 
+Both portal bell menus link to protected notification detail pages and paginated
+inboxes at `/user/notifications` and `/librarian/notifications`. Opening a detail
+uses the existing confirmed read mutation, refreshes header read indicators, and
+offers known reservation/circulation links. The APIs enforce member ownership or
+librarian-only shared notifications; no notification schema upgrade is required.
+
 [LibDashboard](../frontend/src/pages/lib/LibDashboard.jsx) displays nine
 metric drill-downs and collection, circulation, activity and attention content.
 The Acquisitions section and its summary tile are no longer shown on the dashboard.

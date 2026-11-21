@@ -2,7 +2,7 @@ from datetime import datetime
 
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from services.email_identity import email_matches, normalize_email
 
 from database import get_db
-from dependencies import get_current_user, get_session_user, get_locked_current_user, get_locked_session_user
+from dependencies import get_current_user, get_session_user, get_locked_current_user, get_locked_session_user, require_member
 from services.member_deletion import lock_active_account, remove_profile_photo
 from services.auth_cookie import set_auth_cookie
 from services.auth_sessions import create_session_token, revoke_user_sessions
@@ -193,6 +193,7 @@ class NotificationOut(BaseModel):
     message: str
     type: str
     book_title: str | None = None
+    reservation_id: int | None = None
     is_read: bool
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -200,21 +201,37 @@ class NotificationOut(BaseModel):
 
 @router.get("/notifications", response_model=list[NotificationOut])
 def get_notifications(
-    current_user: User    = Depends(get_current_user),
+    skip: int = Query(0, ge=0, le=2_147_483_647),
+    limit: int = Query(30, ge=1, le=200),
+    current_user: User    = Depends(require_member),
     db:           Session = Depends(get_db),
 ):
     return (
         db.query(Notification)
         .filter(Notification.user_id == current_user.id)
-        .order_by(desc(Notification.created_at))
-        .limit(30)
+        .order_by(desc(Notification.created_at), desc(Notification.id))
+        .offset(skip).limit(limit)
         .all()
     )
 
 
+@router.get("/notifications/{notif_id}", response_model=NotificationOut)
+def get_notification(
+    notif_id: int,
+    current_user: User = Depends(require_member),
+    db: Session = Depends(get_db),
+):
+    notification = db.query(Notification).filter(
+        Notification.id == notif_id, Notification.user_id == current_user.id,
+    ).first()
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return notification
+
+
 @router.post("/notifications/read-all", status_code=204)
 def mark_all_read(
-    current_user: User    = Depends(get_current_user),
+    current_user: User    = Depends(require_member),
     db:           Session = Depends(get_db),
 ):
     db.query(Notification).filter(
@@ -227,7 +244,7 @@ def mark_all_read(
 @router.post("/notifications/{notif_id}/read", status_code=204)
 def mark_notification_read(
     notif_id:     int,
-    current_user: User    = Depends(get_current_user),
+    current_user: User    = Depends(require_member),
     db:           Session = Depends(get_db),
 ):
     notif = db.query(Notification).filter(

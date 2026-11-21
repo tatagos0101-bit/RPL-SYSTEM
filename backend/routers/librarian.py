@@ -625,13 +625,14 @@ def notify_member(
 def get_notifications(
     unread_only: bool    = False,
     limit:       int     = Query(50, ge=1, le=200),
+    skip:        int     = Query(0, ge=0, le=2_147_483_647),
     db:          Session = Depends(get_db),
     _:           User    = Depends(require_librarian),
 ):
     q = db.query(Notification).filter(Notification.user_id.is_(None))
     if unread_only:
         q = q.filter(Notification.is_read == False)
-    notifs = q.order_by(desc(Notification.created_at)).limit(limit).all()
+    notifs = q.order_by(desc(Notification.created_at), desc(Notification.id)).offset(skip).limit(limit).all()
     return [
         NotificationOut(
             id             = n.id,
@@ -645,6 +646,20 @@ def get_notifications(
         )
         for n in notifs
     ]
+
+
+@router.get("/notifications/{notification_id}", response_model=NotificationOut)
+def get_notification(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_librarian),
+):
+    notification = db.query(Notification).filter(
+        Notification.id == notification_id, Notification.user_id.is_(None),
+    ).first()
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return NotificationOut.model_validate(notification, from_attributes=True)
 
 
 @router.patch("/notifications/{notification_id}/read")
