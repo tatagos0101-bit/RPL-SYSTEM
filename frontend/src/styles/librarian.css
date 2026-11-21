@@ -36,8 +36,10 @@
 }
 .rpl-staff :where(h1, h2, h3, p, a, span) { overflow-wrap: anywhere; }
 .rpl-staff :where(h1, h2, h3) { text-wrap: pretty; }
-.rpl-staff :where(button, input, select, textarea, .font-sans) { font-family: inherit; }
-.rpl-staff :where(h1, .staff-section-title, .staff-report-chart > h2, .staff-panel > h2, .staff-monthly h2) { font-family: 'Newsreader', Georgia, serif; font-weight: 500; letter-spacing: -.015em; }
+.rpl-staff :where(button, input, select, textarea) { font-family: inherit; }
+.rpl-staff .font-sans { font-family: inherit; }
+.rpl-staff :where(h1, h2, h3, .rpl-brand) { font-family: 'Newsreader', Georgia, serif; }
+.rpl-staff :where(h1, .staff-section-title, .staff-report-chart > h2, .staff-panel > h2, .staff-monthly h2) { font-weight: 500; letter-spacing: -.015em; }
 .rpl-staff :focus-visible { outline: 2px solid var(--rpl-focus); outline-offset: 4px; }
 .rpl-staff :where(button, input, select, textarea) { border-radius: 10px; }
 .rpl-staff :where(button, a) { transition: color 160ms, background-color 160ms, border-color 160ms, box-shadow 160ms; }
@@ -58,7 +60,7 @@
 }
 .staff-header-leading { display: flex; align-items: center; min-width: 0; gap: 12px; }
 .staff-route-title { font-family: 'Newsreader', Georgia, serif; font-size: 1.25rem; font-weight: 500; line-height: 1.25; }
-.staff-header-brand { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: auto; padding: 2px 0; color: var(--rpl-muted); font-size: .875rem; font-weight: 500; text-align: left; }
+.staff-header-brand { display: flex; align-items: center; gap: 10px; min-width: 0; margin-left: auto; padding: 2px 0; color: var(--rpl-muted); font-family: "Segoe UI", Arial, sans-serif; font-size: .875rem; font-weight: 500; text-align: left; }
 .staff-header-brand img { width: 32px; height: 32px; object-fit: contain; flex: 0 0 auto; }
 .staff-header-brand:hover { color: var(--rpl-ink); }
 .staff-menu-toggle, .staff-notification-button, .staff-drawer-close { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 44px; min-height: 44px; color: var(--rpl-muted); }
