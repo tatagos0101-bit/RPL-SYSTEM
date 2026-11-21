@@ -35,6 +35,11 @@ keep production `AUTO_MIGRATE=false`. See [entrance station operation and upgrad
 for the fields, index, acceptance checks and limitations. Local startup/tests do
 not establish that the production schema has been upgraded.
 
+The missing entrance-station upgrade was applied to production on November 21,
+2026. See the [production repair record](ENTRANCE_STATION.md#november-21-production-repair)
+for the unlock failure, exact schema additions and verification limits. New
+installations and other databases still require the established additive upgrade.
+
 ## Catalog discovery compatibility prerequisite (local only)
 
 The November16 local catalog revision adds server-side `sort` and `favorites_only`

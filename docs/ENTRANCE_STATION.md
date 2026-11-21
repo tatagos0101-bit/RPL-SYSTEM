@@ -62,3 +62,26 @@ checks/rate limits, validation, retries, exact exits, search and pagination. Exi
 multi-face, presence and PAD tests remain relevant. Synthetic browser checks verify
 camera continuity and manual entry; they do not certify real-face/PAD accuracy or
 live PostgreSQL concurrency. The existing privacy/retention policy is unchanged.
+
+## November 21 production repair
+
+At 3:03 PM Philippine time on November 21, 2026, the deployed station's unlock
+query was repaired by applying `entrance_station_manual_attendance_fields` to
+the existing production project. The API already selected the new visitor fields,
+but production still had the seven-column legacy `entry_logs` table. Because
+unlocking also retrieves recent attendance, the missing columns blocked unlock
+even when PIN verification succeeded.
+
+The additive migration installed nullable `visitor_name VARCHAR(150)`,
+`visitor_location VARCHAR(200)` and `manual_request_id VARCHAR(36)`, plus the
+partial unique index `uq_entry_logs_manual_request_id`. Existing visits, the
+managed station PIN, table permissions and RLS were preserved.
+
+Verification confirmed the column definitions, a valid unique index, runtime
+column privileges, unchanged browser-role restrictions, and successful planning
+of the attendance SELECT without reading visitor records. Both the public-domain
+API and direct API returned healthy responses and rejected missing/invalid PINs
+with HTTP 403. The isolated station/PIN/manual-attendance regression set passed
+44 tests. The operator confirmed that the deployed station unlocks with the
+existing PIN after the repair. Real-camera recognition accuracy was not tested
+as part of this schema repair.
