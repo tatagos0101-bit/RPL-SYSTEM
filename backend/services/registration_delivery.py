@@ -42,6 +42,11 @@ def send_registration_email(*, destination, member_id, temporary_password):
 
 
 def send_registration_sms(*, destination, member_id, temporary_password):
+    send_sms(destination, f"RPL account ready. Member ID: {member_id}. Temporary password: {temporary_password}. "
+             "Sign in with your Member ID and change it at first login. Keep it private.")
+
+
+def send_sms(destination, message, *, timeout=10):
     if not sms_configured():
         raise otp_delivery.DeliveryUnavailable()
     destination = normalize_sms_phone(destination)
@@ -49,15 +54,17 @@ def send_registration_sms(*, destination, member_id, temporary_password):
     response = httpx.post(f"https://api.twilio.com/2010-04-01/Accounts/{account}/Messages.json",
         auth=(account, os.environ["REGISTRATION_TWILIO_AUTH_TOKEN"].strip()),
         data={"To": destination, "From": os.environ["REGISTRATION_TWILIO_FROM"].strip(),
-              "Body": f"RPL account ready. Member ID: {member_id}. Temporary password: {temporary_password}. "
-                      "Sign in with your Member ID and change it at first login. Keep it private."},
-        timeout=10, follow_redirects=False)
+              "Body": message},
+        timeout=timeout, follow_redirects=False)
     if response.status_code != 201:
         raise otp_delivery.DeliveryUnavailable()
-    result = response.json()
+    try:
+        result = response.json()
+    except ValueError:
+        raise otp_delivery.DeliveryUncertain() from None
     if (not isinstance(result, dict) or not _MESSAGE_SID.fullmatch(str(result.get("sid", "")))
             or result.get("status") not in {"queued", "accepted", "sending", "sent", "delivered"}):
-        raise otp_delivery.DeliveryUnavailable()
+        raise otp_delivery.DeliveryUncertain()
 
 
 def deliver_registration_credentials(*, member_id, temporary_password, email=None, phone=None):

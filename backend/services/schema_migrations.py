@@ -38,6 +38,7 @@ ADDITIONS = {
     ],
     "notifications": [("user_id", Integer, None)],
     "users": [
+        ("last_activity_at", DateTime(timezone=True), None),
         ("deleted_at", DateTime(timezone=True), None),
         ("member_id", String(20), None),
         ("id_image_url", String(300), None),
@@ -62,6 +63,10 @@ def upgrade_schema(conn, metadata) -> None:
 
     # create_all does not add indexes to tables that already exist.
     for table_name, index_name in (
+        ("account_deletion_notices", "uq_account_deletion_notices_pending_member"),
+        ("account_deletion_notices", "ix_account_deletion_notices_status_deadline"),
+        ("account_deletion_notices", "ix_account_deletion_notices_notification_id"),
+        ("account_deletion_notices", "ix_account_deletion_notices_member_created"),
         ("entry_logs", "uq_entry_logs_manual_request_id"),
         ("transactions", "ix_transactions_recommendation_history"),
         ("reservations", "ix_reservations_member_status_book"),
@@ -83,7 +88,7 @@ def upgrade_schema(conn, metadata) -> None:
     for table in metadata.sorted_tables:
         name = conn.dialect.identifier_preparer.quote(table.name)
         conn.execute(text(f"ALTER TABLE public.{name} ENABLE ROW LEVEL SECURITY"))
-        if table.name in ("auth_sessions", "password_reset_codes", "reservation_confirmations", "inventory_writes", "copy_acquisitions"):
+        if table.name in ("account_deletion_notices", "auth_sessions", "password_reset_codes", "reservation_confirmations", "inventory_writes", "copy_acquisitions"):
             conn.execute(text(f"REVOKE ALL ON TABLE public.{name} FROM PUBLIC"))
         for role in sorted(roles):
             conn.execute(text(f"REVOKE ALL ON TABLE public.{name} FROM {role}"))

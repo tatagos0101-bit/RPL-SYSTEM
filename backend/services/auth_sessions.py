@@ -20,6 +20,8 @@ def credential_digest(user) -> str:
 
 def create_session_token(db, user) -> str:
     now = now_ph()
+    from services.account_inactivity import record_activity
+    record_activity(db, user, now)
     db.query(AuthSession).filter(
         AuthSession.user_id == user.id, AuthSession.expires_at <= now,
     ).delete(synchronize_session=False)

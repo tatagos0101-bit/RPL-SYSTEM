@@ -20,7 +20,7 @@ from services.biometric_crypto import BiometricStorageError, settings as biometr
 # Import all models to ensure SQLAlchemy relationships are properly initialized
 from models.security_alert import SecurityAlert
 from routers import auth, users, books, inventory, transactions, reservations, librarian, recommendations, reports, kiosk, uploads
-from routers import librarian_settings, reporting
+from routers import account_notices, librarian_settings, reporting
 
 logger = get_logger("main")
 
@@ -74,6 +74,7 @@ app.add_middleware(
 app.add_middleware(SecurityMiddleware)
 
 # ── Routers ───────────────────────────────────────────────────────────────────
+app.include_router(account_notices.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(books.router)

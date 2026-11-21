@@ -31,6 +31,7 @@ class User(Base):
     avatar_url     = Column(String(300), nullable=True)
 
     created_at     = Column(DateTime(timezone=True), server_default=func.now())
+    last_activity_at = Column(DateTime(timezone=True), nullable=True)
     updated_at     = Column(DateTime(timezone=True), onupdate=func.now())
     # An identity-free, permanently disabled row preserves historical foreign keys.
     deleted_at     = Column(DateTime(timezone=True), nullable=True)

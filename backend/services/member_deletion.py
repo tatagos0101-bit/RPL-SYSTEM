@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 from fastapi import HTTPException
 from sqlalchemy import or_
 
+from models.account_deletion_notice import AccountDeletionNotice
 from models.auth_session import AuthSession
 from models.book_interaction import BookInteraction
 from models.entry_log import EntryLog
@@ -133,6 +134,9 @@ def delete_account(db, member):
     for book_id in book_ids:
         sync_expired_reservations(db, book_id=book_id, commit=False)
 
+    notices = db.query(AccountDeletionNotice).filter_by(user_id=member.id)
+    notices.filter_by(status="pending").update({"status": "deleted"}, synchronize_session=False)
+    notices.update({"notification_id": None}, synchronize_session=False)
     legacy_notices.delete(synchronize_session=False)
     reservation_ids = db.query(Reservation.id).filter(Reservation.user_id == member.id)
     db.query(Notification).filter(or_(

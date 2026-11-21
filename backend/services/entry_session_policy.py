@@ -37,6 +37,9 @@ def record_entry_scan(
     db.query(User).filter(User.id == user.id).with_for_update().populate_existing().one()
     seen_at = as_ph(seen_at or now_ph())
 
+    from services.account_inactivity import record_activity
+    record_activity(db, user, seen_at)
+
     latest = (
         db.query(EntryLog)
         .filter(EntryLog.user_id == user.id, EntryLog.granted == True)

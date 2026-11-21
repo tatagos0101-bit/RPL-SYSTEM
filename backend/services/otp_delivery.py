@@ -11,6 +11,10 @@ class DeliveryUnavailable(Exception):
     pass
 
 
+class DeliveryUncertain(DeliveryUnavailable):
+    """Transport ended without a definitive provider acknowledgement."""
+
+
 def configured(channel):
     return channel == "email" and all(os.getenv(name, "").strip() for name in (
         "OTP_SMTP_HOST", "OTP_SMTP_USER", "OTP_SMTP_PASSWORD", "OTP_EMAIL_FROM"))
@@ -45,6 +49,8 @@ def send_email(destination, subject, content, *, idempotency_prefix="rpl-otp", t
                         or isinstance(exc, (smtplib.SMTPAuthenticationError, ssl.SSLError))):
                     raise
                 time.sleep(2 ** attempt)
+    except (smtplib.SMTPServerDisconnected, TimeoutError, ConnectionError):
+        raise DeliveryUncertain() from None
     except Exception:
         # Exceptions may contain credentials, recipients or message content.
         raise DeliveryUnavailable() from None
