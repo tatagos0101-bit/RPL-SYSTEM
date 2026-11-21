@@ -7,6 +7,7 @@ import json
 import os
 import time
 import base64
+import tempfile
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
@@ -16,7 +17,7 @@ import qrcode
 
 BASE = os.environ.get('QR_BROWSER_BASE', 'http://127.0.0.1:5187')
 assert urlparse(BASE).hostname in ('127.0.0.1', 'localhost'), 'Use a local test server only'
-ARTIFACTS = Path(os.environ.get('QR_BROWSER_ARTIFACTS', '.tools/qr-browser'))
+ARTIFACTS = Path(os.environ.get('QR_BROWSER_ARTIFACTS', str(Path(tempfile.gettempdir()) / 'rpl-qr-circulation')))
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 qr_bytes = BytesIO()
 qrcode.make('RPL-BOOK-00001-C001').save(qr_bytes, format='PNG')
@@ -33,7 +34,9 @@ def row(number, mode='return'):
 
 
 with sync_playwright() as playwright:
-    browser = playwright.chromium.launch(channel='msedge', headless=True)
+    browser = playwright.chromium.launch(
+        **({'executable_path': os.environ['CIRCULATION_BROWSER_EXECUTABLE']} if os.environ.get('CIRCULATION_BROWSER_EXECUTABLE') else {'channel': 'msedge'}),
+        headless=True)
     for width, height in [(1440, 1000), (390, 844)]:
         context = browser.new_context(viewport=dict(width=width, height=height))
         context.add_init_script("""navigator.mediaDevices.getUserMedia = async () => {
@@ -58,12 +61,16 @@ with sync_playwright() as playwright:
 
         def route_api(route):
             request = route.request
-            if request.resource_type not in ('xhr', 'fetch'):
+            if request.resource_type not in ('xhr', 'fetch') and request.method != 'OPTIONS':
                 return route.continue_()
+            headers = {'access-control-allow-origin': BASE, 'access-control-allow-credentials': 'true',
+                       'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS'}
+            if request.method == 'OPTIONS':
+                return route.fulfill(status=204, headers=headers)
             path = urlparse(request.url).path
             params = parse_qs(urlparse(request.url).query)
             status = 200
-            if path.endswith('/profile'):
+            if path.endswith('/profile') or path.endswith('/auth/session'):
                 data = dict(id=1, name='Synthetic librarian', role='librarian', must_change_password=False)
             elif path.endswith('/transactions/count'):
                 data = dict(total=0, borrowed=0, returned=0, overdue=0)
@@ -97,7 +104,7 @@ with sync_playwright() as playwright:
                     receipts[writes[-1]['key']] = dict(operation=operation, result=data)
             else:
                 data = []
-            route.fulfill(status=status, json=data)
+            route.fulfill(status=status, headers=headers, json=data)
 
         page.route('**/api/**', route_api)
         if os.environ.get('QR_BROWSER_CSP') == 'true':
@@ -110,10 +117,9 @@ with sync_playwright() as playwright:
                 route.fulfill(response=response, headers={**response.headers, 'content-security-policy': policy})
             page.route(BASE + '/**', with_csp)
         page.goto(BASE + '/librarian/borrow-return')
-        page.get_by_role('button', name='Quick Scan Session', exact=True).click()
+        page.get_by_role('button', name='Return books', exact=True).click()
         dialog = page.get_by_role('dialog')
-        dialog.get_by_role('button', name='Return Books', exact=True).click()
-        assert not dialog.get_by_label('Member ID', exact=True).count()
+        dialog.get_by_role('button', name='Use book QR / code instead', exact=True).click()
         dialog.get_by_role('button', name='Start QR camera').click()
         dialog.get_by_text('Camera permission denied.', exact=False).wait_for()
         code_input = dialog.get_by_label('Library QR code', exact=True)
@@ -141,9 +147,8 @@ with sync_playwright() as playwright:
         dialog.get_by_role('button', name='Close', exact=True).click()
 
         # Borrowing uses supervised ID, then explicit legacy-copy choice.
-        page.get_by_role('button', name='Quick Scan Session', exact=True).click()
-        dialog.get_by_role('button', name='Borrow Books', exact=True).click()
-        dialog.get_by_label('Member ID', exact=True).fill('SYN-1')
+        page.get_by_role('button', name='Borrow books', exact=True).click()
+        dialog.get_by_label('Email or Member ID', exact=True).fill('SYN-1')
         dialog.get_by_role('button', name='Identify member', exact=True).click()
         code_input = dialog.get_by_label('Library QR code', exact=True)
         scan('RPL-00001')
@@ -160,7 +165,7 @@ with sync_playwright() as playwright:
         assert len(writes) == 3  # Second item must not be submitted after unknown outcome.
         original_key = writes[-1]['key']
         page.reload()
-        page.get_by_role('button', name='Quick Scan Session', exact=True).click()
+        page.get_by_role('button', name='Borrow books', exact=True).click()
         dialog.get_by_role('heading', name='Unresolved requests', exact=False).wait_for()
         assert len(writes) == 3  # Reload must never replay.
         unknown[0] = False
@@ -189,11 +194,7 @@ with sync_playwright() as playwright:
                 {kind:'videoinput', deviceId:'synthetic-camera', label:'Synthetic QR camera'}
             ];
         }""", QR_IMAGE)
-        page.get_by_role('button', name='Quick Scan Session', exact=True).click()
-        dialog.get_by_role('button', name='Borrow Books', exact=True).click()
-        dialog.get_by_role('button', name='Face recognition', exact=True).click()
-        wait_for_condition("document.querySelector('dialog video')?.readyState >= 2")
-        dialog.get_by_role('button', name='Identify member', exact=True).click()
+        page.get_by_role('button', name='Borrow books', exact=True).click()
         dialog.get_by_label('Library QR code', exact=True).wait_for()
         assert page.evaluate('window.cameraStops') >= 1  # Face stream released first.
         stops = page.evaluate('window.cameraStops')

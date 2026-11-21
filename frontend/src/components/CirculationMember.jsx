@@ -7,7 +7,7 @@ import { getMembers } from '../api/librarian';
 import { findManualMemberMatch, memberToSessionIdentity } from '../api/manualMemberLookup';
 import { errorMessage } from '../api/inventoryWrites';
 
-export default function CirculationMember({ onSelect }) {
+export default function CirculationMember({ onSelect, mode = 'borrow' }) {
   const webcam = useRef(null);
   const [method, setMethod] = useState('face');
   const [identifier, setIdentifier] = useState('');
@@ -59,7 +59,7 @@ export default function CirculationMember({ onSelect }) {
     finally { if (mounted.current) setBusy(false); }
   };
   return <form onSubmit={identify} className="space-y-4">
-    <h3 className="text-lg font-semibold">Identify the borrowing member</h3>
+    <h3 className="text-lg font-semibold">{mode === 'return' ? 'Identify the returning member' : 'Identify the borrowing member'}</h3>
     <p className="text-muted">{method === 'face' ? 'Scanning starts automatically. Keep the member facing the camera.' : 'Identify the member at the counter using their email or Member ID.'}</p>
     <div className="flex flex-wrap gap-3">
       {['face', 'manual'].map(value => <button type="button" key={value} disabled={busy} aria-pressed={method === value} onClick={() => changeMethod(value)}

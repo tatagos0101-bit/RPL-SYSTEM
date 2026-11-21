@@ -168,16 +168,19 @@ async function run() {
 
       await page.getByRole('button', { name: 'Return books', exact: true }).click();
       const returnDialog = page.getByRole('dialog', { name: 'Return Books', exact: true });
-      await returnDialog.getByLabel('Library QR code', { exact: true }).waitFor();
-      assert.equal(await returnDialog.locator('video').count(), 0);
-      assert.equal(await returnDialog.getByRole('heading', { name: 'Identify the borrowing member' }).count(), 0);
+      assert.equal(await returnDialog.locator('video').count(), 1, 'Return must open the face scanner immediately');
+      await waitForCamera();
+      assert.equal(await returnDialog.getByLabel('Library QR code', { exact: true }).count(), 0,
+        'Book scanning must be an optional fallback');
+      await returnDialog.getByRole('heading', { name: 'Identify the returning member', exact: true }).waitFor();
       await returnDialog.getByRole('button', { name: 'Close', exact: true }).click();
+      await stopped();
       assert.deepEqual(writes, [], 'Identity and scan preparation must not record transactions');
       assert.deepEqual(errors, []);
       assert.equal(await page.locator('vite-error-overlay').count(), 0);
       results.push({ width, automaticScanning: true, automaticRetries: true, emailFallback: true, cameraCleanup: true,
-        uncertainFaceBlocked: true, returnFlowUnchanged: true, transactionsWritten: writes.length });
-      console.log(`PASS ${width}px: automatic scanning/retries, lighting and recognition feedback, exact email fallback, PAD rejection, camera cleanup, camera denial and retry, unchanged returns`);
+        uncertainFaceBlocked: true, returnStartsWithFace: true, transactionsWritten: writes.length });
+      console.log(`PASS ${width}px: automatic scanning/retries, lighting and recognition feedback, exact email fallback, PAD rejection, camera cleanup, camera denial and retry, face-first return entry`);
       await context.close();
     }
     await writeFile(path.join(artifacts, 'checks.json'), JSON.stringify(results, null, 2));

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import QrScanner from './QrScanner';
 import BorrowBookSelection from './BorrowBookSelection';
+import ReturnBookSelection from './ReturnBookSelection';
 import CirculationMember from './CirculationMember';
 import BorrowingCapacity from './BorrowingCapacity';
 import FineContent from './FineContent';
@@ -25,18 +26,19 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
   const mounted = useRef(true);
   const [mode, setMode] = useState(initialReturn ? 'return' : initialMode);
   const [member, setMember] = useState(null);
-  const [rows, setRows] = useState(initialReturn ? [{ ...initialReturn, transaction_id: initialReturn.transaction_id || initialReturn.id, title: initialReturn.book_title }] : []);
+  const [returnByCode, setReturnByCode] = useState(false);
+  const [rows, setRows] = useState([]);
   const [choices, setChoices] = useState([]);
   const [busy, setBusy] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const [review, setReview] = useState(Boolean(initialReturn));
+  const [review, setReview] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [actor] = useState(() => localStorage.getItem('userId'));
   const [recovery, setRecovery] = useState(() => {
     try { return readCirculation(actor); } catch { return null; }
   });
-  const allowance = useBorrowingCapacity(member?.user_id ?? null);
+  const allowance = useBorrowingCapacity(mode === 'borrow' ? member?.user_id ?? null : null);
   const refreshRecovery = () => {
     try { setRecovery(readCirculation(actor)); } catch { setRecovery(null); }
   };
@@ -56,6 +58,7 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
 
   const add = row => {
     if (mode === 'borrow' && !row.available) { setError(`Copy ${row.copy_number} is ${row.copy_status}; it cannot be borrowed.`); return; }
+    if (mode === 'return' && member && row.user_id !== member.user_id) { setError('That loan belongs to a different member. Choose a book from this member’s borrowed list.'); return; }
     setRows(previous => previous.some(item => itemKey(item) === itemKey(row)) ? previous : [...previous, row]);
     setChoices([]); setError(''); setNotice(`Added ${row.title}, copy ${row.copy_number ?? 'legacy'}.`);
   };
@@ -69,8 +72,10 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
     try {
       const { data } = await lookupCirculation(code, mode);
       if (!mounted.current) return;
-      if (data.candidates.length === 1) add(data.candidates[0]);
-      else { setChoices(data.candidates); setNotice('Legacy title QR: select the exact physical copy or loan.'); }
+      const candidates = mode === 'return' && member ? data.candidates.filter(row => row.user_id === member.user_id) : data.candidates;
+      if (!candidates.length) throw new Error(mode === 'return' && member ? 'No active loan for this member matches that code. Choose a book from their borrowed list.' : 'No matching physical copy or active loan was found.');
+      if (candidates.length === 1) add(candidates[0]);
+      else { setChoices(candidates); setNotice('Legacy title QR: select the exact physical copy or loan.'); }
     } catch (err) { if (mounted.current) setError(errorMessage(err)); }
     finally { inFlight.current = false; if (mounted.current) setBusy(false); }
   };
@@ -148,12 +153,16 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
           <button onClick={() => setMode('borrow')} className="bg-action text-white rounded-xl p-6">Borrow Books</button>
           <button onClick={() => setMode('return')} className="bg-action text-white rounded-xl p-6">Return Books</button>
         </div>}
-        {mode === 'borrow' && !member && <CirculationMember onSelect={setMember} />}
-        {mode && (mode === 'return' || member) && <>
-          {member && <section><p className="font-semibold">{member.name} · {member.member_id}</p><BorrowingCapacity {...allowance} /></section>}
+        {mode && !member && !returnByCode && <>
+          <CirculationMember onSelect={setMember} mode={mode} />
+          {mode === 'return' && <section className="space-y-2 border-t border-line pt-4"><p className="text-sm text-muted">If member identification is unavailable, staff can find the loan using a book code.</p><button type="button" onClick={() => setReturnByCode(true)} className="min-h-11 rounded-lg border border-line px-4 py-3 text-sm font-semibold text-link">Use book QR / code instead</button></section>}
+        </>}
+        {mode && (member || returnByCode) && <>
+          {member && <section><p className="font-semibold">{member.name} · {member.member_id}</p>{mode === 'borrow' && <BorrowingCapacity {...allowance} />}</section>}
           {!review && (mode === 'borrow'
             ? <BorrowBookSelection key={member.user_id} memberId={member.user_id} rows={rows} onAdd={add} onScan={scan} busy={busy || choices.length > 0} />
-            : <QrScanner onScan={scan} busy={busy} />)}
+            : member ? <ReturnBookSelection key={member.user_id} member={member} rows={rows} onAdd={add} onScan={scan} busy={busy || choices.length > 0} />
+              : <section className="space-y-3"><h3 className="text-lg font-semibold">QR / code fallback</h3><p className="text-sm text-muted">Check the borrower and physical copy shown in the list before confirming a return.</p><QrScanner onScan={scan} busy={busy} />{!rows.length && <button type="button" disabled={busy || choices.length > 0} onClick={() => { setReturnByCode(false); setError(''); setNotice(''); lastScan.current = {}; }} className="min-h-11 text-sm text-link underline underline-offset-4 disabled:opacity-50">Back to member identification</button>}</section>)}
           {choices.length > 0 && <section className="space-y-2">
             <h3 className="font-semibold">Choose the physical copy / active loan</h3>
             {choices.map(row => <button key={itemKey(row)} onClick={() => add(row)} disabled={mode === 'borrow' && !row.available}
@@ -164,7 +173,7 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
           </section>}
           <section className="space-y-3">
             <h3 className="text-lg font-semibold">{review ? 'Review before confirmation' : 'Pending list'} ({rows.length})</h3>
-            {!rows.length && <p className="text-muted">{mode === 'borrow' ? 'Add a reserved book above, or scan/type a library copy code.' : 'Scan a library copy QR to begin.'}</p>}
+            {!rows.length && <p className="text-muted">{returnByCode ? 'No book selected. Use the QR / code entry above.' : 'Choose the books being handed over from the selection above.'}</p>}
             {rows.map(row => <article key={itemKey(row)} className="border border-line rounded-xl p-4 space-y-1">
               <p className="font-semibold break-words">{row.title} · Copy {row.copy_number ?? 'legacy'}</p>
               {mode === 'borrow' && row.copy_qr && <p className="break-all font-mono text-sm text-muted">{row.copy_qr}</p>}
@@ -179,7 +188,7 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
           </section>
           <p className="text-sm text-muted">Items are recorded separately. Confirmed items stay confirmed if another fails. No offline processing.</p>
           <div className="flex flex-wrap gap-3">
-            {review && !rows.some(row => row.outcome) && <button disabled={processing} onClick={() => setReview(false)} className="border border-line p-3 rounded-lg">{mode === 'borrow' ? 'Back to book selection' : 'Back to scanning'}</button>}
+            {review && !rows.some(row => row.outcome) && <button disabled={processing} onClick={() => setReview(false)} className="border border-line p-3 rounded-lg">Back to book selection</button>}
             {!review ? <button disabled={!rows.length || busy || choices.length > 0} onClick={() => setReview(true)} className="bg-action text-white rounded-lg p-3 disabled:opacity-50">Review list</button>
               : <button disabled={processing || !recovery || recovery.length > 0 || !rows.some(row => !row.outcome)} onClick={confirm} className="bg-action text-white rounded-lg p-3 disabled:opacity-50">
                 {processing ? 'Processing…' : mode === 'borrow' ? 'Confirm Borrowing' : 'Confirm Returns'}

@@ -127,8 +127,8 @@ export const cancelLibReservation = (id) =>
 export const getMemberReservations = (userId, options = {}) =>
   client.get(`/api/librarian/member/${userId}/reservations`, options);
 
-export const getMemberActiveLoans = (userId) =>
-  client.get(`/api/librarian/member/${userId}/active-loans`);
+export const getMemberActiveLoans = (userId, options = {}) =>
+  client.get(`/api/librarian/member/${userId}/active-loans`, options);
 
 export const exportAllCopyQRs = async (search, onProgress) => {
   const snapshot = await client.get('/api/inventory/book-copies/export', { params: { search } });

@@ -418,8 +418,19 @@ multiple copies are available. Queued/unavailable titles cannot be picked up. QR
 Enter-terminated input and manual code entry remain optional for reserved pickups
 and are the default for walk-ins without active reservations. Failed reservation
 loads show retry and optional scanning, without claiming there are no reservations.
-Returns start with QR lookup and may include different borrowers. Scanning and
-selection are read-only; direct legacy QR scans still require explicit ambiguous
+Returns also start with automatic member facial identification, with supervised
+email/Member ID lookup as an alternative. The existing librarian-only active-loans
+endpoint supplies that member's active/overdue books. Each Add to return list
+selection retains the exact loan, copy and member IDs; no book scan is required.
+This lookup computes overdue display status without persisting status changes,
+materializing physical copies, or assigning legacy loans to copies.
+Transaction-log and Due Books shortcuts use this same identification/selection
+flow. QR/code entry is explicitly opened as a fallback, never automatically for
+empty or failed loan lists. Within an identified-member session, fallback scans
+are restricted to that member's loans. Staff unable to identify a member can
+explicitly open the code-only fallback, checking each loan's borrower at review;
+only that fallback may include different borrowers. Scanning and selection create
+no circulation transaction; direct legacy QR scans still require explicit ambiguous
 copy/loan selection. Automatic reservation selection never silently swaps a stale
 copy at confirmation; staff hand over the physical copy shown in review.
 Both selection paths share the original review, per-item submission and recovery
