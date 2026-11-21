@@ -233,7 +233,7 @@ const UserLayout = () => {
                         key={n.id}
                         to={notificationHref('member', n.id)}
                         onClick={() => setNotifOpen(false)}
-                        className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-line last:border-0 hover:bg-panel transition-colors ${
+                        className={`group w-full flex items-start gap-3 px-4 py-3 text-left border-b border-line last:border-0 hover:bg-panel transition-colors ${
                           !n.is_read ? 'bg-info-soft' : ''
                         }`}
                       >
@@ -241,10 +241,10 @@ const UserLayout = () => {
                           {NOTIF_ICONS[n.type] ?? NOTIF_ICONS.default}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <p className={`text-sm leading-snug ${n.is_read ? 'text-muted' : 'text-ink font-semibold'}`}>
+                          <p className={`text-sm leading-snug group-hover:underline group-focus-visible:underline ${n.is_read ? 'text-muted' : 'text-ink font-semibold'}`}>
                             {n.message}
                           </p>
-                          <p className="text-sm text-muted font-medium mt-0.5">{timeAgo(n.created_at)}</p>
+                          <p className="text-sm text-muted font-normal mt-0.5">{timeAgo(n.created_at)}</p>
                         </div>
                         {!n.is_read && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0" />

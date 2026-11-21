@@ -199,11 +199,11 @@ const LibLayout = () => {
                       >
                         {/* Dot indicator */}
                         <div className={`mt-1.5 flex-shrink-0 w-1.5 h-1.5 rounded-full ${n.is_read ? 'bg-transparent' : 'bg-blue-500'}`} />
-                        <Link to={notificationHref('librarian', n.id)} onClick={() => setBellOpen(false)} className="flex-1 min-w-0 hover:underline">
-                          <p className="text-sm text-link text-ink leading-snug">
+                        <Link to={notificationHref('librarian', n.id)} onClick={() => setBellOpen(false)} className="group flex-1 min-w-0">
+                          <p className="text-sm text-link leading-snug group-hover:underline group-focus-visible:underline">
                             {n.message}
                           </p>
-                          <p className="text-sm font-semibold tracking-normal text-link text-muted mt-0.5">
+                          <p className="text-sm font-normal text-muted mt-0.5">
                             {timeAgo(n.created_at)}
                           </p>
                         </Link>
