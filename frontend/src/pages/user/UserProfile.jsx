@@ -86,11 +86,17 @@ function AvatarUpload({ currentUrl, name, onUploaded }) {
           <span className="text-xs">{uploading ? 'Saving...' : removing ? 'Removing...' : photoAction}</span>
         </span>
       </button>
-      <p className="mt-3 text-xs text-muted">JPG, PNG or WebP · Up to 5 MB</p>
-      {currentUrl && <button type="button" onClick={handleRemove} disabled={busy}
-        className="mt-2 min-h-[44px] rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted transition-colors hover:bg-subtle hover:text-ink disabled:cursor-wait disabled:opacity-60">
-        {removing ? 'Removing photo...' : 'Remove photo'}
-      </button>}
+      <div role="group" aria-label="Profile photo options" className="mt-3 flex max-w-xs flex-wrap gap-2">
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={busy}
+          className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-line bg-subtle px-3 py-2 text-sm font-semibold text-ink transition-colors hover:bg-panel disabled:cursor-wait disabled:opacity-60">
+          <Camera size={15} aria-hidden="true" />{uploading ? 'Saving photo...' : photoAction}
+        </button>
+        {currentUrl && <button type="button" aria-label="Remove profile photo" onClick={handleRemove} disabled={busy}
+          className="min-h-[44px] rounded-lg border border-line px-3 py-2 text-sm font-semibold text-muted transition-colors hover:bg-subtle hover:text-ink disabled:cursor-wait disabled:opacity-60">
+          {removing ? 'Removing photo...' : 'Remove photo'}
+        </button>}
+      </div>
+      <p className="mt-2 text-xs text-muted">Optional · JPG, PNG or WebP · Up to 5 MB</p>
       {(busy || notice) && <p role="status" className="mt-1 max-w-xs text-sm text-muted">
         {uploading ? 'Saving profile photo...' : removing ? 'Removing profile photo...' : notice}
       </p>}
