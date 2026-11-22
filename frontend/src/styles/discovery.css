@@ -109,7 +109,8 @@
 }
 .rpl-discovery-nav .rpl-header-actions > button,
 .rpl-discovery-nav .rpl-header-leading > button { color: var(--rpl-ink); border-radius: 3px; }
-.rpl-discovery-nav .discovery-nav-links { display: flex; align-items: center; gap: 28px; margin-right: 16px; }
+.rpl-discovery-nav .discovery-nav-links { display: flex; align-items: center; justify-self: center; gap: 28px; margin-right: 0; }
+.rpl-discovery-nav .rpl-header-actions { justify-self: end; }
 .rpl-discovery-nav .discovery-nav-links a {
   display: inline-flex;
   align-items: center;
@@ -118,6 +119,7 @@
   color: var(--rpl-ink);
   font-size: .875rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 .rpl-discovery-nav .discovery-nav-links a::after {
   content: "";
@@ -131,7 +133,10 @@
   transform-origin: left;
   transition: transform 180ms ease;
 }
-.rpl-discovery-nav .discovery-nav-links a:is(:hover, [aria-current="page"])::after { transform: scaleX(1); }
+.rpl-discovery-nav .discovery-nav-links a:is(:hover, [aria-current="page"], [aria-current="location"])::after { transform: scaleX(1); }
+@media (min-width: 1100px) {
+  .rpl-discovery-nav.rpl-header:has(> .discovery-nav-links) { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+}
 
 /* The landing header sits over the room; the catalog keeps its paper header. */
 .rpl-landing-nav.rpl-header { --rpl-focus: #f2c66d; background: rgb(35 26 20 / 82%); border-bottom-color: rgb(255 253 247 / 16%); }
@@ -139,6 +144,7 @@
 .rpl-landing-nav .discovery-nav-links a,
 .rpl-landing-nav :is(.rpl-header-leading, .rpl-header-actions) > button { color: #fffdf7; }
 .rpl-landing-nav .rpl-header-actions > a { background: #edc27a; color: #302016; }
+.rpl-landing-nav .discovery-nav-links a[aria-current="location"] { color: #edc27a; }
 .rpl-landing-nav :is(.rpl-header-leading, .rpl-header-actions) > button:hover { background: rgb(255 253 247 / 12%); }
 
 /* Existing local photography becomes the full-bleed, gently moving room. */
@@ -251,6 +257,9 @@
 .rpl-landing .discovery-service-photo { height: 510px; overflow: hidden; }
 .rpl-landing .discovery-service-photo img { width: 100%; height: 100%; object-fit: cover; object-position: 55% center; }
 .rpl-landing .discovery-services-copy { min-width: 0; }
+.rpl-landing :is(#about-us, #contact) { scroll-margin-top: calc(var(--rpl-header-height) + 16px); }
+.rpl-landing :is(#about-us, #contact) h2 { scroll-margin-top: calc(var(--rpl-header-height) + 48px); }
+.rpl-landing .discovery-about-intro { max-width: 65ch; margin-bottom: 24px; color: var(--rpl-muted); font-size: 1rem; line-height: 1.7; }
 .rpl-landing .discovery-services h2 { margin: 0 0 28px; font-size: 2.5rem; line-height: 1.1; letter-spacing: -.02em; text-wrap: auto; }
 .rpl-landing .discovery-service { border-top: 1px solid var(--rpl-line); padding-block: 20px; }
 .rpl-landing .discovery-service h3 { font-size: 1.375rem; line-height: 1.3; }
@@ -373,7 +382,15 @@
   .rpl-catalog .catalog-public-book:hover .catalog-book-action { background: var(--rpl-info-soft); border-color: var(--rpl-link); }
 }
 @media (min-width: 800px) {
-  .rpl-public.rpl-catalog .catalog-content { width: min(1760px, calc(100% - 64px)); }
+  .rpl-public.rpl-catalog, .rpl-catalog-nav { --catalog-gutter: clamp(28px, 3vw, 80px); }
+  .rpl-public.rpl-catalog .catalog-content { width: calc(100% - var(--catalog-gutter) - var(--catalog-gutter)); }
+  .rpl-catalog-nav.rpl-header { padding-inline: var(--catalog-gutter); }
+}
+@media (min-width: 1100px) and (hover: hover) and (pointer: fine) {
+  .rpl-public.rpl-catalog .catalog-rail-books { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; }
+  .rpl-public.rpl-catalog .catalog-rail-books > .catalog-rail-heading { grid-column: 1; }
+  .rpl-public.rpl-catalog .catalog-page-controls-top { grid-column: 2; align-self: center; }
+  .rpl-public.rpl-catalog .catalog-rail-books > :is(.catalog-rail-track, .catalog-page-controls-bottom) { grid-column: 1 / -1; }
 }
 @media (min-width: 800px) and (hover: hover) and (pointer: fine) {
   .rpl-public.rpl-catalog .catalog-rail-books .catalog-rail-track { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 32px 28px; }
@@ -455,6 +472,15 @@
   .rpl-catalog .catalog-panel { padding-inline: 12px; }
   .rpl-catalog .catalog-book { flex-basis: 132px; }
   .rpl-catalog .catalog-page-controls button { min-height: 44px; }
+}
+/* Four visible public links replace the drawer at every screen size. */
+@media (max-width: 1099px) {
+  .rpl-public.rpl-discovery, .rpl-discovery-nav { --rpl-header-height: max(112px, 7rem); }
+  .rpl-discovery-nav.rpl-header:has(> .discovery-nav-links) { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 48px 44px; gap: 0 12px; padding-block: 8px; }
+  .rpl-discovery-nav.rpl-header .rpl-header-leading { display: flex; grid-column: 1; grid-row: 1; }
+  .rpl-discovery-nav.rpl-header .rpl-brand { grid-column: auto; grid-row: auto; font-size: clamp(1rem, 2.7vw, 1.25rem); }
+  .rpl-discovery-nav.rpl-header .rpl-header-actions { grid-column: 2; grid-row: 1; }
+  .rpl-discovery-nav .discovery-nav-links { grid-column: 1 / -1; grid-row: 2; gap: clamp(12px, 3vw, 28px); margin-right: 0; }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .rpl-catalog .catalog-book:hover .catalog-book-cover { transform: translateY(-2px); }

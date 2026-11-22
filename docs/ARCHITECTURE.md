@@ -64,7 +64,13 @@ are retained; no video, animation package or new external media is loaded.
 The wide-screen refinement removes the landing page's 1360px content cap in favor
 of shared 3vw gutters (28–80px), including its header, journey, services and footer.
 The hero fills the viewport with centered, fluid display type and a wider search
-form. Landing-only selectors retain the catalog's existing width and mobile gutters.
+form. Mobile layouts retain comfortable side gutters.
+The public catalog now shares those fluid desktop gutters with its header; its
+existing book sizes, vertical desktop grid, mobile swipe shelves and 24-title
+pagination remain. Desktop pagination sits beside the shelf heading. The public
+Home/Catalog header uses visible Home, Catalog, About Us and Contact links instead
+of a drawer. The latter two route to the homepage's short introduction and contact
+information using hash anchors, smooth scrolling and reduced-motion handling.
 
 [PublicBrowse](../frontend/src/pages/public/PublicBrowse.jsx) shares small category
 cover collages, [BookShelf](../frontend/src/components/public/BookShelf.jsx) and

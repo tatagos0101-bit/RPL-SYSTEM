@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X, LogOut, User, BookOpen, LayoutGrid, Camera, Home, Sun, Moon, LogIn } from 'lucide-react';
 import { clearAuth } from '../api/auth';
@@ -11,10 +11,17 @@ const Navbar = () => {
   );
   const navigate = useNavigate();
   const location = useLocation();
+  const isPublicDiscovery = ['/', '/browse'].includes(location.pathname);
 
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   const userRole = localStorage.getItem('userRole');
   const hideCurrentCatalog = isLoggedIn && userRole === 'librarian' && location.pathname.replace(/\/+$/, '') === '/browse';
+
+  useEffect(() => {
+    if (!isPublicDiscovery || location.hash) return;
+    const frame = requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    return () => cancelAnimationFrame(frame);
+  }, [isPublicDiscovery, location.hash, location.key]);
 
   const toggleTheme = () => {
     const newDark = !isDark;
@@ -47,30 +54,33 @@ const Navbar = () => {
   return (
     <>
       {/* TOP NAV */}
-      <nav className={`rpl-chrome rpl-header fixed top-0 left-0 w-full z-50 ${['/', '/browse'].includes(location.pathname) ? 'rpl-discovery-nav' : ''} ${location.pathname === '/' ? 'rpl-landing-nav' : ''} ${location.pathname === '/browse' ? 'rpl-catalog-nav' : ''}`}>
+      <nav className={`rpl-chrome rpl-header fixed top-0 left-0 w-full z-50 ${isPublicDiscovery ? 'rpl-discovery-nav' : ''} ${location.pathname === '/' ? 'rpl-landing-nav' : ''} ${location.pathname === '/browse' ? 'rpl-catalog-nav' : ''}`}>
         {logoutError && <p role="alert" className="absolute top-full left-0 w-full p-3 bg-panel text-danger">{logoutError}</p>}
 
         {/* Left: Hamburger + Logo */}
         <div className="rpl-header-leading">
-          <button
+          {!isPublicDiscovery && <button
             onClick={() => setIsOpen(true)}
             className="p-2 text-muted hover:bg-info-soft rounded-lg transition-all"
             aria-label="Open menu" aria-expanded={isOpen} aria-controls="public-navigation"
           >
             <Menu size={26} />
-          </button>
+          </button>}
 
           <Link to={getHomePath()} onClick={() => setIsOpen(false)} className="rpl-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></Link>
         </div>
 
+        {isPublicDiscovery && (
+            <div className="discovery-nav-links">
+              <Link to="/" aria-current={location.pathname === '/' && !location.hash ? 'page' : undefined}>Home</Link>
+              {!hideCurrentCatalog && <Link to="/browse" aria-current={location.pathname === '/browse' ? 'page' : undefined}>Catalog</Link>}
+              <Link to="/#about-us" aria-current={location.pathname === '/' && location.hash === '#about-us' ? 'location' : undefined}>About Us</Link>
+              <Link to="/#contact" aria-current={location.pathname === '/' && location.hash === '#contact' ? 'location' : undefined}>Contact</Link>
+            </div>
+        )}
+
         {/* Right: Theme toggle + Auth button */}
         <div className="rpl-header-actions">
-          {['/', '/browse'].includes(location.pathname) && (
-            <div className="discovery-nav-links">
-              <Link to="/" aria-current={location.pathname === '/' ? 'page' : undefined}>Home</Link>
-              {!hideCurrentCatalog && <Link to="/browse" aria-current={location.pathname === '/browse' ? 'page' : undefined}>Catalog</Link>}
-            </div>
-          )}
           <button
             onClick={toggleTheme}
             className="p-2.5 rounded-lg text-muted hover:bg-subtle transition-all"
@@ -103,6 +113,7 @@ const Navbar = () => {
         </div>
       </nav>
 
+      {!isPublicDiscovery && <>
       {/* OVERLAY */}
       {isOpen && (
         <div
@@ -168,6 +179,7 @@ const Navbar = () => {
           </p>
         </div>
       </div>
+      </>}
     </>
   );
 };

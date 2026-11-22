@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { catalogSearchPath } from '../../api/catalogDiscovery';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, Mail, ChevronRight, ArrowRight } from 'lucide-react';
 import useLandingMotion from '../../components/public/useLandingMotion';
 
@@ -41,7 +41,25 @@ const LandingPage = () => {
   const pageRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { hash, key: locationKey } = useLocation();
   useLandingMotion(pageRef);
+
+  useEffect(() => {
+    const targetId = hash === '#about-us' ? 'about-us' : hash === '#contact' ? 'contact' : null;
+    if (!targetId) return;
+    const frame = requestAnimationFrame(() => {
+      const section = document.getElementById(targetId);
+      (section?.querySelector('h2') || section)?.scrollIntoView({
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      // A new navigation must not inherit an unfinished native smooth scroll.
+      window.scrollTo({ top: window.scrollY, left: window.scrollX, behavior: 'instant' });
+    };
+  }, [hash, locationKey]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -91,13 +109,17 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section className="discovery-services" aria-labelledby="discovery-services-title">
+      <section id="about-us" className="discovery-services" aria-labelledby="discovery-services-title">
         <div className="discovery-container discovery-services-layout">
           <div className="discovery-service-photo discovery-reveal">
             <img src="/images/reading-room-1200.webp" alt="Sunlight across a quiet reading room and bookshelves" width="1200" height="800" loading="lazy" decoding="async" />
           </div>
           <div className="discovery-services-copy">
-            <h2 id="discovery-services-title" className="discovery-reveal">Your library, made accessible.</h2>
+            <h2 id="discovery-services-title" className="discovery-reveal">About us</h2>
+            <p className="discovery-about-intro discovery-reveal">
+              The Rizal Provincial Library connects readers with books and library services.
+              Browse the collection, find your next read, and sign in to manage your reservations and borrowing.
+            </p>
             <div className="discovery-service-list">
               {FEATURES.map((f) => (
                 <div key={f.title} className="discovery-service discovery-reveal">
@@ -124,7 +146,7 @@ const LandingPage = () => {
               <p className="discovery-contact"><MapPin size={19} aria-hidden="true" /><span>L. Wood Rd, Dolores,<br />Taytay, 1920 Rizal</span></p>
               <p className="discovery-contact"><Clock size={19} aria-hidden="true" /><span>Mon – Fri | 8:00 AM – 5:00 PM</span></p>
             </div>
-            <div className="discovery-reveal">
+            <div id="contact" className="discovery-reveal">
               <h2>Contact Us</h2>
               <div className="discovery-contact"><Phone size={19} aria-hidden="true" /><div><p className="discovery-contact-label">Telephone</p><a href="tel:026587276">(02) 658-7276</a></div></div>
               <div className="discovery-contact"><Mail size={19} aria-hidden="true" /><div><p className="discovery-contact-label">Email</p><a href="mailto:provinciallibrary_rizal@yahoo.com">provinciallibrary_rizal@yahoo.com</a></div></div>
