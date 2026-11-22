@@ -28,7 +28,7 @@
 - [ ] Read-only builder check of the spec and contract before product code; settle implementation issues without reopening approved policy.
 - [ ] Backend owner: write failing lifecycle/API/migration tests; implement notice model/schema, activity, delivery, protected routes and approval integration. Preserve existing manual delete. Run focused regressions.
 - [ ] Frontend owner: implement review-first Delete Account flow, notice queue/check action, explicit existing manual delete, member Keep action in notification/profile surfaces, API helpers; synthetic desktop/mobile browser acceptance.
-- [ ] Root: validate migrations on isolated targets, create reviewed scheduler setup SQL with Vault-generated key and restricted queues, update architecture/deployment policy docs and verify package boundaries.
+- [ ] Root: validate migrations on isolated targets, create reviewed scheduler setup SQL with a Vault-generated key and no durable credential queue, update architecture/deployment policy docs and verify package boundaries.
 - [ ] Full relevant suites, lint/build, rendered QA; one fresh review of the integrated branch and focused fixes.
 - [ ] Merge reviewed work to main. Apply minimal additive production DDL and ACLs, publish backend then frontend, enable/verify scheduler without manually sending real patron notices, verify deployed public access boundaries. Record limitations honestly.
 

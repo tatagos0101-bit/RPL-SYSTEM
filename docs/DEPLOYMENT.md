@@ -26,10 +26,12 @@ The scheduled job only sends notices/reconciles activity; it has no deletion pat
 
 Release backend before frontend. After protected-route/dry-run checks, the
 [reviewed scheduler setup](../supabase/operations/configure_account_inactivity_schedule.sql)
-can enable Supabase Cron/pg_net with a Vault-generated purpose-only key and a
-private application digest. It does not require a Vercel environment secret or
-Supabase service key. Restrict queue/Vault access, set the HTTP timeout explicitly,
-and check HTTP response metadata rather than treating a Cron request ID as success.
+can prepare an inactive Supabase Cron job using direct HTTPS, a Vault-generated
+purpose-only key and a private application digest. It does not require a Vercel
+environment secret or Supabase service key. Keep Vault private, set the HTTP
+timeout explicitly, and run the same Cron command in protected dry-run mode before
+activating real processing. The command raises for non-200 HTTP responses and
+never persists credentials in a request queue.
 Use [feature metadata checks](../supabase/operations/check_account_inactivity_access.sql)
 and advisors after the upgrade. Configure existing SMTP/optional Twilio separately;
 mocked transport success is not evidence of real inbox/phone delivery.
