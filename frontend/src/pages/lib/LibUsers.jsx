@@ -20,6 +20,7 @@ import {
   resetMemberPassword,
 } from '../../api/librarian';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
+import '../../styles/librarian-members.css';
 
 const formatApiError = (err, fallback) => {
   const detail = err?.response?.data?.detail;
@@ -390,7 +391,7 @@ export default function LibUsers() {
   const filtered = users;
 
   return (
-    <div className="rpl-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
+    <div className="rpl-page staff-members-page min-h-screen bg-transparent pb-20 font-sans text-ink transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-5 md:px-8 pt-8">
         {operationError && <p role="alert">{operationError} <button className="underline" onClick={fetchMembers}>Retry loading</button></p>}
 
@@ -427,10 +428,10 @@ export default function LibUsers() {
         <AccountNoticeQueue revision={noticeRevision} onReview={setAccountReview} />
 
         {/* Table */}
-        <div className="bg-panel border border-line rounded-xl overflow-hidden shadow-sm">
+        <div className="staff-members-panel bg-panel border border-line rounded-xl overflow-hidden shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-5 border-b border-line">
-            <h3 className="font-semibold tracking-normal rpl-subheading">All Members</h3>
-            <div className="relative max-w-full">
+            <h3 id="members-list-heading" className="font-semibold tracking-normal rpl-subheading">All Members</h3>
+            <div className="staff-members-search relative max-w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={14}/>
               <input aria-label="Search name or ID…" type="text" placeholder="Search name or ID…" value={search} onChange={e => setSearch(e.target.value)}
                 className="bg-subtle border border-line rounded-lg py-2 pl-8 pr-4 text-base font-medium outline-none focus:ring-2 focus:ring-line w-full sm:w-52 text-muted placeholder:text-muted"/>
@@ -440,55 +441,58 @@ export default function LibUsers() {
           {loading ? (
             <div className="flex justify-center py-16"><RefreshCw size={24} className="animate-spin text-link"/></div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left min-w-[700px]">
-                <thead>
-                  <tr className="text-sm font-semibold text-muted tracking-normal border-b border-line">
-                    {['Member','ID','Location','Joined','Loans','Face ID','Status',''].map(h => (
-                      <th key={h} className="px-6 py-4">{h}</th>
+            <div className="staff-members-scroll overflow-x-auto">
+              <table role="table" aria-labelledby="members-list-heading" className="staff-members-table w-full text-left">
+                <thead role="rowgroup">
+                  <tr role="row" className="text-sm font-semibold text-muted tracking-normal border-b border-line">
+                    {['Member','ID','Location','Joined','Loans','Face ID','Status','Actions'].map(h => (
+                      <th key={h} role="columnheader" scope="col" className="px-6 py-4">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   {filtered.map(u => (
-                    <tr key={u.id} className="group border-b border-line hover:bg-info-soft hover:bg-subtle transition-all duration-200">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                    <tr key={u.id} role="row" className="staff-member-row group border-b border-line hover:bg-info-soft hover:bg-subtle transition-all duration-200">
+                      <td role="cell" className="staff-member-identity px-6 py-4">
+                        <div className="staff-member-person flex items-center gap-3">
                           <div className="w-8 h-8 bg-info-soft rounded-xl flex items-center justify-center flex-shrink-0">
                             <User size={14} className="text-link"/>
                           </div>
-                          <div>
-                            <p className="font-bold text-sm text-ink flex items-center gap-1.5">
-                              {u.name}
-                              {u.face_enrolled && <BadgeCheck size={12} className="text-link"/>}
+                          <div className="min-w-0">
+                            <p className="staff-member-name font-bold text-sm text-ink flex items-center gap-1.5">
+                              <span>{u.name}</span>
+                              {u.face_enrolled && <BadgeCheck size={12} className="shrink-0 text-link"/>}
                             </p>
-                            <p className="text-sm text-muted font-medium">{u.email || 'No email on file'}</p>
+                            <p className="staff-member-email text-sm text-muted font-medium">{u.email || 'No email on file'}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-sans text-sm text-link font-semibold">{u.member_id}</td>
-                      <td className="px-6 py-4 text-sm text-muted font-medium">{u.location||'—'}</td>
-                      <td className="px-6 py-4 text-sm text-muted font-medium">
+                      <td role="cell" className="staff-member-id px-6 py-4 font-sans text-sm text-link font-semibold"><span className="staff-member-label" aria-hidden="true">Member ID</span>{u.member_id}</td>
+                      <td role="cell" className="px-6 py-4 text-sm text-muted font-medium"><span className="staff-member-label" aria-hidden="true">Location</span>{u.location||'—'}</td>
+                      <td role="cell" className="staff-member-joined px-6 py-4 text-sm text-muted font-medium">
+                        <span className="staff-member-label" aria-hidden="true">Joined</span>
                         {toUtcDate(u.joined_at).toLocaleDateString('en-PH',{month:'short',year:'numeric'})}
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold">{u.active_loans}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-0.5 rounded-full text-sm font-semibold ${u.face_enrolled?'bg-info-soft bg-info-soft text-link text-link':'bg-subtle text-muted'}`}>
+                      <td role="cell" className="px-6 py-4 text-sm font-semibold"><span className="staff-member-label" aria-hidden="true">Loans</span>{u.active_loans}</td>
+                      <td role="cell" className="px-6 py-4">
+                        <span className="staff-member-label" aria-hidden="true">Face ID</span>
+                        <span className={`staff-member-badge px-2 py-0.5 rounded-full text-sm font-semibold ${u.face_enrolled?'bg-info-soft bg-info-soft text-link text-link':'bg-subtle text-muted'}`}>
                           {u.face_enrolled?'Enrolled':'None'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-sm font-semibold tracking-normal inline-block ${u.status==='active'?'bg-success-soft bg-success-soft text-success text-success':'bg-danger-soft bg-danger-soft text-danger text-danger'}`}>
+                      <td role="cell" className="px-6 py-4">
+                        <span className="staff-member-label" aria-hidden="true">Status</span>
+                        <span className={`staff-member-badge px-2.5 py-1 rounded-full text-sm font-semibold tracking-normal inline-block ${u.status==='active'?'bg-success-soft bg-success-soft text-success text-success':'bg-danger-soft bg-danger-soft text-danger text-danger'}`}>
                           {u.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 relative">
+                      <td role="cell" className="staff-member-actions px-6 py-4 relative">
                         <button type="button" aria-label={`Actions for ${u.name}`} aria-expanded={actionMenu === u.id}
                           onClick={(event) => {
                             setActionAnchor(event.currentTarget);
                             setActionMenu(actionMenu===u.id?null:u.id);
                           }}
-                          className="p-2 text-muted hover:text-muted hover:bg-subtle rounded-lg transition-all">
+                          className="staff-member-actions-button p-2 text-muted hover:text-muted hover:bg-subtle rounded-lg transition-all">
                           <MoreHorizontal size={15}/>
                         </button>
                         {actionMenu===u.id && (
@@ -521,7 +525,7 @@ export default function LibUsers() {
                     </tr>
                   ))}
                   {filtered.length===0 && (
-                    <tr><td colSpan={8} className="text-center py-12 text-muted text-sm font-semibold tracking-normal">No members found</td></tr>
+                    <tr role="row" className="staff-members-empty"><td role="cell" colSpan={8} className="text-center py-12 text-muted text-sm font-semibold tracking-normal">No members found</td></tr>
                   )}
                 </tbody>
               </table>

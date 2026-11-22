@@ -1,0 +1,50 @@
+/* One set of member records: a table on large screens and stacked rows on phones. */
+.staff-members-table { width: 100%; min-width: 1040px; table-layout: auto; }
+.staff-members-table :where(th, td) { padding: 14px 16px; vertical-align: middle; }
+.staff-members-table th { white-space: nowrap; }
+.staff-members-table .staff-member-identity { min-width: 250px; }
+.staff-members-table .staff-member-person { width: 100%; min-width: 0; align-items: flex-start; }
+.staff-members-table .staff-member-name { align-items: baseline; line-height: 1.45; }
+.staff-members-table .staff-member-name > span { min-width: 0; overflow-wrap: anywhere; }
+.staff-members-table .staff-member-email { margin-top: 3px; overflow-wrap: anywhere; }
+.staff-members-table .staff-member-id { min-width: 120px; white-space: nowrap; }
+.staff-members-table .staff-member-joined { min-width: 110px; white-space: nowrap; }
+.staff-members-table td:nth-child(3) { min-width: 150px; overflow-wrap: anywhere; }
+.staff-members-table .staff-member-badge { display: inline-flex; align-items: center; white-space: nowrap; line-height: 1.45; }
+.staff-members-table .staff-member-actions { width: 76px; }
+.staff-members-table .staff-member-actions-button { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+.staff-members-table .staff-member-label { display: none; }
+.staff-members-search { width: 100%; }
+@media (min-width: 640px) {
+  .staff-members-search { width: auto; }
+}
+
+@media (max-width: 767px) {
+  .staff-members-scroll { overflow: visible; }
+  .staff-members-table { display: block; min-width: 0; }
+  .staff-members-table thead {
+    position: absolute; width: 1px; height: 1px; padding: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  .staff-members-table tbody { display: block; }
+  .staff-members-table .staff-member-row {
+    position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px; padding: 20px 16px;
+  }
+  .staff-members-table .staff-member-row:last-child { border-bottom: 0; }
+  .staff-members-table .staff-member-row > td {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+    min-width: 0; padding: 0; font-size: .875rem; line-height: 1.5;
+  }
+  .staff-members-table .staff-member-row > .staff-member-identity { grid-column: 1 / -1; padding-right: 48px; }
+  .staff-members-table .staff-member-name { align-items: baseline; }
+  .staff-members-table .staff-member-label {
+    display: block; color: var(--rpl-muted); font-size: .75rem;
+    font-weight: 500; line-height: 1.4; white-space: nowrap;
+  }
+  .staff-members-table .staff-member-row > .staff-member-actions {
+    position: absolute; top: 12px; right: 12px; width: 44px;
+  }
+  .staff-members-table .staff-members-empty,
+  .staff-members-table .staff-members-empty > td { display: block; width: 100%; }
+}
