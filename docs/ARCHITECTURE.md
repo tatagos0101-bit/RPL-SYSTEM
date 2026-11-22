@@ -61,6 +61,10 @@ enters view and pauses the background off-screen or on hidden pages using scoped
 IntersectionObservers; it adds no scroll-driven React renders. Without the observer
 API, content stays visible. Search, catalog, login routes and photography credits
 are retained; no video, animation package or new external media is loaded.
+The wide-screen refinement removes the landing page's 1360px content cap in favor
+of shared 3vw gutters (28–80px), including its header, journey, services and footer.
+The hero fills the viewport with centered, fluid display type and a wider search
+form. Landing-only selectors retain the catalog's existing width and mobile gutters.
 
 [PublicBrowse](../frontend/src/pages/public/PublicBrowse.jsx) shares small category
 cover collages, [BookShelf](../frontend/src/components/public/BookShelf.jsx) and
