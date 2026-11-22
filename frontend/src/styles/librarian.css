@@ -228,6 +228,8 @@
   .staff-chart-grid-featured, .staff-chart-grid-activity { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 899px) {
+  .staff-chart-grid, .staff-chart-grid-featured, .staff-chart-grid-activity { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .staff-report-chart { align-self: start; }
   .staff-report-filters { grid-template-columns: minmax(0, 1fr); }
   .staff-monthly > p { max-width: 80ch; }
   .staff-metric:nth-child(-n+4) { flex-basis: calc((100% - 12px) / 2); }
@@ -294,6 +296,9 @@
   .staff-metric:nth-child(n+5) .staff-metric-scope, .staff-metric:nth-child(n+5) .staff-metric-comparison { margin-top: 4px; }
 }
 .staff-report-chart > p[aria-live] { min-height: 1.5em; margin-top: 8px; }
+@media (max-width: 899px) {
+  .staff-report-chart > p[aria-live] { min-height: 3em; font-size: .75rem; }
+}
 
 /* Anchor notifications to the header, including when its title wraps. */
 .staff-header .rpl-header-actions > .relative { position: static; }
