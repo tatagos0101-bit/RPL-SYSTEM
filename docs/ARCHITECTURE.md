@@ -55,8 +55,8 @@ photographs of the RPL branch.
 
 The November22 landing motion update extends that existing presentation with a
 full-width photographic background, slow CSS photo/light/dust movement, and a
-landing-only translucent header. A background pause control and reduced-motion
-preferences stop decorative motion. `useLandingMotion` reveals content once as it
+landing-only translucent header. Background motion plays automatically and respects
+reduced-motion preferences. `useLandingMotion` reveals content once as it
 enters view and pauses the background off-screen or on hidden pages using scoped
 IntersectionObservers; it adds no scroll-driven React renders. Without the observer
 API, content stays visible. Search, catalog, login routes and photography credits

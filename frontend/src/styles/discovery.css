@@ -179,16 +179,7 @@
 .rpl-landing .discovery-hero-dust span:nth-child(4) { --dust-x: 76%; --dust-y: 62%; --dust-delay: -17s; }
 .rpl-landing .discovery-hero-dust span:nth-child(5) { --dust-x: 55%; --dust-y: 86%; --dust-delay: -5s; width: 2px; height: 2px; }
 .rpl-landing .discovery-hero-dust span:nth-child(6) { --dust-x: 34%; --dust-y: 24%; --dust-delay: -15s; width: 2px; height: 2px; }
-.rpl-landing .discovery-motion-toggle {
-  position: absolute; right: max(32px, calc((100vw - 1360px) / 2)); bottom: 24px;
-  display: grid; place-items: center; width: 44px; height: 44px;
-  border: 1px solid rgb(255 253 247 / 45%); border-radius: 50%;
-  background: rgb(35 26 20 / 35%); color: #fffdf7;
-  transition: background 220ms ease, border-color 220ms ease, transform 220ms ease;
-}
-.rpl-landing .discovery-motion-toggle:is(:hover, :focus-visible) { background: #513728; border-color: #edc27a; }
-.rpl-landing.discovery-ambient-paused .discovery-ambient,
-.rpl-landing[data-motion-paused="true"] .discovery-ambient { animation-play-state: paused; }
+.rpl-landing.discovery-ambient-paused .discovery-ambient { animation-play-state: paused; }
 .rpl-landing .discovery-hero::after {
   content: "";
   position: absolute;
@@ -249,7 +240,7 @@
 }
 .rpl-landing .discovery-hero-links a { transition: color 220ms ease; }
 .rpl-landing .discovery-hero-links a:hover { color: #edc27a; }
-.rpl-landing :is(.discovery-hero-links a, .discovery-motion-toggle, .discovery-footer a):focus-visible { outline-color: #edc27a; }
+.rpl-landing :is(.discovery-hero-links a, .discovery-footer a):focus-visible { outline-color: #edc27a; }
 .rpl-landing .discovery-journey { border-bottom: 1px solid var(--rpl-line); }
 .rpl-landing .discovery-journey-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; padding-block: 24px; }
 .rpl-landing .discovery-journey-step p:first-child { font-family: var(--discovery-serif); font-size: 1.75rem; line-height: 1.25; }
@@ -423,7 +414,6 @@
   .rpl-discovery-nav .discovery-nav-links a { font-size: .8125rem; }
   .rpl-landing .discovery-hero { min-height: max(700px, 100svh); padding-block: 220px 76px; }
   .rpl-landing .discovery-hero-photo img { object-position: 54% 49%; }
-  .rpl-landing .discovery-motion-toggle { right: 20px; bottom: 18px; }
   .rpl-landing .discovery-hero h1 { font-size: clamp(2.5rem, 10.8vw, 3.5rem); line-height: 1.05; }
   .rpl-landing .discovery-hero h1 br { display: none; }
   .rpl-landing .discovery-hero-description { font-size: .9375rem; line-height: 1.6; margin-top: 16px; }
@@ -492,14 +482,13 @@
   .rpl-landing .discovery-footer-links a:hover { color: #edc27a; }
   .rpl-landing-nav .rpl-header-actions > a { transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease; }
   .rpl-landing-nav .rpl-header-actions > a:is(:hover, :focus-visible) { transform: translateY(-2px); box-shadow: 0 6px 20px rgb(237 194 122 / 20%); background: #f4ce8e; }
-  .rpl-landing .discovery-motion-toggle:hover { transform: scale(1.06); }
-  .rpl-landing :is(.discovery-search button, .discovery-motion-toggle):active { transform: scale(.97); }
+  .rpl-landing .discovery-search button:active { transform: scale(.97); }
 }
 @media (prefers-reduced-motion: reduce) {
   .rpl-discovery *, .rpl-discovery *::before, .rpl-discovery *::after, .rpl-discovery-nav * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .rpl-discovery .discovery-enter, .rpl-discovery .discovery-reveal, .rpl-discovery .discovery-hero-photo img { opacity: 1; transform: none; }
   .rpl-landing.discovery-motion-ready .discovery-reveal { opacity: 1; transform: none; }
-  .rpl-landing :is(.discovery-hero-light, .discovery-hero-dust, .discovery-motion-toggle) { display: none; }
+  .rpl-landing :is(.discovery-hero-light, .discovery-hero-dust) { display: none; }
 }
 
 /* Catalog discovery: desktop grids retain the familiar phone swipe shelves. */

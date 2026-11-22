@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { catalogSearchPath } from '../../api/catalogDiscovery';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, Mail, ChevronRight, ArrowRight, Pause, Play } from 'lucide-react';
+import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, Mail, ChevronRight, ArrowRight } from 'lucide-react';
 import useLandingMotion from '../../components/public/useLandingMotion';
 
 const DUST_MOTES = [0, 1, 2, 3, 4, 5];
@@ -40,7 +40,6 @@ const STATS = [
 const LandingPage = () => {
   const pageRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [motionPaused, setMotionPaused] = useState(false);
   const navigate = useNavigate();
   useLandingMotion(pageRef);
 
@@ -50,7 +49,7 @@ const LandingPage = () => {
   };
 
   return (
-    <div ref={pageRef} data-motion-paused={motionPaused} className="rpl-page rpl-public rpl-discovery rpl-landing min-h-screen min-w-0 font-sans">
+    <div ref={pageRef} className="rpl-page rpl-public rpl-discovery rpl-landing min-h-screen min-w-0 font-sans">
       <main>
       <section className="discovery-hero" aria-labelledby="discovery-title">
         <picture className="discovery-hero-photo" aria-hidden="true">
@@ -79,11 +78,6 @@ const LandingPage = () => {
             <Link to="/login">Member login</Link>
           </div>
         </div>
-        <button type="button" className="discovery-motion-toggle" onClick={() => setMotionPaused(value => !value)}
-          aria-label={motionPaused ? 'Play background animation' : 'Pause background animation'}
-          title={motionPaused ? 'Play background animation' : 'Pause background animation'} aria-pressed={motionPaused}>
-          {motionPaused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
-        </button>
       </section>
 
       <section className="discovery-journey" aria-label="Your library journey">
