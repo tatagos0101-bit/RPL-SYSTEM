@@ -2,12 +2,15 @@ import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { PUBLIC_LIBRARIAN_NAV_LINKS } from '../../api/librarianNavigation';
+import { getStoredAuth, homeForRole } from '../../api/authRoutes';
 import '../../styles/librarian-welcome.css';
 
 export default function LibrarianPublicNavbar() {
   const location = useLocation();
   const pathname = location.pathname.replace(/\/+$/, '');
   const isLanding = pathname === '/librarian';
+  const { isLoggedIn, role } = getStoredAuth();
+  const isLibrarianSignedIn = isLoggedIn && role === 'librarian';
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'instant' }));
@@ -32,8 +35,8 @@ export default function LibrarianPublicNavbar() {
       </div>
 
       <div className="rpl-header-actions">
-        <Link to="/librarian/login" className="librarian-welcome-sign-in">
-          <span>Sign In</span>
+        <Link to={isLibrarianSignedIn ? homeForRole(role) : '/librarian/login'} className="librarian-welcome-sign-in">
+          <span>{isLibrarianSignedIn ? 'Staff Hub' : 'Sign In'}</span>
           <ArrowRight size={17} aria-hidden="true" />
         </Link>
       </div>

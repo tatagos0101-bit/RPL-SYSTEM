@@ -74,7 +74,10 @@ information using hash anchors, smooth scrolling and reduced-motion handling.
 
 The public librarian welcome page and staff sidebar link to `/librarian/catalog`.
 It reuses the public book list with librarian navigation: Home and the brand return
-to `/librarian`, and Sign In opens `/librarian/login`. The explicit URL preserves
+to `/librarian`. Signed-in librarians see Staff Hub links back to
+`/librarian/home` in the header and welcome-page primary action; public catalog
+navigation does not sign them out.
+Otherwise Sign In opens `/librarian/login`. The explicit URL preserves
 the portal after search, pagination, reloads and bookmarked visits. Its read-only
 details omit member reservation prompts; it grants no staff permissions. `/browse`
 keeps the reader-facing navigation, and management routes still require a librarian

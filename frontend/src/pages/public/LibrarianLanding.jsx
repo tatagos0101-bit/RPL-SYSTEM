@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, LockKeyhole } from 'lucide-react';
 import { LIBRARIAN_PUBLIC_CATALOG_PATH } from '../../api/librarianNavigation';
+import { getStoredAuth, homeForRole } from '../../api/authRoutes';
 import LibrarianPublicNavbar from '../../components/public/LibrarianPublicNavbar';
 import useLandingMotion from '../../components/public/useLandingMotion';
 
@@ -9,6 +10,8 @@ const DUST_MOTES = [0, 1, 2, 3, 4, 5];
 
 export default function LibrarianLanding() {
   const pageRef = useRef(null);
+  const { isLoggedIn, role } = getStoredAuth();
+  const isLibrarianSignedIn = isLoggedIn && role === 'librarian';
   useLandingMotion(pageRef);
 
   return (
@@ -33,8 +36,8 @@ export default function LibrarianLanding() {
               Sign in to access circulation, member records, reservations, inventory, reports, and daily library operations.
             </p>
             <div className="librarian-welcome-actions discovery-enter">
-              <Link to="/librarian/login" className="librarian-welcome-button librarian-welcome-button-primary">
-                Librarian Sign In
+              <Link to={isLibrarianSignedIn ? homeForRole(role) : '/librarian/login'} className="librarian-welcome-button librarian-welcome-button-primary">
+                {isLibrarianSignedIn ? 'Open Staff Hub' : 'Librarian Sign In'}
                 <ArrowRight size={20} aria-hidden="true" />
               </Link>
               <Link to={LIBRARIAN_PUBLIC_CATALOG_PATH} className="librarian-welcome-button librarian-welcome-button-secondary">
