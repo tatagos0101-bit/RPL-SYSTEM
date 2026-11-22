@@ -75,6 +75,24 @@ async function healthy(page, errors) {
   assert.equal(await page.locator('vite-error-overlay').count(), 0);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Horizontal page overflow');
 }
+async function successfulScan(page, pause = false) {
+  // Capture the short-lived state atomically; separate protocol calls can outlast it.
+  const handle = await page.waitForFunction(shouldPause => {
+    const node = [...document.querySelectorAll('[role="status"]')].find(item => item.textContent.includes('Scan successful'));
+    if (!node || !node.offsetHeight) return false;
+    const snapshot = { text: node.innerText, check: Boolean(node.querySelector('svg.lucide-check')), pathname: location.pathname };
+    if (shouldPause) {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      document.dispatchEvent(new Event('visibilitychange'));
+    }
+    return snapshot;
+  }, pause);
+  const snapshot = await handle.jsonValue();
+  await handle.dispose();
+  assert.ok(snapshot.text.includes('Welcome, Synthetic member!'));
+  assert.equal(snapshot.check, true);
+  return snapshot;
+}
 async function run() {
   const browser = await chromium.launch({ headless: true,
     executablePath: process.env.PERFORMANCE_BROWSER_EXECUTABLE || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
@@ -153,11 +171,8 @@ async function run() {
         await page.getByText('Spoofing Detected. Please use a live face.', { exact: true }).waitFor({ timeout: 10000 });
         assert.ok(page.url().endsWith('/user/login'));
         state.reply = { ...actor, matched: true };
-        const success = page.getByRole('status').filter({ hasText: 'Scan successful' });
-        await success.waitFor();
-        assert.ok(await success.getByText('Welcome, Synthetic member!', { exact: true }).isVisible());
-        assert.equal(await success.locator('svg.lucide-check').count(), 1);
-        assert.ok(page.url().endsWith('/user/login'));
+        const success = await successfulScan(page);
+        assert.equal(success.pathname, '/user/login');
         await page.screenshot({ path: path.join(artifacts, 'face-success-' + width + '.png') });
         await page.waitForFunction(() => window.syntheticStreams.every(s => s.getTracks().every(t => t.readyState === 'ended')));
         await page.waitForURL('**/user/home');
@@ -191,13 +206,8 @@ async function run() {
       staff.state.reply = { ...staff.state.actor, matched: true };
       await staff.page.goto(base + '/librarian/login');
       await staff.page.getByRole('button', { name: 'Face ID', exact: true }).click();
-      const staffSuccess = staff.page.getByRole('status').filter({ hasText: 'Scan successful' });
-      await staffSuccess.waitFor();
-      assert.ok(await staffSuccess.getByText('Welcome, Synthetic member!', { exact: true }).isVisible());
-      await staff.page.evaluate(() => {
-        Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
-        document.dispatchEvent(new Event('visibilitychange'));
-      });
+      const staffSuccess = await successfulScan(staff.page, true);
+      assert.equal(staffSuccess.pathname, '/librarian/login');
       await staff.page.getByText('Camera paused', { exact: true }).waitFor();
       await delay(650);
       assert.ok(staff.page.url().endsWith('/librarian/login'));
