@@ -47,7 +47,7 @@ const Navbar = () => {
   return (
     <>
       {/* TOP NAV */}
-      <nav className={`rpl-chrome rpl-header fixed top-0 left-0 w-full z-50 ${['/', '/browse'].includes(location.pathname) ? 'rpl-discovery-nav' : ''} ${location.pathname === '/browse' ? 'rpl-catalog-nav' : ''}`}>
+      <nav className={`rpl-chrome rpl-header fixed top-0 left-0 w-full z-50 ${['/', '/browse'].includes(location.pathname) ? 'rpl-discovery-nav' : ''} ${location.pathname === '/' ? 'rpl-landing-nav' : ''} ${location.pathname === '/browse' ? 'rpl-catalog-nav' : ''}`}>
         {logoutError && <p role="alert" className="absolute top-full left-0 w-full p-3 bg-panel text-danger">{logoutError}</p>}
 
         {/* Left: Hamburger + Logo */}

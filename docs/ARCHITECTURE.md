@@ -53,6 +53,15 @@ by that public-page revision. [Photography credits](../frontend/public/images/CR
 identify the locally served library photographs; they are generic imagery, not
 photographs of the RPL branch.
 
+The November22 landing motion update extends that existing presentation with a
+full-width photographic background, slow CSS photo/light/dust movement, and a
+landing-only translucent header. A background pause control and reduced-motion
+preferences stop decorative motion. `useLandingMotion` reveals content once as it
+enters view and pauses the background off-screen or on hidden pages using scoped
+IntersectionObservers; it adds no scroll-driven React renders. Without the observer
+API, content stays visible. Search, catalog, login routes and photography credits
+are retained; no video, animation package or new external media is loaded.
+
 [PublicBrowse](../frontend/src/pages/public/PublicBrowse.jsx) shares small category
 cover collages, [BookShelf](../frontend/src/components/public/BookShelf.jsx) and
 [CatalogBookCard](../frontend/src/components/public/CatalogBookCard.jsx) styling

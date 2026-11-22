@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { catalogSearchPath } from '../../api/catalogDiscovery';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, Mail, ChevronRight, ArrowRight } from 'lucide-react';
+import { Search, Scan, Sparkles, QrCode, MapPin, Clock, Phone, Mail, ChevronRight, ArrowRight, Pause, Play } from 'lucide-react';
+import useLandingMotion from '../../components/public/useLandingMotion';
+
+const DUST_MOTES = [0, 1, 2, 3, 4, 5];
 
 const FEATURES = [
   {
@@ -35,8 +38,11 @@ const STATS = [
 ];
 
 const LandingPage = () => {
+  const pageRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [motionPaused, setMotionPaused] = useState(false);
   const navigate = useNavigate();
+  useLandingMotion(pageRef);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -44,19 +50,23 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="rpl-page rpl-public rpl-discovery rpl-landing min-h-screen min-w-0 font-sans">
+    <div ref={pageRef} data-motion-paused={motionPaused} className="rpl-page rpl-public rpl-discovery rpl-landing min-h-screen min-w-0 font-sans">
       <main>
       <section className="discovery-hero" aria-labelledby="discovery-title">
         <picture className="discovery-hero-photo" aria-hidden="true">
           <source media="(max-width: 639px)" srcSet="/images/library-window-800.webp" />
-          <img src="/images/library-window-1600.webp" alt="" width="1600" height="1068" fetchPriority="high" decoding="async" />
+          <img className="discovery-ambient" src="/images/library-window-1600.webp" alt="" width="1600" height="1068" fetchPriority="high" decoding="async" />
         </picture>
-        <div className="discovery-container discovery-hero-copy discovery-enter">
-          <h1 id="discovery-title">Discover your next<br />{' '}great read.</h1>
-          <p className="discovery-hero-description">
+        <div className="discovery-hero-light discovery-ambient" aria-hidden="true" />
+        <div className="discovery-hero-dust" aria-hidden="true">
+          {DUST_MOTES.map(mote => <span key={mote} className="discovery-ambient" />)}
+        </div>
+        <div className="discovery-container discovery-hero-copy">
+          <h1 id="discovery-title" className="discovery-enter">Discover your next<br />{' '}great read.</h1>
+          <p className="discovery-hero-description discovery-enter">
             Explore the Rizal Provincial Library collection, reserve a title, and make room for your next story.
           </p>
-          <form onSubmit={handleSearch} className="discovery-search">
+          <form onSubmit={handleSearch} className="discovery-search discovery-enter">
             <div>
               <Search size={21} aria-hidden="true" />
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
@@ -64,17 +74,22 @@ const LandingPage = () => {
             </div>
             <button type="submit">Search <ArrowRight size={18} aria-hidden="true" /></button>
           </form>
-          <div className="discovery-hero-links">
+          <div className="discovery-hero-links discovery-enter">
             <Link to="/browse">Browse collection <ArrowRight size={18} aria-hidden="true" /></Link>
             <Link to="/login">Member login</Link>
           </div>
         </div>
+        <button type="button" className="discovery-motion-toggle" onClick={() => setMotionPaused(value => !value)}
+          aria-label={motionPaused ? 'Play background animation' : 'Pause background animation'}
+          title={motionPaused ? 'Play background animation' : 'Pause background animation'} aria-pressed={motionPaused}>
+          {motionPaused ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
+        </button>
       </section>
 
       <section className="discovery-journey" aria-label="Your library journey">
         <div className="discovery-container discovery-journey-grid">
           {STATS.map((s) => (
-            <div key={s.label} className="discovery-journey-step">
+            <div key={s.label} className="discovery-journey-step discovery-reveal">
               <p>{s.val}</p>
               <p>{s.label}</p>
             </div>
@@ -106,21 +121,21 @@ const LandingPage = () => {
       <footer className="discovery-footer">
         <div className="discovery-container">
           <div className="discovery-footer-grid">
-            <div className="discovery-footer-brand">
+            <div className="discovery-footer-brand discovery-reveal">
               <p className="rpl-brand"><img src="/RPL.png" alt="" className="rpl-brand-logo" /><span>Rizal Provincial Library</span></p>
               <p>Empowering the people of Rizal Province through modern, accessible, and technology-driven library services.</p>
             </div>
-            <div>
+            <div className="discovery-reveal">
               <h2>Location &amp; Hours</h2>
               <p className="discovery-contact"><MapPin size={19} aria-hidden="true" /><span>L. Wood Rd, Dolores,<br />Taytay, 1920 Rizal</span></p>
               <p className="discovery-contact"><Clock size={19} aria-hidden="true" /><span>Mon – Fri | 8:00 AM – 5:00 PM</span></p>
             </div>
-            <div>
+            <div className="discovery-reveal">
               <h2>Contact Us</h2>
               <div className="discovery-contact"><Phone size={19} aria-hidden="true" /><div><p className="discovery-contact-label">Telephone</p><a href="tel:026587276">(02) 658-7276</a></div></div>
               <div className="discovery-contact"><Mail size={19} aria-hidden="true" /><div><p className="discovery-contact-label">Email</p><a href="mailto:provinciallibrary_rizal@yahoo.com">provinciallibrary_rizal@yahoo.com</a></div></div>
             </div>
-            <div>
+            <div className="discovery-reveal">
               <h2>Quick Links</h2>
               <div className="discovery-footer-links">
                 {[
@@ -132,7 +147,7 @@ const LandingPage = () => {
               </div>
             </div>
           </div>
-          <div className="discovery-footer-bottom">
+          <div className="discovery-footer-bottom discovery-reveal">
             <p>© 2025 Rizal Provincial Library · All Rights Reserved</p>
             <div className="discovery-footer-legal">
               <Link to="/privacy-policy">Data Privacy</Link>
