@@ -73,8 +73,8 @@ const Navbar = () => {
         {isPublicDiscovery && (
             <div className="discovery-nav-links">
               <Link to="/" aria-current={location.pathname === '/' && !location.hash ? 'page' : undefined}>Home</Link>
-              <Link to="/browse" aria-current={location.pathname === '/browse' ? 'page' : undefined}>Catalog</Link>
               <Link to="/#about-us" aria-current={location.pathname === '/' && location.hash === '#about-us' ? 'location' : undefined}>About Us</Link>
+              <Link to="/browse" aria-current={location.pathname === '/browse' ? 'page' : undefined}>Catalog</Link>
               <Link to="/#contact" aria-current={location.pathname === '/' && location.hash === '#contact' ? 'location' : undefined}>Contact</Link>
             </div>
         )}
