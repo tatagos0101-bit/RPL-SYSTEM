@@ -5,6 +5,7 @@ import Webcam from 'react-webcam';
 import { clearAuth, login, faceAuth, persistAuth } from '../../api/auth';
 import { landingForRole, passwordChangePathForRole, safeNextPath } from '../../api/authRoutes';
 import { startAutomaticFaceScan } from '../../api/circulationFaceScan';
+import { loginErrorMessage } from '../../api/loginErrors';
 
 const ROLE_LABEL = {
   member: 'Member',
@@ -146,7 +147,7 @@ const LoginPage = ({ expectedRole = 'member' }) => {
       persistAuth(data);
       navigate(data.must_change_password ? passwordChangePathForRole(data.role) : safeNextPath(nextPath, data.role));
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Check your credentials or backend connection.');
+      setError(loginErrorMessage(err));
       setIsLoading(false);
     }
   };
