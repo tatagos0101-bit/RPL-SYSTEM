@@ -14,6 +14,26 @@ Authentication remains in FastAPI. Supabase Auth is not used by this application
 Database passwords and Supabase secret/service-role keys belong only in server
 environment variables. Never put them in a `VITE_*` variable or commit `.env` files.
 
+## Inactive member notices prerequisite
+
+The [inactive account review](ACCOUNT_INACTIVITY.md) feature adds nullable
+`users.last_activity_at`, private `account_deletion_notices`, pending-notice
+uniqueness and lookup indexes. Apply the scoped additive schema and the existing
+backend runtime-group policy/grants before the new backend; keep production
+`AUTO_MIGRATE=false` and revoke PUBLIC/browser access. Existing manual deletion,
+face removal, private storage and outstanding-loan protections remain required.
+The scheduled job only sends notices/reconciles activity; it has no deletion path.
+
+Release backend before frontend. After protected-route/dry-run checks, the
+[reviewed scheduler setup](../supabase/operations/configure_account_inactivity_schedule.sql)
+can enable Supabase Cron/pg_net with a Vault-generated purpose-only key and a
+private application digest. It does not require a Vercel environment secret or
+Supabase service key. Restrict queue/Vault access, set the HTTP timeout explicitly,
+and check HTTP response metadata rather than treating a Cron request ID as success.
+Use [feature metadata checks](../supabase/operations/check_account_inactivity_access.sql)
+and advisors after the upgrade. Configure existing SMTP/optional Twilio separately;
+mocked transport success is not evidence of real inbox/phone delivery.
+
 ## Member registration delivery prerequisite
 
 The November 16 local revision makes government ID optional and adds email-first,

@@ -170,6 +170,20 @@ and camera capture feedback. Account deletion retains deidentified historical
 foreign keys and requires the additive `users.deleted_at` column; it is not a
 hard cascade delete. See [policy, storage failure behavior and release
 requirements](MEMBER_MANAGEMENT.md) and the [release record](REPAIR_RELEASE_2026-10-21.md).
+
+[Inactive account review](ACCOUNT_INACTIVITY.md) adds automatic notices after six
+calendar months of recorded inactivity and a 72-hour response window. The notice
+job never deletes accounts: a librarian reviews and password-confirms a mature,
+unanswered notice. Renewed activity/member replies prevent approval. The explicit
+manual deletion path remains available with the existing outstanding-loan/private
+storage/history safeguards. New private `account_deletion_notices` and nullable
+`users.last_activity_at` require an additive upgrade and runtime RLS/grants before
+the compatible backend. In-app notices are durable; email-first/optional phone SMS
+delivery reports provider outcomes honestly. Future sign-ins/station encounters
+persist activity; missing old session history is not reconstructed or claimed.
+The separate purpose-authenticated job is scheduled only after release checks;
+repository code alone is not evidence that a hosted schedule is enabled.
+
 The October 19 [runtime-role audit](RUNTIME_ROLE_REHEARSAL.md) found an owner-capable
 API connection. On October 25, production switched to `rpl_api_runtime`, inheriting
 only the restricted `rpl_app_runtime` group. All 16 application tables have the

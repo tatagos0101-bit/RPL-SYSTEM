@@ -35,7 +35,8 @@ WITH expected(table_name) AS (VALUES
     ('users'), ('auth_sessions'), ('books'), ('book_copies'), ('book_interactions'),
     ('transactions'), ('reservations'), ('reservation_confirmations'), ('inventory_writes'),
     ('notifications'), ('entry_logs'), ('reading_goals'), ('face_embeddings'),
-    ('password_reset_codes'), ('security_alerts'), ('library_settings')
+    ('password_reset_codes'), ('security_alerts'), ('library_settings'),
+    ('copy_acquisitions'), ('account_deletion_notices')
 ), access AS (
     SELECT expected.table_name, relation.oid, relation.relowner, relation.relrowsecurity
     FROM expected LEFT JOIN pg_namespace schema ON schema.nspname='public'

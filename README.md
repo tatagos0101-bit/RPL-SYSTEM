@@ -104,7 +104,7 @@ borrow additional books until those loans are returned.
 
 Authentication and member/librarian authorization are handled by FastAPI;
 Supabase Auth is not used. New browser logins use HttpOnly cookies, secure in
-production. PostgreSQL holds the application's 16 tables, including accounts,
+production. PostgreSQL holds the application's 18 tables, including accounts,
 password hashes, face embeddings, books/copies, loans, reservations, entry logs,
 notifications, and goals. Browser Data API roles cannot directly read those tables.
 The additive migration also stores private confirmation IDs, prevents normalized
