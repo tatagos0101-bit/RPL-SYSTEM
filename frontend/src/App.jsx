@@ -7,6 +7,7 @@ import LibLayout from './components/LibLayout';
 import RequireRole from './components/RequireRole';
 import PasswordChangeNotice from './components/PasswordChangeNotice';
 import { legacyLibPathToLibrarian } from './api/authRoutes';
+import { LIBRARIAN_PUBLIC_CATALOG_PATH } from './api/librarianNavigation';
 import './index.css';
 
 const LandingPage = lazy(() => import('./pages/public/LandingPage'));
@@ -72,6 +73,7 @@ const AppContent = () => {
           <Route path="/user/login" element={<LoginPage expectedRole="member" />} />
           <Route path="/user/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/librarian" element={<LibrarianLanding />} />
+          <Route path={LIBRARIAN_PUBLIC_CATALOG_PATH} element={<PublicBrowse librarianPortal />} />
           <Route path="/librarian/login" element={<LoginPage expectedRole="librarian" />} />
           <Route path="/entry-gate" element={<Navigate to="/entry-station" replace />} />
           <Route path="/entry-station" element={<EntryGate />} />

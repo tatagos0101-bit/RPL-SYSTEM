@@ -11,8 +11,17 @@ test('public librarian navigation exposes only safe public links', () => {
     PUBLIC_LIBRARIAN_NAV_LINKS.map(({ to, label }) => ({ to, label })),
     [
       { to: '/librarian', label: 'Librarian Home' },
-      { to: '/browse', label: 'Public Catalog' },
+      { to: '/librarian/catalog', label: 'Public Catalog' },
     ],
+  );
+});
+
+test('staff public catalog keeps the librarian portal route', () => {
+  const catalogLink = STAFF_LIBRARIAN_NAV_LINKS.find(link => link.key === 'public-catalog');
+
+  assert.deepEqual(
+    { to: catalogLink?.to, label: catalogLink?.label },
+    { to: '/librarian/catalog', label: 'Public Catalog' },
   );
 });
 

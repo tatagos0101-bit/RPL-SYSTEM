@@ -1,43 +1,19 @@
 import { useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, LockKeyhole } from 'lucide-react';
-import { PUBLIC_LIBRARIAN_NAV_LINKS } from '../../api/librarianNavigation';
+import { LIBRARIAN_PUBLIC_CATALOG_PATH } from '../../api/librarianNavigation';
+import LibrarianPublicNavbar from '../../components/public/LibrarianPublicNavbar';
 import useLandingMotion from '../../components/public/useLandingMotion';
-import '../../styles/librarian-welcome.css';
 
 const DUST_MOTES = [0, 1, 2, 3, 4, 5];
 
 export default function LibrarianLanding() {
   const pageRef = useRef(null);
-  const location = useLocation();
   useLandingMotion(pageRef);
 
   return (
     <div ref={pageRef} className="rpl-page rpl-public rpl-discovery rpl-landing rpl-librarian-landing min-h-screen min-w-0">
-      <nav aria-label="Librarian navigation" className="rpl-chrome rpl-header rpl-discovery-nav rpl-landing-nav fixed top-0 left-0 w-full z-50">
-        <div className="rpl-header-leading">
-          <Link to="/librarian" className="rpl-brand">
-            <img src="/RPL.png" alt="" className="rpl-brand-logo" />
-            <span>Rizal Provincial Library</span>
-          </Link>
-        </div>
-
-        <div className="discovery-nav-links">
-          {PUBLIC_LIBRARIAN_NAV_LINKS.map(link => (
-            <Link key={link.to} to={link.to}
-              aria-current={location.pathname.replace(/\/+$/, '') === link.to ? 'page' : undefined}>
-              {link.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="rpl-header-actions">
-          <Link to="/librarian/login" className="librarian-welcome-sign-in">
-            <span>Sign In</span>
-            <ArrowRight size={17} aria-hidden="true" />
-          </Link>
-        </div>
-      </nav>
+      <LibrarianPublicNavbar />
 
       <main>
         <section className="discovery-hero" aria-labelledby="librarian-welcome-title">
@@ -61,7 +37,7 @@ export default function LibrarianLanding() {
                 Librarian Sign In
                 <ArrowRight size={20} aria-hidden="true" />
               </Link>
-              <Link to="/browse" className="librarian-welcome-button librarian-welcome-button-secondary">
+              <Link to={LIBRARIAN_PUBLIC_CATALOG_PATH} className="librarian-welcome-button librarian-welcome-button-secondary">
                 <BookOpen size={20} aria-hidden="true" />
                 Public Catalog
               </Link>

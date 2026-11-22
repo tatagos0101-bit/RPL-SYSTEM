@@ -8,16 +8,17 @@ import { Search, X, RefreshCw, BookOpen, LogIn, ChevronLeft, ChevronRight } from
 import BookCover from '../../components/BookCover';
 import BookShelf from '../../components/public/BookShelf';
 import CatalogBookCard from '../../components/public/CatalogBookCard';
+import LibrarianPublicNavbar from '../../components/public/LibrarianPublicNavbar';
 import { getCategoryPreviews } from '../../api/books';
 import { getStoredAuth } from '../../api/authRoutes';
 import CatalogCategories from '../../components/public/CatalogCategories';
 import { normalizeCatalogSearch } from '../../api/catalogDiscovery';
 
-const PublicBrowse = () => {
+const PublicBrowse = ({ librarianPortal = false }) => {
   // This role controls catalogue presentation; protected actions still verify
   // the session and role on the server.
   const { isLoggedIn, role } = getStoredAuth();
-  const isLibrarian = isLoggedIn && role === 'librarian';
+  const isLibrarianView = librarianPortal || (isLoggedIn && role === 'librarian');
   const isMember = isLoggedIn && role === 'member';
   const categoryResource = useReadResource(getCategoryPreviews);
   const [activeCategory, setActiveCategory] = useState('');
@@ -65,6 +66,7 @@ const PublicBrowse = () => {
 
   return (
     <div className="rpl-page rpl-public rpl-discovery rpl-catalog min-h-screen min-w-0 font-sans">
+      {librarianPortal && <LibrarianPublicNavbar />}
       <main className="discovery-container catalog-content">
         <div className="catalog-search">
           <Search aria-hidden="true" size={20} />
@@ -226,7 +228,7 @@ const PublicBrowse = () => {
                         </span>
                       </div>
 
-                      {!isAvailable && !isLibrarian && (
+                      {!isAvailable && !isLibrarianView && (
                         <p className="text-sm font-bold leading-relaxed text-warning bg-warning-soft border border-warning rounded-xl px-4 py-3 mb-6">
                           Currently not available. Reserve now to join the queue. You'll be notified when it's your turn.
                         </p>
@@ -235,7 +237,7 @@ const PublicBrowse = () => {
 
                     {/* CTA */}
                     <div className="space-y-3">
-                      {!isLibrarian && <Link
+                      {!isLibrarianView && <Link
                         to={isMember ? `/user/reservations?reserveBook=${selected.id}` : reserveLoginPath(selected.id)}
                         className="min-h-[44px] w-full flex items-center justify-center gap-2 py-4 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal transition-all"
                       >

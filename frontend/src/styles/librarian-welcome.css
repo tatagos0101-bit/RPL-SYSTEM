@@ -13,7 +13,7 @@
   font-size: clamp(1rem, 1.35vw, 1.25rem);
   text-wrap: pretty;
 }
-.rpl-librarian-landing .librarian-welcome-sign-in {
+.rpl-librarian-nav .librarian-welcome-sign-in {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -21,6 +21,8 @@
   border-radius: 999px;
   font-size: .875rem;
   font-weight: 600;
+  background: var(--rpl-action);
+  color: #fffdf7;
 }
 .rpl-librarian-landing .librarian-welcome-actions {
   --enter-delay: 180ms;
@@ -69,7 +71,7 @@
   .rpl-librarian-landing .discovery-hero { min-height: max(660px, calc(100svh - 132px)); padding-block: calc(var(--rpl-header-height) + 64px) 64px; }
   .rpl-librarian-landing .discovery-hero h1 { font-size: clamp(3rem, 10.5vw, 4rem); }
   .rpl-librarian-landing .discovery-hero-description { font-size: 1rem; }
-  .rpl-librarian-landing .librarian-welcome-sign-in { padding-inline: 14px; }
+  .rpl-librarian-nav .librarian-welcome-sign-in { padding-inline: 14px; }
   .rpl-librarian-landing .librarian-welcome-actions { gap: 12px; margin-top: 28px; max-width: 360px; }
   .rpl-librarian-landing .librarian-welcome-button { min-height: 56px; padding: 14px 20px; }
   .rpl-librarian-landing .librarian-welcome-access-copy { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px 16px; min-height: 132px; padding-block: 24px; }

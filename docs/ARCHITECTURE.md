@@ -68,9 +68,17 @@ form. Mobile layouts retain comfortable side gutters.
 The public catalog now shares those fluid desktop gutters with its header; its
 existing book sizes, vertical desktop grid, mobile swipe shelves and 24-title
 pagination remain. Desktop pagination sits beside the shelf heading. The public
-Home/Catalog header uses visible Home, Catalog, About Us and Contact links instead
-of a drawer. The latter two route to the homepage's short introduction and contact
+Home/Catalog header uses visible Home, About Us, Catalog and Contact links instead
+of a drawer. About Us and Contact route to the homepage's short introduction and contact
 information using hash anchors, smooth scrolling and reduced-motion handling.
+
+The public librarian welcome page and staff sidebar link to `/librarian/catalog`.
+It reuses the public book list with librarian navigation: Home and the brand return
+to `/librarian`, and Sign In opens `/librarian/login`. The explicit URL preserves
+the portal after search, pagination, reloads and bookmarked visits. Its read-only
+details omit member reservation prompts; it grants no staff permissions. `/browse`
+keeps the reader-facing navigation, and management routes still require a librarian
+session on the server.
 
 [PublicBrowse](../frontend/src/pages/public/PublicBrowse.jsx) shares small category
 cover collages, [BookShelf](../frontend/src/components/public/BookShelf.jsx) and
