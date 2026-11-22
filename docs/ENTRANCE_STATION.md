@@ -6,7 +6,8 @@ source and local checks; it does not establish production deployment or camera a
 
 ## Operation
 
-1. Open `/entry-station` and unlock it with the current station PIN.
+1. In the librarian menu, choose **Workspace → Entrance Station** (below Dashboard),
+   or open `/entry-station` directly. Unlock it with the current station PIN.
 2. Make the existing facial-processing notice visible and choose **Start camera**.
    Starting the camera is an operator action, not a patron consent record.
 3. The scanner continues during low light, no-face and unrecognized-face results.

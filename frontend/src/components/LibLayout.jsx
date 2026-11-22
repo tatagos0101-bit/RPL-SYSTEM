@@ -8,13 +8,14 @@ import { isPasswordChangePath } from '../api/authRoutes';
 import { notificationHref, notifyNotificationsUpdated, NOTIFICATIONS_UPDATED } from '../api/notificationLinks';
 import {
   BookOpen, PlusSquare, Users, LayoutDashboard, ArrowLeftRight,
-  QrCode, FileText,
+  QrCode, FileText, Camera,
   Menu, X, ChevronRight, ShieldCheck,
   AlertTriangle, Bell, BookMarked, Settings,
 } from 'lucide-react';
 
 const NAV_ICONS = {
   home: <LayoutDashboard size={18} />,
+  'entry-station': <Camera size={18} />,
   inventory: <BookOpen size={18} />,
   'borrow-return': <ArrowLeftRight size={18} />,
   reservations: <BookMarked size={18} />,
@@ -124,7 +125,7 @@ const LibLayout = () => {
   const currentLink = STAFF_LIBRARIAN_NAV_LINKS.find(link => link.to === location.pathname);
   const pageTitle = currentLink ? labels[currentLink.key] || currentLink.label : 'Librarian workspace';
   const navGroups = [
-    ['Workspace', ['home', 'inventory', 'users']],
+    ['Workspace', ['home', 'entry-station', 'inventory', 'users']],
     ['Circulation', ['borrow-return', 'reservations', 'due-books']],
     ['Library management', ['reports', 'add-book', 'qr-bulk', 'public-catalog']],
   ];

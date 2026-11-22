@@ -7,6 +7,7 @@ export const PUBLIC_LIBRARIAN_NAV_LINKS = [
 
 export const STAFF_LIBRARIAN_NAV_LINKS = [
   { key: 'home', to: '/librarian/home', label: 'Home' },
+  { key: 'entry-station', to: '/entry-station', label: 'Entrance Station' },
   { key: 'inventory', to: '/librarian/inventory', label: 'Browse Books' },
   { key: 'borrow-return', to: '/librarian/borrow-return', label: 'Borrow / Return' },
   { key: 'reservations', to: '/librarian/reservations', label: 'Reservations' },

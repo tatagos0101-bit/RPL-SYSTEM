@@ -25,10 +25,12 @@ test('staff public catalog keeps the librarian portal route', () => {
   );
 });
 
-test('staff librarian navigation does not expose the entrance station route', () => {
+test('staff can open the entrance station directly while the public navigation stays unchanged', () => {
   const routes = STAFF_LIBRARIAN_NAV_LINKS.map((link) => link.to);
+  const stationLink = STAFF_LIBRARIAN_NAV_LINKS.find(link => link.key === 'entry-station');
 
-  assert.equal(routes.includes('/entry-station'), false);
+  assert.deepEqual(stationLink, { key: 'entry-station', to: '/entry-station', label: 'Entrance Station' });
+  assert.equal(PUBLIC_LIBRARIAN_NAV_LINKS.some(link => link.to === '/entry-station'), false);
   assert.equal(routes.includes('/librarian/entry'), false);
   assert.equal(routes.includes('/librarian/borrow-return'), true);
 });
