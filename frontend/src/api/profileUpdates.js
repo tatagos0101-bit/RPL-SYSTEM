@@ -1,7 +1,10 @@
+import { invalidateSharedReads } from './sharedReads.js';
+
 export const PROFILE_UPDATED = 'rpl-profile-updated';
 export const PROFILE_REVISION_KEY = 'rpl-profile-revision';
 
 export function publishProfileUpdate(patch) {
+  invalidateSharedReads('profile');
   window.dispatchEvent(new CustomEvent(PROFILE_UPDATED, { detail: patch }));
   // Other tabs re-fetch through the authenticated API. Never store signed URLs.
   try { localStorage.setItem(PROFILE_REVISION_KEY, `${Date.now()}-${Math.random()}`); }

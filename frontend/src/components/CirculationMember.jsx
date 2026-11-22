@@ -66,7 +66,8 @@ export default function CirculationMember({ onSelect, mode = 'borrow' }) {
         className={`border border-line rounded-lg p-3 ${method === value ? 'bg-action text-white' : ''}`}>{value === 'manual' ? 'Use email or Member ID instead' : 'Face recognition'}</button>)}
     </div>
     {method === 'face' ? <div className="space-y-3">
-      <Webcam ref={webcam} audio={false} screenshotFormat="image/jpeg" aria-label="Member face camera" className="w-full max-h-64 rounded-xl"
+      <Webcam ref={webcam} audio={false} screenshotFormat="image/jpeg" screenshotQuality={0.8}
+        videoConstraints={{ width: 640, height: 480, facingMode: 'user' }} aria-label="Member face camera" className="w-full max-h-64 rounded-xl"
         onUserMediaError={() => { scanSession.current?.stop(); setMethod('manual'); setError('Camera unavailable. Use email or Member ID instead.'); }} />
       <p role={scanStatus.phase === 'error' ? 'alert' : 'status'} aria-atomic="true" className={`flex items-start gap-3 rounded-xl border border-line bg-subtle p-3 text-sm ${scanStatus.phase === 'error' ? 'text-danger' : 'text-link'}`}>
         <RefreshCw size={18} aria-hidden="true" className={`mt-0.5 shrink-0 ${['starting', 'scanning'].includes(scanStatus.phase) ? 'motion-safe:animate-spin' : ''}`} />

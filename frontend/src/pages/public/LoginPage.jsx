@@ -4,6 +4,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import { clearAuth, login, faceAuth, persistAuth } from '../../api/auth';
 import { landingForRole, passwordChangePathForRole, safeNextPath } from '../../api/authRoutes';
+import { startAutomaticFaceScan } from '../../api/circulationFaceScan';
 
 const ROLE_LABEL = {
   member: 'Member',
@@ -34,8 +35,8 @@ const LoginPage = ({ expectedRole = 'member' }) => {
   // Face login state
   const webcamRef = useRef(null);
   const pollingRef = useRef(null);
-  const isPendingRef = useRef(false);
-  const nextAllowedRef = useRef(0);
+  const [scanRevision, setScanRevision] = useState(0);
+  const [facePaused, setFacePaused] = useState(false);
   const [faceStatus, setFaceStatus] = useState('idle'); // idle | scanning | matched | failed
   const [faceMessage, setFaceMessage] = useState('');
   const portalLabel = ROLE_LABEL[expectedRole] || 'Member';
@@ -45,106 +46,80 @@ const LoginPage = ({ expectedRole = 'member' }) => {
   const portalLandingLabel = isLibrarianPortal ? 'Staff Portal' : 'Member Portal';
 
   const stopPolling = useCallback(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
+    pollingRef.current?.stop();
+    pollingRef.current = null;
   }, []);
 
   const startFaceScan = useCallback(() => {
-    setFaceStatus('scanning');
-    setFaceMessage('');
-    let spoofConfidence = 0; // Buffer for consecutive spoof results
+    if (document.hidden) return;
+    stopPolling();
+    setFacePaused(false);
+    setScanRevision(value => value + 1);
+  }, [stopPolling]);
 
-    pollingRef.current = setInterval(async () => {
-      if (isPendingRef.current) return;
-      if (Date.now() < nextAllowedRef.current) return;
-      const screenshot = webcamRef.current?.getScreenshot();
-      if (!screenshot) return;
-      const image = screenshot;
-      isPendingRef.current = true;
-      try {
-        const { data } = await faceAuth(image, expectedRole);
-
-        if (data.matched) {
-          spoofConfidence = 0;
-          stopPolling();
+  useEffect(() => {
+    if (tab !== 'face' || facePaused) return;
+    let active = true;
+    let spoofConfidence = 0;
+    const video = webcamRef.current?.video;
+    const scanner = startAutomaticFaceScan({
+      purpose: 'login',
+      capture: () => document.hidden ? null : webcamRef.current?.getScreenshot(),
+      lookup: (image, config) => faceAuth(image, expectedRole, config),
+      onStatus: status => {
+        if (!active || status.phase === 'recognized') return;
+        setFaceStatus(status.phase === 'error' ? 'failed' : 'scanning');
+        if (status.reason === 'Spoofing Detected') {
+          spoofConfidence++;
+          setFaceMessage(spoofConfidence >= 3 ? 'Spoofing Detected. Please use a live face.' : 'Verifying identity…');
+        } else {
+          if (status.phase === 'retry' && !['no_face', 'too_dark', 'too_far', 'liveness_uncertain'].includes(status.reason)) spoofConfidence = 0;
+          setFaceMessage(status.message);
+        }
+      },
+      onMatch: async data => {
+        if (!active) return;
+        try {
           if (data.role !== expectedRole) {
             await clearAuth();
-            setFaceStatus('failed');
-            setFaceMessage(wrongPortalMessage(data.role, expectedRole));
+            if (active) {
+              setFaceStatus('failed');
+              setFaceMessage(wrongPortalMessage(data.role, expectedRole));
+            }
             return;
           }
-
           setFaceStatus('matched');
-          setFaceMessage(`Welcome, ${data.name}!`);
-          persistAuth({
-            user_id: data.user_id,
-            name: data.name,
-            role: data.role,
-            must_change_password: data.must_change_password,
-          });
-          setTimeout(() => {
-            navigate(data.must_change_password ? passwordChangePathForRole(data.role) : safeNextPath(nextPath, data.role));
-          }, 900);
-        } else if (data.message === 'Spoofing Detected') {
-          spoofConfidence++;
-          // Only show message and rely on backend logging if seen 3 times
-          if (spoofConfidence >= 3) {
-            setFaceMessage('Spoofing Detected. Please use a live face.');
-            // We do NOT call setFaceStatus('failed') or stopPolling()
-            // so the user can just keep trying.
-          } else {
-            setFaceMessage('Verifying identity...');
-          }
-        } else if (data.message === 'liveness_uncertain') {
-          setFaceMessage('Live face not confirmed. Face the camera directly in even lighting.');
-        } else if (['no_face', 'too_dark', 'too_far'].includes(data.message)) {
-          // "Do nothing" to spoofConfidence - doesn't reset, doesn't increment
-          if (data.message === 'too_dark') setFaceMessage('Too dark. Add more light.');
-          else if (data.message === 'too_far') setFaceMessage('Move closer to the camera.');
-          else if (spoofConfidence > 0) setFaceMessage('Keep still...');
-          else setFaceMessage('');
-        } else {
-          // Reset on a valid real face (even if not recognized)
-          spoofConfidence = 0;
-          if (data.message === 'not_recognized') {
-            setFaceMessage('Face not recognized. Keep still...');
-          } else {
-            setFaceMessage(data.message || '');
+          setFaceMessage('Welcome, ' + data.name + '!');
+          persistAuth(data);
+          navigate(data.must_change_password ? passwordChangePathForRole(data.role) : safeNextPath(nextPath, data.role));
+        } catch {
+          if (active) {
+            setFaceStatus('failed');
+            setFaceMessage('Sign-in could not be completed. Please use password sign-in.');
           }
         }
-      } catch (err) {
-        setFaceStatus('failed');
-        setFaceMessage('Could not complete sign-in or sign-out. Please retry.');
-        if (err.response?.status === 429) {
-          nextAllowedRef.current = Date.now() + 3000;
-        } else if (err.response?.status === 503) {
-          nextAllowedRef.current = Date.now() + 5000;
-          setFaceMessage('Face verification is unavailable. Please use password login.');
-        }
-      }
-      finally {
-        isPendingRef.current = false;
-      }
-    }, 1000);
-  }, [expectedRole, nextPath, stopPolling, navigate]);
-
-  // Start/stop polling when tab changes
-  useEffect(() => {
-    if (tab === 'face') {
-      // short delay so webcam has time to mount
-      const t = setTimeout(startFaceScan, 600);
-      return () => { clearTimeout(t); stopPolling(); };
-    } else {
-      stopPolling();
-      setFaceStatus('idle');
-      setFaceMessage('');
-    }
-  }, [tab, startFaceScan, stopPolling]);
-
-  // Cleanup on unmount
-  useEffect(() => () => stopPolling(), [stopPolling]);
+      },
+    });
+    pollingRef.current = scanner;
+    const hide = () => {
+      if (!document.hidden) return;
+      active = false;
+      scanner.stop();
+      video?.srcObject?.getTracks().forEach(track => track.stop());
+      setFacePaused(true);
+      setFaceStatus('paused');
+      setFaceMessage('The camera paused while this page was hidden. Choose Try Again to resume.');
+    };
+    document.addEventListener('visibilitychange', hide);
+    if (document.hidden) hide();
+    return () => {
+      active = false;
+      scanner.stop();
+      video?.srcObject?.getTracks().forEach(track => track.stop());
+      if (pollingRef.current === scanner) pollingRef.current = null;
+      document.removeEventListener('visibilitychange', hide);
+    };
+  }, [tab, facePaused, scanRevision, expectedRole, nextPath, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -187,7 +162,7 @@ const LoginPage = ({ expectedRole = 'member' }) => {
                 className={`auth-method ${tab === 'password' ? 'is-active' : ''}`}>
                 <KeyRound size={18} aria-hidden="true" /> Password
               </button>
-              <button type="button" onClick={() => setTab('face')} aria-pressed={tab === 'face'}
+              <button type="button" onClick={() => { setFacePaused(false); setTab('face'); }} aria-pressed={tab === 'face'}
                 className={`auth-method ${tab === 'face' ? 'is-active' : ''}`}>
                 <ScanFace size={18} aria-hidden="true" /> Face ID
               </button>
@@ -241,11 +216,15 @@ const LoginPage = ({ expectedRole = 'member' }) => {
             <div className="auth-face-content flex flex-col items-center gap-5">
               {/* Webcam + HUD */}
               <div className="auth-face-frame relative w-64 h-64 rounded-xl overflow-hidden bg-panel border-2 border-line shadow-sm">
-                {faceStatus !== 'matched' && (
+                {faceStatus !== 'matched' && !facePaused && (
                   <Webcam
+                    key={scanRevision}
                     ref={webcamRef}
+                    audio={false}
                     screenshotFormat="image/jpeg"
-                    videoConstraints={{ facingMode: 'user', width: 640, height: 640 }}
+                    screenshotQuality={0.8}
+                    videoConstraints={{ facingMode: 'user', width: 640, height: 480 }}
+                    onUserMediaError={() => { stopPolling(); setFaceStatus('failed'); setFaceMessage('Camera unavailable. Check permissions or use password sign-in.'); }}
                     className="w-full h-full object-cover"
                     mirrored
                   />
@@ -277,17 +256,17 @@ const LoginPage = ({ expectedRole = 'member' }) => {
 
               {/* Status text */}
               <div role="status" aria-live="polite" className="auth-face-status text-center space-y-1">
-                {(faceStatus === 'scanning' || faceStatus === 'failed') && (
+                {['scanning', 'failed', 'paused'].includes(faceStatus) && (
                   <>
                     <p className={`text-sm font-semibold tracking-normal ${faceStatus === 'failed' ? 'text-danger' : 'text-link text-link'}`}>
-                      {faceStatus === 'failed' ? 'Access Denied' : 'Scanning...'}
+                      {faceStatus === 'paused' ? 'Camera paused' : faceStatus === 'failed' ? 'Sign-in unavailable' : 'Scanning...'}
                     </p>
                     <p className={`text-sm ${faceStatus === 'failed' ? 'text-danger text-danger font-bold' : 'text-muted '}`}>
                       {faceMessage || 'Position your face in the frame'}
                     </p>
-                    {faceStatus === 'failed' && !faceMessage.includes('Too many') && (
+                    {['failed', 'paused'].includes(faceStatus) && !faceMessage.includes('Too many') && (
                       <button
-                        onClick={() => { setFaceStatus('scanning'); setFaceMessage(''); }}
+                        onClick={startFaceScan}
                         className="mt-2 text-sm font-semibold tracking-normal text-link hover:underline"
                       >
                         Try Again

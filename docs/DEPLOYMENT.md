@@ -258,6 +258,15 @@ setup, avoiding a dlib compiler build. The API runs in `sin1` with a 60-second
 maximum request duration. Keep local uploads, logs, databases and secrets excluded
 using `backend/.vercelignore`.
 
+The November 22 performance changes require no new environment values, database
+migration, model files or dependencies. Face/enrollment POST responses include
+numeric `Server-Timing` stages for diagnostics. Compare cold/warm requests and
+one-person/group scans using the browser's Network panel; stage timings exclude
+camera capture/upload and can overlap. Keep actual camera/PAD acceptance separate
+from synthetic timing and mocked browser checks. The configured recognition engine
+and existing model/threshold settings are preserved; this release does not install
+InsightFace or provision GPU/always-on hosting.
+
 The existing Supabase marketplace connection supplies the required backend Storage
 configuration. Connecting or resetting that resource can also inject owner database
 credentials; apply the [retirement checks](OWNER_CREDENTIAL_RETIREMENT.md) before

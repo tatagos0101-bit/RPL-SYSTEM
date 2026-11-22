@@ -25,8 +25,8 @@ export const confirmPasswordReset = (identifier, code, newPassword) =>
 export const enrollFace = (imageBase64) =>
   client.post('/api/auth/enroll-face', { image: imageBase64 });
 
-export const faceAuth = (imageBase64, expectedRole) =>
-  client.post('/api/auth/face', { image: imageBase64, expected_role: expectedRole }, { timeout: 30000 });
+export const faceAuth = (imageBase64, expectedRole, config) =>
+  client.post('/api/auth/face', { image: imageBase64, expected_role: expectedRole }, { timeout: 30000, ...config });
 
 export const faceLookup = (imageBase64, config) =>
   client.post('/api/auth/face-lookup', { image: imageBase64 }, config);

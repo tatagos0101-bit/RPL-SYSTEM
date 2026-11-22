@@ -7,13 +7,13 @@ Flow:
   compare(encoding, stored_encoding_json) -> distance
   find_match(encoding, users) -> User or None
 """
-import base64
 import json
 from typing import Optional
 
 import numpy as np
 
 from config import FACE_MATCH_THRESHOLD
+from services.face_frame import decode_rgb
 
 # Lazy-import face_recognition so the rest of the app still starts
 # even if dlib isn't installed yet.
@@ -26,15 +26,7 @@ except ImportError:
 
 def _decode_base64_image(b64_string: str) -> np.ndarray:
     """Convert a base64 JPEG/PNG string into a numpy RGB array."""
-    if "," in b64_string:
-        b64_string = b64_string.split(",", 1)[1]
-    img_bytes = base64.b64decode(b64_string)
-
-    from PIL import Image, ImageOps
-    import io
-
-    img = ImageOps.exif_transpose(Image.open(io.BytesIO(img_bytes))).convert("RGB")
-    return np.array(img)
+    return decode_rgb(b64_string)
 
 
 def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:

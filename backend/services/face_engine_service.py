@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from typing import Iterable, Optional
 
 import numpy as np
-from sqlalchemy.orm import Session, undefer
+from sqlalchemy.orm import Session, joinedload, undefer
+from services.face_frame import gallery_read, invalidate_gallery, timed_stage
 
 from config import (
     FACE_AUTO_UPGRADE_EMBEDDINGS,
@@ -150,6 +151,7 @@ def _detect_dlib_faces(image: str, max_faces: int) -> list[dict]:
     return results
 
 
+@timed_stage("detect")
 def detect_faces(image: str, max_faces: int = 4, engines: Optional[Iterable[str]] = None) -> list[dict]:
     last_error = None
     for engine in _enabled_engines(engines):
@@ -205,15 +207,16 @@ def _stored_embedding_rows(
     engine: str,
     excluded_user_id: Optional[int] = None,
 ):
-    query = db.query(FaceEmbedding).filter(
+    query = db.query(FaceEmbedding).options(joinedload(FaceEmbedding.user)).filter(
         FaceEmbedding.engine == engine,
         FaceEmbedding.is_active == True,
     )
     if excluded_user_id is not None:
         query = query.filter(FaceEmbedding.user_id != excluded_user_id)
-    return query.all()
+    return gallery_read(db, engine, excluded_user_id, query.all)
 
 
+@timed_stage("match")
 def find_best_match(
     db: Session,
     encoding: list[float],
@@ -233,7 +236,7 @@ def find_best_match(
             query = db.query(User).options(undefer(User.face_encoding)).filter(User.face_encoding.isnot(None))
             if excluded_user_id is not None:
                 query = query.filter(User.id != excluded_user_id)
-            users = query.all()
+            users = gallery_read(db, engine, excluded_user_id, query.all)
         for user in users:
             if not user.face_encoding:
                 continue
@@ -292,6 +295,7 @@ def _lock_current_match(db, match, encoding, threshold):
     return None
 
 
+@timed_stage("verify")
 def revalidate_match_for_face(db, face, match, *, purpose="login", threshold=None):
     if match is None:
         return None
@@ -366,6 +370,7 @@ def upsert_face_embedding(
     quality_score: Optional[float],
     source: str,
 ) -> FaceEmbedding:
+    invalidate_gallery(db)
     db.query(FaceEmbedding).filter(
         FaceEmbedding.user_id == user.id,
         FaceEmbedding.engine == engine,
@@ -385,6 +390,7 @@ def upsert_face_embedding(
 
 
 def store_enrollment_face(db: Session, user: User, face: dict, *, source: str = "enrollment") -> None:
+    invalidate_gallery(db)
     # Explicit replacement must not leave an older engine recognizing the old face.
     db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).delete(synchronize_session=False)
     user.face_encoding = None

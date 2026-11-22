@@ -20,7 +20,7 @@ function clock() {
 
 function session(overrides = {}) {
   const time = clock(), statuses = [], matches = [];
-  const loop = startCirculationFaceScan({ ...time, capture: () => 'synthetic-frame',
+  const loop = startCirculationFaceScan({ ...time, now: () => 0, capture: () => 'synthetic-frame',
     lookup: async () => ({ data: { matched: false, message: 'no_face' } }),
     onStatus: status => statuses.push(status), onMatch: member => matches.push(member), ...overrides });
   return { loop, time, statuses, matches };
@@ -37,7 +37,7 @@ test('automatically scans ready frames and waits for the camera without sending 
   assert.equal(statuses.at(-1).phase, 'starting');
   ready = true; await time.run();
   assert.equal(requests, 1);
-  assert.equal(time.delay(), 2000);
+  assert.equal(time.delay(), 1500);
   assert.match(statuses.at(-1).message, /No face detected/);
   loop.stop(); assert.equal(time.count(), 0);
 });
@@ -51,7 +51,16 @@ test('slow recognition never queues another request while the first is running',
   assert.equal(time.count(), 0);
   resolve({ data: { matched: false, message: 'no_face' } }); await inFlight;
   assert.equal(time.count(), 1);
-  assert.equal(time.delay(), 2000);
+  assert.equal(time.delay(), 1500);
+  loop.stop();
+});
+
+test('processing time counts toward the scan interval instead of adding a second wait', async () => {
+  let elapsed = 0;
+  const { loop, time } = session({ now: () => elapsed,
+    lookup: async () => { elapsed += 2400; return { data: { matched: false, message: 'no_face' } }; } });
+  await time.run();
+  assert.equal(time.delay(), 0);
   loop.stop();
 });
 
@@ -60,7 +69,7 @@ test('lighting, unknown faces and uncertain liveness retry without identifying a
   const { loop, time, statuses, matches } = session({
     lookup: async () => ({ data: { matched: false, message: replies.shift() } }),
   });
-  for (let index = 0; index < 5; index++) { await time.run(); assert.equal(time.delay(), 2000); }
+  for (let index = 0; index < 5; index++) { await time.run(); assert.equal(time.delay(), 1500); }
   assert.deepEqual(matches, []);
   assert.ok(statuses.some(status => status.message.includes('Too dark')));
   assert.ok(statuses.some(status => status.message.includes('Face not recognized')));

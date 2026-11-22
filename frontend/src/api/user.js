@@ -1,8 +1,13 @@
 import client from './client';
 import { prepareUploadForm } from './uploads';
+import { getStoredAuth } from './authRoutes';
+import { createSharedRead } from './sharedReads';
 
-export const getProfile = (config) =>
-  client.get('/api/user/profile', config);
+const readScope = () => {
+  const { userId, role, isLoggedIn, mustChangePassword } = getStoredAuth();
+  return JSON.stringify([userId, role, isLoggedIn, mustChangePassword]);
+};
+export const getProfile = createSharedRead('profile', config => client.get('/api/user/profile', config), readScope);
 
 export const updateProfile = (data) =>
   client.put('/api/user/profile', data);
@@ -19,8 +24,7 @@ export const getBiometricStatus = () =>
 export const getLoans = () =>
   client.get('/api/user/loans');
 
-export const getFines = () =>
-  client.get('/api/user/fines');
+export const getFines = createSharedRead('fines', () => client.get('/api/user/fines'), readScope);
 
 export const getReadingStats = () =>
   client.get('/api/user/reading-stats');

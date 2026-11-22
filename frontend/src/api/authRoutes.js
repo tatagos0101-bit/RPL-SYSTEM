@@ -1,3 +1,5 @@
+import { invalidateSharedReads } from './sharedReads.js';
+
 const PORTAL_HOME = {
   member: '/user/home',
   librarian: '/librarian/home',
@@ -67,6 +69,7 @@ export const getStoredAuth = () => ({
 });
 
 export const persistStoredAuth = ({ user_id, name, role, must_change_password = false }) => {
+  invalidateSharedReads();
   localStorage.removeItem('token');
   localStorage.setItem('isLoggedIn', 'true');
   localStorage.setItem('userRole', role);
@@ -76,6 +79,8 @@ export const persistStoredAuth = ({ user_id, name, role, must_change_password = 
 };
 
 export const updateStoredProfile = ({ id, name, role, must_change_password = false }) => {
+  if (localStorage.getItem('userId') !== String(id) || localStorage.getItem('userRole') !== role
+    || localStorage.getItem('mustChangePassword') !== String(Boolean(must_change_password))) invalidateSharedReads();
   localStorage.setItem('isLoggedIn', 'true');
   localStorage.setItem('userRole', role);
   localStorage.setItem('userName', name);
@@ -84,5 +89,6 @@ export const updateStoredProfile = ({ id, name, role, must_change_password = fal
 };
 
 export const clearStoredAuth = () => {
+  invalidateSharedReads();
   AUTH_KEYS.forEach((key) => localStorage.removeItem(key));
 };

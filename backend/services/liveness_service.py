@@ -7,24 +7,25 @@ Recognition routes also verify every exact recognition box before granting acces
 import cv2
 import numpy as np
 from typing import Tuple
-import base64
-import io
-from PIL import Image, ImageOps
+from threading import local
+from services.face_frame import decode_bgr, timed_stage
+
+_detectors = local()
+
+
+def _face_cascade():
+    if not hasattr(_detectors, "cascade"):
+        _detectors.cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    return _detectors.cascade
 
 
 def _decode_base64_image(b64_string: str) -> np.ndarray:
     """Convert a base64 JPEG/PNG string to a numpy array."""
-    if "," in b64_string:
-        b64_string = b64_string.split(",", 1)[1]
-    
-    img_bytes = base64.b64decode(b64_string, validate=True)
-    img = Image.open(io.BytesIO(img_bytes))
-    if img.width * img.height > 4_000_000:
-        raise ValueError("Camera frame is too large")
-    img = ImageOps.exif_transpose(img).convert("RGB")
-    return cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    return decode_bgr(b64_string)
 
 
+@timed_stage("precheck")
 def check_liveness(b64_image: str) -> Tuple[str, float]:
     """
     Check quality and MiniFASNet scores for all faces found by the precheck.
@@ -49,9 +50,7 @@ def check_liveness(b64_image: str) -> Tuple[str, float]:
     from services.anti_spoof_service import AntiSpoofUnavailable, score_face
 
     # Early face/quality check; recognition boxes are independently screened too.
-    face_cascade = cv2.CascadeClassifier(
-        cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-    )
+    face_cascade = _face_cascade()
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
     
     if len(faces) == 0:

@@ -17,6 +17,7 @@ from limiter import limiter
 from logger import get_logger
 from middleware.security import SecurityMiddleware
 from services.biometric_crypto import BiometricStorageError, settings as biometric_encryption_settings
+from services.face_frame import FaceFrameMiddleware
 # Import all models to ensure SQLAlchemy relationships are properly initialized
 from models.security_alert import SecurityAlert
 from routers import auth, users, books, inventory, transactions, reservations, librarian, recommendations, reports, kiosk, uploads
@@ -71,6 +72,7 @@ app.add_middleware(
 
 # ── Security middleware — outer layer, runs after CORS so it doesn't ──────────
 # interfere with preflight responses.
+app.add_middleware(FaceFrameMiddleware)
 app.add_middleware(SecurityMiddleware)
 
 # ── Routers ───────────────────────────────────────────────────────────────────

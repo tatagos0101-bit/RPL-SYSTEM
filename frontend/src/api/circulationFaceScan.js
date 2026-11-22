@@ -1,4 +1,4 @@
-import { entryStationRetryDelay } from './entryStationState.js';
+import { ENTRY_SCAN_INTERVAL_MS, entryStationRetryDelay } from './entryStationState.js';
 
 const retryMessage = message => ({
   too_dark: 'Too dark. Improve the lighting. Scanning will retry automatically.',
@@ -14,8 +14,8 @@ const retryMessage = message => ({
 
 // A new frame is scheduled only after the previous request finishes. Stopping
 // aborts that request and prevents late responses from selecting a member.
-export function startCirculationFaceScan({ capture, lookup, onStatus, onMatch,
-  setTimer = setTimeout, clearTimer = clearTimeout }) {
+export function startAutomaticFaceScan({ capture, lookup, onStatus, onMatch, purpose = 'circulation',
+  setTimer = setTimeout, clearTimer = clearTimeout, now = Date.now }) {
   let stopped = false;
   let timer;
   let controller;
@@ -26,7 +26,7 @@ export function startCirculationFaceScan({ capture, lookup, onStatus, onMatch,
   };
   const scan = async () => {
     if (stopped) return;
-    let delay = 2000;
+    let delay = ENTRY_SCAN_INTERVAL_MS;
     try {
       const image = capture();
       if (!image) {
@@ -35,23 +35,27 @@ export function startCirculationFaceScan({ capture, lookup, onStatus, onMatch,
         return;
       }
       controller = new AbortController();
-      onStatus({ phase: 'scanning', message: 'Scanning… Keep the member facing the camera.' });
+      onStatus({ phase: 'scanning', message: purpose === 'login' ? 'Scanning… Face the camera in even lighting.' : 'Scanning… Keep the member facing the camera.' });
+      const started = now();
       const { data } = await lookup(image, { signal: controller.signal });
       if (stopped) return;
+      delay = Math.max(0, ENTRY_SCAN_INTERVAL_MS - Math.max(0, now() - started));
       if (data?.matched === true) {
         stop();
-        onStatus({ phase: 'recognized', message: 'Member recognized. Loading their books…' });
+        onStatus({ phase: 'recognized', message: purpose === 'login' ? 'Face recognized.' : 'Member recognized. Loading their books…' });
         onMatch(data);
         return;
       }
-      onStatus({ phase: 'retry', message: retryMessage(data?.message) });
-      if (data?.message === 'Spoofing Detected') delay = 5000;
+      onStatus({ phase: 'retry', reason: data?.message, message: retryMessage(data?.message) });
+      if (data?.message === 'Spoofing Detected' && purpose !== 'login') delay = 5000;
     } catch (error) {
       if (stopped) return;
       const status = error?.response?.status;
       if ([401, 403].includes(status)) {
         stop();
-        onStatus({ phase: 'error', message: 'Your librarian session is unavailable. Close this dialog and sign in again.' });
+        onStatus({ phase: 'error', message: purpose === 'login'
+          ? 'Face sign-in could not be completed. Please use password sign-in.'
+          : 'Your librarian session is unavailable. Close this dialog and sign in again.' });
       } else if ([400, 413, 422].includes(status)) {
         stop();
         onStatus({ phase: 'error', message: 'This camera image could not be processed. Use email or Member ID instead.' });
@@ -70,3 +74,5 @@ export function startCirculationFaceScan({ capture, lookup, onStatus, onMatch,
   timer = setTimer(scan, 0);
   return { stop };
 }
+
+export const startCirculationFaceScan = startAutomaticFaceScan;

@@ -372,6 +372,37 @@ models load lazily; no runtime model downloads are needed. See
 Live-face/phone trials are user-reported passes; printed-photo testing was waived by the operator on November 7, 2026 (not performed). This integration is not a production deployment or PAD certification.
 Passive RGB classification does not prove camera origin or prevent all replay.
 
+The November 22 performance pass adds request-scoped work in
+[face_frame.py](../backend/services/face_frame.py). The frame is decoded once into
+the same RGB/BGR pixels. PAD predictions are reused only for identical model input
+tensors within that request; the precheck and every recognition-box check remain,
+with unchanged models, thresholds and uncertainty handling. Different frames and
+different tensors never share a prediction. Galleries are read once per engine
+within a scan, while current templates/accounts are still revalidated before access.
+All images, predictions and gallery references are cleared when the request ends.
+Numeric `Server-Timing` headers expose decode/precheck/detection/PAD/match/verification
+and total processing time without images, identities or credentials. Stage durations
+are inclusive and can overlap; they do not measure camera capture or network time.
+
+Login and circulation use nonoverlapping scans with a 1.5-second minimum interval
+between request starts, counting processing time instead of adding another full
+wait after a slow response. Error/rate-limit backoff remains. Login navigates on a
+verified response without the former decorative 900ms delay, ignores cancelled late
+results, and stops camera tracks on hiding; resuming needs an explicit retry.
+Concurrent member profile/fine reads are coalesced only while in flight and within
+the same auth scope. Completed responses are never cached. Login/logout clear the
+read scope; profile updates invalidate pending sharing for that resource. Public
+catalog pages contain 24 titles, with the existing top/bottom navigation. Search
+remains debounced; initial/page requests start immediately and obsolete reads abort.
+
+[The synthetic benchmark](../scripts/benchmark_face_work.py) measures repeated
+decoding and identical PAD inputs only (`python scripts/benchmark_face_work.py`).
+It does not use a camera or database and does not measure face detection, identity
+matching, network latency or real-person accuracy. `--backend PATH` can compare
+source checkouts with the same Python environment. Synthetic browser coverage in
+`frontend/tests/performance_browser.cjs` checks request counts, pagination, scan
+cleanup, role rejection and mandatory password changes at desktop/mobile sizes.
+
 Legacy encodings and embeddings use JSON in server memory and are not anonymous.
 [Biometric storage](BIOMETRIC_STORAGE.md) adds authenticated AES-256-GCM encryption
 at the ORM boundary for both template formats and `security_alerts.snapshot_b64`.

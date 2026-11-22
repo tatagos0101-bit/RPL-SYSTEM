@@ -11,6 +11,7 @@ from threading import Lock
 
 import cv2
 import numpy as np
+from services.face_frame import pad_prediction, timed_stage
 
 
 MODEL_DIR = Path(__file__).resolve().parents[1] / "assets" / "anti_spoof"
@@ -73,6 +74,7 @@ def _crop(image, box, scale):
     return cv2.resize(patch, (80, 80), interpolation=cv2.INTER_LINEAR)
 
 
+@timed_stage("pad")
 def score_face(image, box):
     """Return (hint, live score) for this exact detected face, failing closed."""
     height, width = image.shape[:2]
@@ -94,12 +96,15 @@ def score_face(image, box):
         with _INFERENCE_LOCK:
             for scale, model in _load_models():
                 patch = _crop(image, values, scale)
-                model.setInput(cv2.dnn.blobFromImage(patch, 1.0, swapRB=False))
-                logits = model.forward().reshape(-1)
-                if logits.shape != (3,) or not np.isfinite(logits).all():
-                    raise AntiSpoofUnavailable("Invalid anti-spoof model output")
-                probabilities = np.exp(logits - logits.max())
-                probabilities /= probabilities.sum()
+                def infer():
+                    model.setInput(cv2.dnn.blobFromImage(patch, 1.0, swapRB=False))
+                    logits = model.forward().reshape(-1)
+                    if logits.shape != (3,) or not np.isfinite(logits).all():
+                        raise AntiSpoofUnavailable("Invalid anti-spoof model output")
+                    probabilities = np.exp(logits - logits.max())
+                    probabilities /= probabilities.sum()
+                    return probabilities
+                probabilities = pad_prediction(model, patch, infer)
                 predictions.append(probabilities)
     except cv2.error as exc:
         raise AntiSpoofUnavailable("Anti-spoof inference failed") from exc

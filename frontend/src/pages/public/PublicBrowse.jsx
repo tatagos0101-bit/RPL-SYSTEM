@@ -32,7 +32,7 @@ const PublicBrowse = () => {
   const [animKey, setAnimKey] = useState(0);
   const touchStartX = useRef(null);
 
-  const listing = useServerPage('/api/books', { search: searchTerm, category: activeCategory }, null, 100);
+  const listing = useServerPage('/api/books', { search: searchTerm, category: activeCategory }, null, 24);
   const { items: books, loading } = listing;
   const filtered = books;
 
