@@ -387,8 +387,10 @@ are inclusive and can overlap; they do not measure camera capture or network tim
 Login and circulation use nonoverlapping scans with a 1.5-second minimum interval
 between request starts, counting processing time instead of adding another full
 wait after a slow response. Error/rate-limit backoff remains. Login navigates on a
-verified response without the former decorative 900ms delay, ignores cancelled late
-results, and stops camera tracks on hiding; resuming needs an explicit retry.
+verified response, showing a check and the recognized name for 500ms before routing
+(previously 900ms). This feedback stops the camera immediately and is cancelled on
+page/method changes or hiding. Login ignores cancelled late results and stops camera
+tracks on hiding; resuming needs an explicit retry.
 Concurrent member profile/fine reads are coalesced only while in flight and within
 the same auth scope. Completed responses are never cached. Login/logout clear the
 read scope; profile updates invalidate pending sharing for that resource. Public

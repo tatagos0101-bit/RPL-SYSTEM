@@ -153,8 +153,17 @@ async function run() {
         await page.getByText('Spoofing Detected. Please use a live face.', { exact: true }).waitFor({ timeout: 10000 });
         assert.ok(page.url().endsWith('/user/login'));
         state.reply = { ...actor, matched: true };
+        const success = page.getByRole('status').filter({ hasText: 'Scan successful' });
+        await success.waitFor();
+        assert.ok(await success.getByText('Welcome, Synthetic member!', { exact: true }).isVisible());
+        assert.equal(await success.locator('svg.lucide-check').count(), 1);
+        assert.ok(page.url().endsWith('/user/login'));
+        await page.screenshot({ path: path.join(artifacts, 'face-success-' + width + '.png') });
+        await page.waitForFunction(() => window.syntheticStreams.every(s => s.getTracks().every(t => t.readyState === 'ended')));
         await page.waitForURL('**/user/home');
-        results.push({ width, faceRedirectMs: Date.now() - state.releasedAt, staleMatchIgnored: true, hiddenCameraStopped: true });
+        const faceRedirectMs = Date.now() - state.releasedAt;
+        assert.ok(faceRedirectMs >= 450, 'Success feedback must remain visible briefly before redirect');
+        results.push({ width, faceRedirectMs, successCheckAndName: true, staleMatchIgnored: true, hiddenCameraStopped: true });
         await page.waitForFunction(() => window.syntheticStreams.every(s => s.getTracks().every(t => t.readyState === 'ended')));
         await page.getByText(/Good (morning|afternoon|evening)/).first().waitFor();
         await healthy(page, errors); await context.close();
@@ -176,6 +185,26 @@ async function run() {
       await healthy(page, errors);
       results.push({ wrongRoleBlocked: true, temporaryPasswordChangeRequired: true });
       await context.close();
+
+      const staff = await surface(browser, 390, false);
+      staff.state.actor.role = 'librarian';
+      staff.state.reply = { ...staff.state.actor, matched: true };
+      await staff.page.goto(base + '/librarian/login');
+      await staff.page.getByRole('button', { name: 'Face ID', exact: true }).click();
+      const staffSuccess = staff.page.getByRole('status').filter({ hasText: 'Scan successful' });
+      await staffSuccess.waitFor();
+      assert.ok(await staffSuccess.getByText('Welcome, Synthetic member!', { exact: true }).isVisible());
+      await staff.page.evaluate(() => {
+        Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      await staff.page.getByText('Camera paused', { exact: true }).waitFor();
+      await delay(650);
+      assert.ok(staff.page.url().endsWith('/librarian/login'));
+      await staff.page.waitForFunction(() => window.syntheticStreams.every(s => s.getTracks().every(t => t.readyState === 'ended')));
+      await healthy(staff.page, staff.errors);
+      results.push({ librarianSuccessCheckAndName: true, hiddenSuccessRedirectCancelled: true });
+      await staff.context.close();
     }
     console.log(JSON.stringify({ baseline, results, artifacts }));
   } finally { await browser.close(); }

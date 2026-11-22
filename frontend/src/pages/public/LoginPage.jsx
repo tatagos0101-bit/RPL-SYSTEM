@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, ScanFace, KeyRound, MapPin, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Check, ScanFace, KeyRound, MapPin, ArrowRight } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import { clearAuth, login, faceAuth, persistAuth } from '../../api/auth';
@@ -10,6 +10,8 @@ const ROLE_LABEL = {
   member: 'Member',
   librarian: 'Librarian',
 };
+
+const FACE_SUCCESS_DELAY_MS = 500;
 
 const wrongPortalMessage = (actualRole, expectedRole) => {
   if (expectedRole === 'member' && actualRole === 'librarian') {
@@ -61,6 +63,7 @@ const LoginPage = ({ expectedRole = 'member' }) => {
     if (tab !== 'face' || facePaused) return;
     let active = true;
     let spoofConfidence = 0;
+    let successTimer;
     const video = webcamRef.current?.video;
     const scanner = startAutomaticFaceScan({
       purpose: 'login',
@@ -88,10 +91,14 @@ const LoginPage = ({ expectedRole = 'member' }) => {
             }
             return;
           }
+          persistAuth(data);
           setFaceStatus('matched');
           setFaceMessage('Welcome, ' + data.name + '!');
-          persistAuth(data);
-          navigate(data.must_change_password ? passwordChangePathForRole(data.role) : safeNextPath(nextPath, data.role));
+          successTimer = setTimeout(() => {
+            if (active && !document.hidden) {
+              navigate(data.must_change_password ? passwordChangePathForRole(data.role) : safeNextPath(nextPath, data.role));
+            }
+          }, FACE_SUCCESS_DELAY_MS);
         } catch {
           if (active) {
             setFaceStatus('failed');
@@ -105,6 +112,7 @@ const LoginPage = ({ expectedRole = 'member' }) => {
       if (!document.hidden) return;
       active = false;
       scanner.stop();
+      clearTimeout(successTimer);
       video?.srcObject?.getTracks().forEach(track => track.stop());
       setFacePaused(true);
       setFaceStatus('paused');
@@ -115,6 +123,7 @@ const LoginPage = ({ expectedRole = 'member' }) => {
     return () => {
       active = false;
       scanner.stop();
+      clearTimeout(successTimer);
       video?.srcObject?.getTracks().forEach(track => track.stop());
       if (pollingRef.current === scanner) pollingRef.current = null;
       document.removeEventListener('visibilitychange', hide);
@@ -232,11 +241,12 @@ const LoginPage = ({ expectedRole = 'member' }) => {
 
                 {/* Matched overlay */}
                 {faceStatus === 'matched' && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-success-soft">
+                  <div role="status" aria-live="polite" aria-atomic="true" className="absolute inset-0 flex flex-col items-center justify-center bg-success-soft px-4 text-center">
                     <div className="w-16 h-16 rounded-full bg-success-soft border-2 border-success flex items-center justify-center mb-3">
-                      <ScanFace size={32} className="text-success" />
+                      <Check size={32} className="text-success" aria-hidden="true" />
                     </div>
-                    <p className="text-success font-semibold tracking-normal text-sm text-center px-4">{faceMessage}</p>
+                    <p className="text-success font-bold text-base">Scan successful</p>
+                    <p className="mt-1 text-success font-semibold tracking-normal text-sm break-words max-w-full">{faceMessage}</p>
                   </div>
                 )}
 
