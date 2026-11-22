@@ -1,0 +1,78 @@
+/* The public staff welcome page shares the reader landing page's design system. */
+.rpl-librarian-landing .discovery-hero {
+  min-height: max(640px, calc(100svh - 144px));
+  padding-block: calc(var(--rpl-header-height) + 96px) 96px;
+}
+.rpl-librarian-landing .discovery-hero h1 {
+  font-size: clamp(3.5rem, 7.8vw, 10.75rem);
+  line-height: 1.08;
+  text-wrap: balance;
+}
+.rpl-librarian-landing .discovery-hero-description {
+  max-width: 780px;
+  font-size: clamp(1rem, 1.35vw, 1.25rem);
+  text-wrap: pretty;
+}
+.rpl-librarian-landing .librarian-welcome-sign-in {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: .875rem;
+  font-weight: 600;
+}
+.rpl-librarian-landing .librarian-welcome-actions {
+  --enter-delay: 180ms;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 36px;
+  width: min(100%, 660px);
+}
+.rpl-librarian-landing .librarian-welcome-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex: 1 1 240px;
+  min-height: 60px;
+  padding: 16px 28px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  transition: background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+.rpl-librarian-landing .librarian-welcome-button svg { flex-shrink: 0; }
+.rpl-librarian-landing .librarian-welcome-button-primary { background: #edc27a; color: #302016; }
+.rpl-librarian-landing .librarian-welcome-button-primary:is(:hover, :focus-visible) { background: #f4ce8e; box-shadow: 0 8px 24px rgb(0 0 0 / 16%); }
+.rpl-librarian-landing .librarian-welcome-button-secondary { background: rgb(35 26 20 / 28%); border-color: rgb(255 253 247 / 70%); color: #fffdf7; }
+.rpl-librarian-landing .librarian-welcome-button-secondary:is(:hover, :focus-visible) { background: rgb(255 253 247 / 12%); border-color: #edc27a; }
+.rpl-librarian-landing .librarian-welcome-button:focus-visible { outline-color: #edc27a; }
+.rpl-librarian-landing .librarian-welcome-access { border-top: 1px solid var(--rpl-line); background: var(--rpl-panel); }
+.rpl-librarian-landing .librarian-welcome-access-copy { display: flex; align-items: center; gap: 24px; min-height: 144px; padding-block: 32px; }
+.rpl-librarian-landing .librarian-welcome-access-copy > svg { flex-shrink: 0; color: var(--rpl-link); }
+.rpl-librarian-landing .librarian-welcome-access h2 { font-size: 2rem; line-height: 1.2; }
+.rpl-librarian-landing .librarian-welcome-access p { margin-left: 12px; color: var(--rpl-muted); font-size: 1rem; }
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .rpl-librarian-landing .librarian-welcome-button { transition: transform 220ms ease, background-color 220ms ease, border-color 220ms ease, box-shadow 220ms ease; }
+  .rpl-librarian-landing .librarian-welcome-button:is(:hover, :focus-visible) { transform: translateY(-3px); }
+  .rpl-librarian-landing .librarian-welcome-button svg { transition: transform 220ms ease; }
+  .rpl-librarian-landing .librarian-welcome-button-primary:is(:hover, :focus-visible) svg { transform: translateX(4px); }
+  .rpl-librarian-landing .librarian-welcome-button:active { transform: translateY(0); }
+}
+@media (max-width: 639px) {
+  .rpl-librarian-landing .discovery-hero { min-height: max(660px, calc(100svh - 132px)); padding-block: calc(var(--rpl-header-height) + 64px) 64px; }
+  .rpl-librarian-landing .discovery-hero h1 { font-size: clamp(3rem, 10.5vw, 4rem); }
+  .rpl-librarian-landing .discovery-hero-description { font-size: 1rem; }
+  .rpl-librarian-landing .librarian-welcome-sign-in { padding-inline: 14px; }
+  .rpl-librarian-landing .librarian-welcome-actions { gap: 12px; margin-top: 28px; max-width: 360px; }
+  .rpl-librarian-landing .librarian-welcome-button { min-height: 56px; padding: 14px 20px; }
+  .rpl-librarian-landing .librarian-welcome-access-copy { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px 16px; min-height: 132px; padding-block: 24px; }
+  .rpl-librarian-landing .librarian-welcome-access h2 { font-size: 1.625rem; }
+  .rpl-librarian-landing .librarian-welcome-access p { grid-column: 2; margin-left: 0; font-size: .9375rem; }
+}
