@@ -50,8 +50,15 @@ def check_liveness(b64_image: str) -> Tuple[str, float]:
     from services.anti_spoof_service import AntiSpoofUnavailable, score_face
 
     # Early face/quality check; recognition boxes are independently screened too.
-    face_cascade = _face_cascade()
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+    from services.entry_face_detector import EntryDetectorUnavailable, entry_face_locations, uses_entry_detector
+    if uses_entry_detector():
+        try:
+            faces = [(left, top, right - left, bottom - top)
+                     for top, right, bottom, left in entry_face_locations(b64_image)]
+        except EntryDetectorUnavailable:
+            return "unavailable", 0.0
+    else:
+        faces = _face_cascade().detectMultiScale(gray, 1.1, 4)
     
     if len(faces) == 0:
         return ("retry", 0.0)

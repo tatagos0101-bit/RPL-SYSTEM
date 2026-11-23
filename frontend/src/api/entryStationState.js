@@ -5,7 +5,7 @@ export const isQuietWalkThroughMessage = (message) =>
   ['no_face', 'too_far'].includes(message);
 
 // Two stations on one public IP need headroom below 120 scans / 60 log reads per minute.
-export const ENTRY_SCAN_INTERVAL_MS = 1500;
+export const ENTRY_SCAN_INTERVAL_MS = 1100;
 export const ENTRY_LOG_MIN_INTERVAL_MS = 2500;
 
 export function entryStationRetryDelay(error, now = Date.now()) {

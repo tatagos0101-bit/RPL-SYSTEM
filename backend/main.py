@@ -68,6 +68,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Server-Timing", "X-Entry-Frame-Width", "X-Entry-Frame-Height", "X-Entry-Min-Face-Pixels"],
 )
 
 # ── Security middleware — outer layer, runs after CORS so it doesn't ──────────

@@ -19,17 +19,25 @@ class FrameWork:
         self.models = {}
         self.galleries = {}
         self.timings = {}
+        self.entrance = False
+        self.detections = {}
+        self.min_face_pixels = None
 
     def clear(self):
         self.source = self.rgb = self.bgr = None
         self.predictions.clear()
         self.models.clear()
         self.galleries.clear()
+        self.detections.clear()
+        self.min_face_pixels = None
+        self.entrance = False
 
     def prepare(self, source):
         if self.source is None or self.source != source:
             self.source = self.rgb = self.bgr = None
             self.predictions.clear()
+            self.detections.clear()
+            self.min_face_pixels = None
             with measure_stage("decode"):
                 self.rgb = _decode_rgb(source)
             self.source = source
@@ -157,10 +165,18 @@ class FaceFrameMiddleware:
             return await self.app(scope, receive, send)
         started = perf_counter()
         with frame_scope() as state:
+            state.entrance = path == "/api/kiosk/face"
             async def timed_send(message):
                 if message["type"] == "http.response.start":
                     from starlette.datastructures import MutableHeaders
                     state.timings["total"] = perf_counter() - started
-                    MutableHeaders(scope=message).append("server-timing", state.header())
+                    headers = MutableHeaders(scope=message)
+                    headers.append("server-timing", state.header())
+                    if state.entrance and state.rgb is not None:
+                        height, width = state.rgb.shape[:2]
+                        headers["x-entry-frame-width"] = str(width)
+                        headers["x-entry-frame-height"] = str(height)
+                        if state.min_face_pixels is not None:
+                            headers["x-entry-min-face-pixels"] = str(state.min_face_pixels)
                 await send(message)
             await self.app(scope, receive, timed_send)

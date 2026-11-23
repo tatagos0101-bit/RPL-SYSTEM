@@ -407,6 +407,34 @@ or production migration is needed on an initialized database.
 
 ## Facial recognition and attendance
 
+The entrance-only capture pass preserves the webcam's native aspect ratio and
+requests up to 1440p detail with soft camera constraints. The verification canvas
+uses actual video pixels, independent of preview width, capped at 2560 on its
+longest edge and 3.8 megapixels. It never upscales a low-resolution camera. A single
+in-memory candidate selects detail among recent frames (at most 240ms old), is
+JPEG-encoded only when sending, and stays within the existing 2.5M-character image
+limit. Camera pause/hiding/unmount clears its canvases and aborts requests. Requests
+never overlap and start at least 1.1 seconds apart, preserving retry/rate-limit
+backoff and the station's 120/minute server limit. Two stations sharing an IP use
+at most about 110/minute before network/processing delays.
+
+Only `/api/kiosk/face` uses the checksummed, bundled [YuNet detector](../backend/assets/face_detector/README.md).
+Its proposals are mapped to original camera pixels and every proposal passes the
+brightness/PAD precheck before the bounded subset is encoded by the existing dlib
+recognizer. Exact recognition-box PAD checks remain. Login, enrollment and
+circulation detection and all identity thresholds/margins remain unchanged.
+Failed/corrupt detector models fail closed. Proposal coordinates are cached only
+within the exact request/image and cleared with the other scan data.
+
+The station's collapsed Camera check shows source/submitted resolution, smallest
+detected-face size, request/server duration and candidate-frame age. Server headers
+contain numeric readings only, exposed through CORS for local diagnostics. No
+diagnostic image/identity history is stored. Success still displays the recognized
+name and now includes a checkmark, while low light/unknown-face hints leave the
+camera running. This pass adds recent-frame selection, not persistent person
+tracking or a separately hosted recognition worker. Actual moving-person accuracy
+at three metres remains a camera/lighting field test, not an automated-test result.
+
 [face_engine_service.py](../backend/services/face_engine_service.py) supports dlib
 Euclidean-distance matching and optional InsightFace cosine-distance matching.
 Automatic mode tries InsightFace before dlib; explicit InsightFace requires separate

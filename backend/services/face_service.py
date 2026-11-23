@@ -69,7 +69,9 @@ def detect_face_encodings(b64_image: str, max_faces: int = 4) -> list[dict]:
         )
 
     img_array = _decode_base64_image(b64_image)
-    locations = face_recognition.face_locations(img_array)[:max_faces]
+    from services.entry_face_detector import entry_face_locations, uses_entry_detector
+    locations = (entry_face_locations(b64_image) if uses_entry_detector()
+                 else face_recognition.face_locations(img_array))[:max_faces]
     if not locations:
         return []
 

@@ -19,4 +19,6 @@
 .entrance button{min-height:44px}.entrance time{font-variant-numeric:tabular-nums;white-space:nowrap}.entrance time small{font-size:.75rem}
 .entrance aside[aria-label="Facial processing notice"]{background:#2c211a;border-color:#846c57;color:#e6d3bb}
 .entrance aside[aria-label="Facial processing notice"] .text-muted{color:#d9c3aa}.entrance aside[aria-label="Facial processing notice"] a{color:#efc26e}
+.entrance-success{border-color:#a6d5aa;background:#2f3c2c}.entrance-success>svg{color:#b7e3b5}
+.entrance-diagnostics{border:1px solid #846c57;border-radius:12px;padding:12px 16px;color:#e6d3bb;font-size:.85rem}.entrance-diagnostics summary{cursor:pointer;font-weight:600;color:#efc26e}.entrance-diagnostics p{margin-top:10px}.entrance-diagnostics dl{display:grid;gap:8px;margin:12px 0}.entrance-diagnostics dl>div{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}.entrance-diagnostics dd{font-variant-numeric:tabular-nums;color:#fff3df}
 @media(max-width:760px){.entrance-columns{grid-template-columns:1fr}.entrance-clock svg{display:none}.entrance-clock{font-size:.72rem}.entrance header{padding:10px}.entrance-title small{font-size:.7rem}}
