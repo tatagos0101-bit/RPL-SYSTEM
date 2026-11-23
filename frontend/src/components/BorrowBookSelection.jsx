@@ -1,4 +1,5 @@
 ﻿import { useEffect, useId, useState } from 'react';
+import { QrCode } from 'lucide-react';
 import { getMemberReservations } from '../api/librarian';
 import { lookupCirculation } from '../api/circulation';
 import { activePickupReservations, availableReservationCopies } from '../api/reservationBorrowing';
@@ -65,6 +66,7 @@ function ReservedBook({ reservation, rows, onAdd, busy }) {
 }
 
 export default function BorrowBookSelection({ memberId, rows, onAdd, onScan, busy }) {
+  const scannerId = useId();
   const [version, setVersion] = useState(0);
   const [resource, setResource] = useState(null);
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -93,7 +95,11 @@ export default function BorrowBookSelection({ memberId, rows, onAdd, onScan, bus
       {reservations.length > 0 && <p className="text-sm text-muted">Add ready reservations directly to the list. The available copy shown is selected automatically. Availability and borrowing rules are checked again when you confirm.</p>}
       {reservations.map(reservation => <ReservedBook key={reservation.id} reservation={reservation} rows={rows} onAdd={onAdd} busy={busy} />)}
     </section>
-    {!noReservations && <button type="button" onClick={() => setScannerOpen(value => !value)} className="rounded-lg border border-line px-4 py-3 text-sm font-semibold text-link">{scannerOpen ? 'Hide QR / code entry' : 'Scan or enter another book'}</button>}
-    {showScanner && <QrScanner onScan={onScan} busy={busy} />}
+    {!noReservations && <button type="button" aria-expanded={showScanner} aria-controls={scannerId} onClick={() => setScannerOpen(value => !value)}
+      className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-transparent bg-action px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-action-hover sm:w-auto">
+      <QrCode size={20} aria-hidden="true" />
+      <span>{scannerOpen ? 'Hide QR / code entry' : 'Scan or enter another book'}</span>
+    </button>}
+    <div id={scannerId} hidden={!showScanner}>{showScanner && <QrScanner onScan={onScan} busy={busy} />}</div>
   </section>;
 }

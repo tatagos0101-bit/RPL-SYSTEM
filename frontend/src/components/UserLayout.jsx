@@ -333,11 +333,11 @@ const UserLayout = () => {
                   className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-semibold text-sm tracking-normal transition-all ${
                     active
                       ? 'bg-action text-white shadow-sm '
-                      : 'text-muted hover:text-white hover:bg-panel'
+                      : 'text-muted hover:text-ink hover:bg-info-soft focus-visible:text-ink focus-visible:bg-info-soft'
                   }`}
                   style={!active ? {} : {}}
                 >
-                  <span className={active ? 'text-white' : 'text-muted'}>
+                  <span className={active ? 'text-white' : 'text-current'}>
                     {link.icon}
                   </span>
                   <span className="flex-1">{link.label}</span>
