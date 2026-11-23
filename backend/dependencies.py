@@ -7,6 +7,7 @@ from models.auth_session import AuthSession
 from models.user import User
 from services.auth_cookie import AUTH_COOKIE_NAME
 from services.auth_sessions import session_claims, session_is_current
+from services.credential_expiry import require_current_temporary_password
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
@@ -33,6 +34,7 @@ def get_session_user(
         raise credentials_error
     if not session_is_current(db.get(AuthSession, sid), user):
         raise credentials_error
+    require_current_temporary_password(user)
     return user
 
 

@@ -14,6 +14,7 @@ class User(Base):
     email          = Column(String(180), unique=True, nullable=True, index=True)
     password_hash  = Column(String(255), nullable=False)
     must_change_password = Column(Boolean, nullable=False, default=False)
+    temporary_password_expires_at = Column(DateTime(timezone=True), nullable=True)
     email_verified = Column(Boolean, nullable=False, default=False)
     phone_verified = Column(Boolean, nullable=False, default=False)
     role           = Column(Enum("member", "librarian", name="user_role", native_enum=False, create_constraint=True), nullable=False, default="member")

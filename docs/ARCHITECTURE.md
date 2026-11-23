@@ -407,6 +407,18 @@ or production migration is needed on an initialized database.
 
 ## Facial recognition and attendance
 
+Password-reset email codes expire after five minutes; contact-verification codes
+retain their separate 15-minute lifetime. Reset confirmation also caps previously
+issued longer-lived challenges at five minutes from creation. Registration and
+librarian-assisted member resets, including main-librarian staff creation, store
+`users.temporary_password_expires_at` at issuance plus 24 hours. Expired temporary
+passwords cannot establish account sessions or complete a password change through
+an older session; face account sign-in cannot bypass expiry. Entrance attendance
+is unchanged. Successful permanent password changes/recovery clear the deadline
+and preserve session revocation. The additive column upgrade grants pre-upgrade
+forced-change accounts one 24-hour rollout window because their original issue
+times were not recorded; rerunning the upgrade never renews that window.
+
 The entrance-only capture pass preserves the webcam's native aspect ratio and
 requests up to 1440p detail with soft camera constraints. The verification canvas
 uses actual video pixels, independent of preview width, capped at 2560 on its

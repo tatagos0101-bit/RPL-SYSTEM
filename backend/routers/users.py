@@ -118,6 +118,7 @@ def change_password(
 
     current_user.password_hash = hash_password(body.new_password)
     current_user.must_change_password = False
+    current_user.temporary_password_expires_at = None
     revoke_user_sessions(db, current_user.id)
     expire_unused_reset_codes_for_user(db, current_user.id)
     token = create_session_token(db, current_user)

@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFil
 from pydantic import EmailStr, TypeAdapter, ValidationError
 from starlette.concurrency import run_in_threadpool
 from services.registration_delivery import deliver_registration_credentials
+from services.credential_expiry import temporary_password_deadline
 from services.passwords import hash_password
 from services.passwords import verify_password
 from services.member_deletion import lock_existing_member, delete_face_data, delete_account
@@ -418,6 +419,7 @@ async def register_member(
         email         = email or None,
         password_hash = hash_password(temporary_password),
         must_change_password = True,
+        temporary_password_expires_at = temporary_password_deadline(),
         email_verified = False,
         phone_verified = False,
         role          = "member",
@@ -477,6 +479,7 @@ def reset_member_password(
     temporary_password = _generate_temporary_password()
     member.password_hash = hash_password(temporary_password)
     member.must_change_password = True
+    member.temporary_password_expires_at = temporary_password_deadline()
     revoke_user_sessions(db, member.id)
     expire_unused_reset_codes_for_user(db, member.id)
     db.commit()
@@ -488,6 +491,7 @@ def reset_member_password(
         "name": member.name,
         "email": member.email,
         "temporary_password": temporary_password,
+        "temporary_password_expires_at": member.temporary_password_expires_at,
     }
 
 

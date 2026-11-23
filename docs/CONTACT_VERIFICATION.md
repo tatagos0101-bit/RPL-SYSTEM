@@ -26,7 +26,7 @@ retroactively marked verified and accounts without a phone are not locked out.
 `password_reset_codes` now stores a purpose, HMAC-bound contact/password context,
 attempt count and provider-acceptance timestamp. No plaintext OTP is stored.
 Verification and reset codes cannot substitute for each other. Codes expire after
-15 minutes; replacement invalidates previous codes of the same purpose. Five
+5 minutes for password resets and 15 minutes for contact verification; replacement invalidates previous codes of the same purpose. Five
 failed attempts consume a code. Sends are serialized under an account row lock,
 with at least 60 seconds between sends and at most five per hour across purposes.
 Existing IP rate limits also apply; production shared Redis remains recommended.

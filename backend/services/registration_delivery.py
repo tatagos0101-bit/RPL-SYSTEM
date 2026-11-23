@@ -37,13 +37,13 @@ def sms_configured():
 def send_registration_email(*, destination, member_id, temporary_password):
     otp_delivery.send_email(destination, "Your Rizal Provincial Library account",
         f"Your library account is ready.\n\nMember ID: {member_id}\nTemporary password: {temporary_password}\n\n"
-        "Sign in with your Member ID and change this password before continuing. Keep it private.",
+        "This temporary password expires 24 hours after it was issued. Sign in with your Member ID and change it before continuing. Keep it private.",
         idempotency_prefix="rpl-registration", timeout=5, max_attempts=1)
 
 
 def send_registration_sms(*, destination, member_id, temporary_password):
     send_sms(destination, f"RPL account ready. Member ID: {member_id}. Temporary password: {temporary_password}. "
-             "Sign in with your Member ID and change it at first login. Keep it private.")
+             "Expires 24 hours after issue. Sign in with your Member ID and change it at first login. Keep it private.")
 
 
 def send_sms(destination, message, *, timeout=10):

@@ -57,9 +57,11 @@ def send_email(destination, subject, content, *, idempotency_prefix="rpl-otp", t
 
 
 def send_code(channel, destination, code, purpose):
+    from services.password_reset import RESET_CODE_MINUTES, CONTACT_CODE_MINUTES
+    minutes = RESET_CODE_MINUTES if purpose == "reset" else CONTACT_CODE_MINUTES
     # Registration SMS does not enable phone verification or password recovery.
     if channel != "email":
         raise DeliveryUnavailable()
     action = "verify your email" if purpose == "verify" else "reset your password"
     send_email(destination, "RPL verification code",
-               f"Rizal Provincial Library: {code} is your code to {action}. Expires in 15 minutes. Do not share this code.")
+               f"Rizal Provincial Library: {code} is your code to {action}. Expires in {minutes} minutes. Do not share this code.")

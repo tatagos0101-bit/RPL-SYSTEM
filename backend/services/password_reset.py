@@ -11,7 +11,8 @@ from models.user import User
 from timezone_utils import now_ph, as_ph
 from services.email_identity import find_email_user
 
-RESET_CODE_MINUTES = 15
+RESET_CODE_MINUTES = 5
+CONTACT_CODE_MINUTES = 15
 RESET_CODE_LENGTH = 6
 
 
@@ -66,7 +67,7 @@ def create_password_reset_code(
         purpose=purpose,
         context_hash=contact_context(user, channel, purpose),
         code_hash=_hash_code(f"{user.id}:{purpose}:{channel}:{code}"),
-        expires_at=_now() + timedelta(minutes=RESET_CODE_MINUTES),
+        expires_at=_now() + timedelta(minutes=RESET_CODE_MINUTES if purpose == "reset" else CONTACT_CODE_MINUTES),
     )
     db.add(reset)
     db.commit()
@@ -138,6 +139,8 @@ def consume_code(db, user, code, purpose, channel=None):
         query = query.filter(PasswordResetCode.channel == channel)
     challenge = query.order_by(PasswordResetCode.id.desc()).with_for_update().first()
     if not challenge:
+        raise invalid
+    if purpose == "reset" and as_ph(challenge.created_at) + timedelta(minutes=RESET_CODE_MINUTES) <= _now():
         raise invalid
     try:
         context_valid = challenge.context_hash == contact_context(user, challenge.channel, purpose)

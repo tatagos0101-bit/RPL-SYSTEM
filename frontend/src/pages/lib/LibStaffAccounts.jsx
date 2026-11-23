@@ -59,7 +59,7 @@ export default function LibStaffAccounts() {
     {forbidden ? <Link to="/librarian/home" className={buttonClass}>Back to dashboard</Link> : <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
       <section className="staff-panel" aria-labelledby="add-librarian-title">
         <h2 id="add-librarian-title" className="flex items-center gap-3"><UserPlus size={22} aria-hidden="true" />Add a librarian</h2>
-        <p className="mt-3 text-sm leading-6 text-muted">A temporary password will be sent by email. The librarian must change it at first sign-in.</p>
+        <p className="mt-3 text-sm leading-6 text-muted">A temporary password will be sent by email. It expires after 24 hours and must be changed at first sign-in.</p>
         {created ? <div className="mt-5 rounded-xl border border-line bg-subtle p-5" role="status">
           <p className="flex items-center gap-2 font-semibold text-success"><CheckCircle2 size={20} aria-hidden="true" />Librarian account created</p>
           <p className="mt-3 break-words font-semibold">{created.account.name}</p>

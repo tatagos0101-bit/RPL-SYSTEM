@@ -38,6 +38,15 @@ mocked transport success is not evidence of real inbox/phone delivery.
 
 ## Main librarian and staff accounts
 
+Before releasing credential-expiry enforcement, add nullable
+`users.temporary_password_expires_at timestamptz`. The scoped upgrade sets existing
+non-deleted forced-change accounts to deployment time plus 24 hours once only.
+Original issue timestamps were not recorded. New temporary credentials receive
+24 hours from issuance; reset codes receive five minutes, including a creation-time
+cap for older challenges. No expiry is added to permanent passwords. Keep existing
+RLS/runtime grants and `AUTO_MIGRATE=false`. Apply the additive upgrade before the
+API release; the normal migration service implements the same repeat-safe upgrade.
+
 The existing `library_settings` table stores a single explicitly designated
 main librarian ID under `librarian_account_manager_id`. This is a permission
 within the existing `librarian` role; it is not a new role or a Supabase Auth user.

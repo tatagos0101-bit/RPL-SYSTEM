@@ -10,6 +10,7 @@ import secrets
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from services.passwords import hash_password, verify_password, needs_legacy_replacement
 from services.email_identity import find_email_user, email_matches, normalize_email
+from services.credential_expiry import require_current_temporary_password
 from services.librarian_accounts import can_manage_librarians
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -107,6 +108,7 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended. Contact librarian.")
     if body.expected_role is not None and body.expected_role != user.role:
         raise HTTPException(403, "This account belongs to the other portal. Use its matching sign-in page.")
+    require_current_temporary_password(user)
     if needs_legacy_replacement(body.password, user.password_hash):
         user.must_change_password = True
         revoke_user_sessions(db, user.id)
@@ -186,7 +188,7 @@ def request_password_reset(
         return PasswordResetRequestResponse(
             success=True,
             message=("If the account has a verified email, a code will be sent to it. "
-                     "It expires in 15 minutes. If it does not arrive, contact the librarian." if available else
+                     "It expires in 5 minutes. If it does not arrive, contact the librarian." if available else
                      "Please visit the librarian to reset your password."),
             requires_librarian_help=not available,
         )
@@ -226,6 +228,7 @@ def confirm_password_reset(
     user = verify_password_reset_code(db, body.identifier, body.code)
     user.password_hash = _hash(body.new_password)
     user.must_change_password = False
+    user.temporary_password_expires_at = None
     revoke_user_sessions(db, user.id)
     expire_unused_reset_codes_for_user(db, user.id)
     db.commit()
@@ -619,6 +622,8 @@ def process_entry_face(
         return FaceAuthResponse(matched=False, faces=faces, message="not_recognized")
 
     matched_user, first_face = first_match
+    if issue_token:
+        require_current_temporary_password(matched_user)
     _last_seen_by_ip[ip] = {"user_id": matched_user.id, "ts": time()}
     security_logger.info("FACE_ENTRY_SUCCESS user_id=%d", matched_user.id)
 

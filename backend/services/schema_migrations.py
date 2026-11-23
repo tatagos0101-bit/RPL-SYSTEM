@@ -44,6 +44,7 @@ ADDITIONS = {
         ("id_image_url", String(300), None),
         ("avatar_url", String(300), None),
         ("must_change_password", Boolean, false()),
+        ("temporary_password_expires_at", DateTime(timezone=True), None),
         ("email_verified", Boolean, false()),
         ("phone_verified", Boolean, false()),
     ],
@@ -52,6 +53,7 @@ ADDITIONS = {
 
 
 def upgrade_schema(conn, metadata) -> None:
+    legacy_temporary_passwords = "temporary_password_expires_at" not in {c["name"] for c in inspect(conn).get_columns("users")}
     for table_name, columns in ADDITIONS.items():
         existing = {c["name"] for c in inspect(conn).get_columns(table_name)}
         for name, column_type, default in columns:
@@ -60,6 +62,11 @@ def upgrade_schema(conn, metadata) -> None:
                 definition = str(CreateColumn(column).compile(dialect=conn.dialect))
                 table = conn.dialect.identifier_preparer.quote(table_name)
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {definition}"))
+
+    if legacy_temporary_passwords:
+        from services.credential_expiry import temporary_password_deadline
+        # Old issue times were not recorded. One rollout window, never renewed.
+        conn.execute(text("UPDATE users SET temporary_password_expires_at = :deadline WHERE must_change_password = true AND deleted_at IS NULL"), {"deadline": temporary_password_deadline()})
 
     # create_all does not add indexes to tables that already exist.
     for table_name, index_name in (

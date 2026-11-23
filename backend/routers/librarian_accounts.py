@@ -15,6 +15,7 @@ from services.librarian_accounts import (
     new_staff_member_id, require_librarian_account_manager, temporary_staff_password,
 )
 from services.passwords import hash_password, verify_password
+from services.credential_expiry import temporary_password_deadline
 from services.registration_delivery import deliver_registration_credentials
 
 router = APIRouter(prefix="/api/librarian/staff", tags=["Librarian accounts"])
@@ -65,7 +66,8 @@ def create_librarian(
     password = temporary_staff_password()
     user = User(name=body.name, email=email, role="librarian", status="active",
                 member_id=new_staff_member_id(db), password_hash=hash_password(password),
-                must_change_password=True, email_verified=False, phone_verified=False)
+                must_change_password=True, temporary_password_expires_at=temporary_password_deadline(),
+                email_verified=False, phone_verified=False)
     db.add(user)
     try:
         db.commit()
