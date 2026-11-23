@@ -1,8 +1,8 @@
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Package, CheckCircle, Clock, BookOpen, Trash2, RefreshCw, ImagePlus, Library, Pencil, Eye } from 'lucide-react';
+import { Search, Plus, Package, CheckCircle, Clock, BookOpen, Trash2, RefreshCw, ImagePlus, Library, Pencil, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import BookCover from '../../components/BookCover';
 import BookEditDialog from '../../components/BookEditDialog';
 import BookDetailsDialog from '../../components/BookDetailsDialog';
@@ -74,7 +74,7 @@ const LibInventory = () => {
   };
 
   return (
-    <div className="rpl-page min-h-screen bg-transparent pt-8 px-6 md:px-12 pb-20 font-sans text-ink transition-colors duration-300">
+    <div className="rpl-page min-h-screen w-full min-w-0 bg-transparent pt-8 px-4 sm:px-6 lg:px-8 pb-20 font-sans text-ink transition-colors duration-300">
       {viewingBook && <BookDetailsDialog book={viewingBook} onClose={() => setViewingBook(null)} />}
       {editingBook && <BookEditDialog key={editingBook.id} book={editingBook} categories={categories}
         onClose={() => setEditingBook(null)} onSaved={handleSaved} />}
@@ -87,7 +87,7 @@ const LibInventory = () => {
         onChange={handleFileChange}
       />
 
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full min-w-0">
         {operationError && <p role="alert">{operationError} <button className="underline" onClick={fetchData}>Retry loading</button></p>}
 
         {/* Header */}
@@ -118,23 +118,9 @@ const LibInventory = () => {
         </div>
 
         {/* Filters */}
-        <div className="animate-fade-in-up delay-200 flex flex-col lg:flex-row gap-4 mb-8">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold tracking-normal transition-all border flex-shrink-0 ${
-                  activeCategory === cat
-                    ? 'bg-action border-line border-line text-white'
-                    : 'bg-panel border-line text-muted hover:border-line hover:text-link hover:text-link'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-          <div className="relative flex-1 min-w-[220px]">
+        <div className="animate-fade-in-up delay-200 flex flex-col lg:flex-row lg:items-center gap-4 mb-8">
+          <InventoryCategories categories={categories} activeCategory={activeCategory} onSelect={setActiveCategory} />
+          <div className="relative w-full min-w-0 lg:w-80 lg:flex-none">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
             <input aria-label="Search title or author..."
               type="text"
@@ -249,6 +235,50 @@ const LibInventory = () => {
     </div>
   );
 };
+
+function InventoryCategories({ categories, activeCategory, onSelect }) {
+  const trackRef = useRef(null);
+  const trackId = useId();
+  const [position, setPosition] = useState({ previous: false, next: false });
+
+  useEffect(() => {
+    const track = trackRef.current;
+    const update = () => {
+      const previous = track.scrollLeft > 4;
+      const next = track.scrollLeft + track.clientWidth < track.scrollWidth - 4;
+      setPosition(current => current.previous === previous && current.next === next ? current : { previous, next });
+    };
+    const frame = requestAnimationFrame(update);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    observer?.observe(track);
+    Array.from(track.children).forEach(child => observer?.observe(child));
+    track.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      track.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [categories]);
+
+  const move = direction => {
+    const track = trackRef.current;
+    track.scrollBy({ left: direction * Math.max(track.clientWidth * .8, 160),
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  };
+  const overflow = position.previous || position.next;
+  const arrowClass = 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-line bg-panel text-link hover:bg-info-soft disabled:opacity-30';
+
+  return <div className="flex min-w-0 flex-1 items-center gap-2">
+    {overflow && <button type="button" className={arrowClass} aria-label="Scroll genres left" aria-controls={trackId} disabled={!position.previous} onClick={() => move(-1)}><ChevronLeft size={20} aria-hidden="true" /></button>}
+    <div ref={trackRef} id={trackId} role="region" aria-label="Book categories" tabIndex={0} className="flex min-w-0 flex-1 gap-2 overflow-x-auto no-scrollbar px-1 py-1.5">
+      {categories.map(cat => <button key={cat} type="button" onClick={() => onSelect(cat)} aria-pressed={activeCategory === cat}
+        className={`shrink-0 whitespace-nowrap rounded-full border border-line px-5 py-2.5 text-sm font-semibold transition-colors ${activeCategory === cat ? 'bg-action text-white' : 'bg-panel text-muted hover:bg-info-soft hover:text-link'}`}>{cat}</button>)}
+    </div>
+    {overflow && <button type="button" className={arrowClass} aria-label="Scroll genres right" aria-controls={trackId} disabled={!position.next} onClick={() => move(1)}><ChevronRight size={20} aria-hidden="true" /></button>}
+  </div>;
+}
 
 const StatCard = ({ label, val, icon, color }) => (
   <div className="bg-panel p-4 sm:p-6 rounded-xl border border-line shadow-sm flex flex-col items-start sm:flex-row sm:items-center gap-3 sm:gap-4 transition-all">
