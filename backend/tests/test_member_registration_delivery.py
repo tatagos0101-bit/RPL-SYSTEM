@@ -45,8 +45,8 @@ def test_registration_password_is_shorter_even_when_id_is_attached(client, db_se
     assert db_session.get(User, response.json()["id"]).id_image_url
 
 
-@pytest.mark.parametrize("channel,contacts", [("email", {"email": "Reader@Example.com", "phone": "09123456789"}), ("sms", {"phone": "09123456789"})])
-def test_accepted_delivery_hides_password_and_occurs_after_commit(client, db_session, staff, monkeypatch, channel, contacts):
+@pytest.mark.parametrize("contacts", [{"email": "Reader@Example.com", "phone": "09123456789"}, {"email": "Reader@Example.com"}])
+def test_accepted_delivery_hides_password_and_occurs_after_commit(client, db_session, staff, monkeypatch, contacts):
     from routers import librarian
     from database import SessionLocal
     sent = []
@@ -56,18 +56,28 @@ def test_accepted_delivery_hides_password_and_occurs_after_commit(client, db_ses
             assert verify_password(values["temporary_password"], member.password_hash)
             assert not member.email_verified and not member.phone_verified
         sent.append(values)
-        return {"channel": channel, "status": "accepted"}
+        return {"channel": "email", "status": "accepted"}
     monkeypatch.setattr(librarian, "deliver_registration_credentials", send, raising=False)
     response = register(client, **contacts)
     assert response.status_code == 201
     body = response.json()
     assert len(sent) == 1
-    assert body["password_delivery"] == {"channel": channel, "status": "accepted"}
+    assert body["password_delivery"] == {"channel": "email", "status": "accepted"}
     assert body["temporary_password"] is None
     assert "password_hash" not in body
-    assert sent[0]["email"] == ("reader@example.com" if channel == "email" else None)
-    assert body["phone"] == "09123456789"
+    assert sent[0]["email"] == "reader@example.com"
+    assert body["phone"] is None
+    assert db_session.get(User, body["id"]).phone is None
     assert len(sent[0]["temporary_password"]) == 10
+
+
+def test_legacy_phone_only_registration_uses_librarian_handoff(client, db_session, staff):
+    response = register(client, phone="09123456789")
+    assert response.status_code == 201
+    body = response.json()
+    assert body["password_delivery"] == {"channel": "librarian", "status": "manual"}
+    assert body["phone"] is None
+    assert verify_password(body["temporary_password"], db_session.get(User, body["id"]).password_hash)
 
 
 @pytest.mark.parametrize("status", ["unavailable", "failed"])

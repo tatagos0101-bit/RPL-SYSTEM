@@ -22,7 +22,7 @@ def test_profile_explicit_clear_and_omitted_fields(client, db_session):
     _, headers = member(db_session)
     response = client.put("/api/user/profile", headers=headers, json={"phone": None})
     assert response.status_code == 200
-    assert response.json()["phone"] is None
+    assert response.json()["phone"] == "09123456789"
     assert response.json()["location"] == "Test location"
     response = client.put("/api/user/profile", headers=headers, json={"location": ""})
     assert response.json()["location"] is None

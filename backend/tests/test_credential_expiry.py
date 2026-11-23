@@ -35,7 +35,7 @@ def test_temporary_password_expires_at_24_hours_including_existing_sessions(clie
     assert client.post('/api/auth/login', json={'email': user.email, 'password': 'Temporary1'}).status_code == 200
     monkeypatch.setattr(credential_expiry, 'now_ph', lambda: deadline)
     assert client.get('/api/auth/session').status_code == 403
-    assert client.put('/api/user/change-password', json={'current_password': 'Temporary1', 'new_password': 'ChangedPassword2'}).status_code == 403
+    assert client.put('/api/user/change-password', json={'new_password': 'ChangedPassword2'}).status_code == 403
     client.cookies.clear()
     result = client.post('/api/auth/login', json={'email': user.email, 'password': 'Temporary1'})
     assert result.status_code == 403 and 'expired' in result.json()['detail']
@@ -46,7 +46,7 @@ def test_permanent_password_change_clears_the_temporary_deadline(client, db_sess
     user = User(name='Synthetic change', email='change@example.com', password_hash=_hash('Temporary1'), role='librarian', must_change_password=True, temporary_password_expires_at=now_ph() + timedelta(hours=24))
     db_session.add(user); db_session.commit()
     assert client.post('/api/auth/login', json={'email': user.email, 'password': 'Temporary1'}).status_code == 200
-    assert client.put('/api/user/change-password', json={'current_password': 'Temporary1', 'new_password': 'ChangedPassword2'}).status_code == 200
+    assert client.put('/api/user/change-password', json={'new_password': 'ChangedPassword2'}).status_code == 200
     db_session.refresh(user)
     assert user.temporary_password_expires_at is None and not user.must_change_password
 

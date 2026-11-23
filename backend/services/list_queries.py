@@ -14,7 +14,7 @@ def member_query(db, search='', status=''):
         query = query.filter(User.status == status)
     if search:
         like = f'%{search}%'
-        terms = [User.name.ilike(like), User.email.ilike(like), User.member_id.ilike(like), User.phone.ilike(like)]
+        terms = [User.name.ilike(like), User.email.ilike(like), User.member_id.ilike(like)]
         if search.isdigit():
             terms.append(User.id == int(search))
         query = query.filter(or_(*terms))

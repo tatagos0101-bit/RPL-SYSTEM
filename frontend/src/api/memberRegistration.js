@@ -3,26 +3,22 @@ export function buildMemberRegistrationForm(form, idFile = null) {
   body.append('name', form.name.trim());
   body.append('location', form.location.trim());
   if (form.email?.trim()) body.append('email', form.email.trim());
-  if (form.phone?.trim()) body.append('phone', form.phone.trim());
   if (idFile) body.append('id_image', idFile);
   return body;
 }
 
 export function registrationDeliveryNotice(result) {
   const delivery = result?.password_delivery;
-  if (delivery?.status === 'accepted' && ['email', 'sms'].includes(delivery.channel)) {
+  if (delivery?.status === 'accepted' && delivery.channel === 'email') {
     return { tone: 'success', temporaryPassword: null,
-      title: delivery.channel === 'email' ? 'Temporary password sent by email' : 'Temporary password sent by text',
-      message: delivery.channel === 'email'
-        ? 'Ask the member to check their inbox or spam folder for their sign-in details.'
-        : 'Ask the member to check their phone for their sign-in details.' };
+      title: 'Temporary password sent by email',
+      message: 'Ask the member to check their inbox or spam folder for their sign-in details.' };
   }
   const password = typeof result?.temporary_password === 'string' && result.temporary_password ? result.temporary_password : null;
-  const channel = delivery?.channel === 'email' ? 'Email' : 'Text-message';
   return { tone: 'warning', temporaryPassword: password, title: 'Give sign-in details to the member',
     message: !password ? 'The account was created. If the member cannot sign in, use Reset Password from the member list.'
-      : delivery?.status === 'unavailable' ? `${channel} sending is unavailable. The account was created; give these details directly to the member.`
-        : delivery?.status === 'failed' ? `${channel} delivery could not be confirmed. The account was created; give these details directly to the member.`
+      : delivery?.channel === 'email' && delivery?.status === 'unavailable' ? 'Email sending is unavailable. The account was created; give these details directly to the member.'
+        : delivery?.channel === 'email' && delivery?.status === 'failed' ? 'Email delivery could not be confirmed. The account was created; give these details directly to the member.'
           : 'Give this Member ID and temporary password directly to the member.' };
 }
 

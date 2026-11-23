@@ -55,7 +55,7 @@ def test_email_precedes_phone_and_a_failed_email_does_not_switch_contacts(monkey
         calls.append("email")
         raise otp_delivery.DeliveryUnavailable("synthetic private error")
     monkeypatch.setattr(delivery, "send_registration_email", fail)
-    monkeypatch.setattr(delivery, "send_registration_sms", lambda **values: calls.append("sms"))
+    monkeypatch.setattr(httpx, "post", lambda *args, **kwargs: calls.append("unexpected SMS"))
     assert delivery.deliver_registration_credentials(**credentials(email="reader@example.test", phone="09123456789")) == {"channel": "email", "status": "failed"}
     assert calls == ["email"]
 
@@ -63,56 +63,17 @@ def test_email_precedes_phone_and_a_failed_email_does_not_switch_contacts(monkey
 def test_unconfigured_transport_and_no_contact_have_explicit_handoff(monkeypatch):
     from services import registration_delivery as delivery
     assert delivery.deliver_registration_credentials(**credentials(email="reader@example.test")) == {"channel": "email", "status": "unavailable"}
-    assert delivery.deliver_registration_credentials(**credentials(phone="09123456789")) == {"channel": "sms", "status": "unavailable"}
+    assert delivery.deliver_registration_credentials(**credentials(phone="09123456789")) == {"channel": "librarian", "status": "manual"}
     assert delivery.deliver_registration_credentials(**credentials()) == {"channel": "librarian", "status": "manual"}
 
 
-@pytest.mark.parametrize("phone,expected", [("0912 345 6789", "+639123456789"), ("639123456789", "+639123456789"), ("9123456789", "+639123456789"), ("+63 (912) 345-6789", "+639123456789"), ("+14155550123", "+14155550123")])
-def test_sms_uses_normalized_phone_and_validated_twilio_acceptance(monkeypatch, configured_sms, phone, expected):
-    from services import registration_delivery as delivery
-    calls = []
-    def post(url, **kwargs):
-        calls.append(url)
-        assert url == "https://api.twilio.com/2010-04-01/Accounts/AC" + "a" * 32 + "/Messages.json"
-        assert kwargs["auth"] == ("AC" + "a" * 32, "synthetic-only")
-        assert kwargs["data"]["To"] == expected and kwargs["data"]["From"] == "+14155550123"
-        assert "Sample123X" in kwargs["data"]["Body"] and "RPL-SAMPLE" in kwargs["data"]["Body"]
-        assert kwargs["timeout"] == 10 and kwargs["follow_redirects"] is False
-        return httpx.Response(201, json={"sid": "SM" + "b" * 32, "status": "queued"})
-    monkeypatch.setattr(delivery.httpx, "post", post)
-    assert delivery.deliver_registration_credentials(**credentials(phone=phone)) == {"channel": "sms", "status": "accepted"}
-    assert len(calls) == 1
-
-
-@pytest.mark.parametrize("response", [(201, {}), (201, {"sid": "SM" + "b" * 32, "status": "failed"}), (400, {"message": "private provider rejection"}), (302, {})])
-def test_sms_rejection_is_not_reported_sent_or_retried(monkeypatch, configured_sms, response):
-    from services import registration_delivery as delivery
-    calls = []
-    def post(*args, **kwargs):
-        calls.append(True)
-        return httpx.Response(response[0], json=response[1])
-    monkeypatch.setattr(delivery.httpx, "post", post)
-    result = delivery.deliver_registration_credentials(**credentials(phone="09123456789"))
-    assert result == {"channel": "sms", "status": "failed"} and len(calls) == 1
-
-
-def test_unknown_sms_failure_is_sanitized_and_not_retried(monkeypatch, configured_sms, caplog):
-    from services import registration_delivery as delivery
-    calls = []
-    def post(*args, **kwargs):
-        calls.append(True)
-        raise httpx.ReadTimeout("private synthetic provider data Sample123X")
-    monkeypatch.setattr(delivery.httpx, "post", post)
-    assert delivery.deliver_registration_credentials(**credentials(phone="09123456789")) == {"channel": "sms", "status": "failed"}
-    assert len(calls) == 1 and "Sample123X" not in caplog.text and "private synthetic" not in caplog.text
-
-
-@pytest.mark.parametrize("phone", ["not a phone", "+00000000000", "0912abc6789", "123"])
-def test_invalid_sms_destinations_never_make_a_request(monkeypatch, configured_sms, phone):
+@pytest.mark.parametrize("phone", [None, "09123456789", "+14155550123", "not a phone"])
+def test_phone_only_credentials_never_send_even_with_legacy_twilio_config(monkeypatch, configured_sms, phone):
     from services import registration_delivery as delivery
     def unexpected(*args, **kwargs): raise AssertionError("No SMS request should occur")
-    monkeypatch.setattr(delivery.httpx, "post", unexpected)
-    assert delivery.deliver_registration_credentials(**credentials(phone=phone)) == {"channel": "sms", "status": "failed"}
+    monkeypatch.setattr(httpx, "post", unexpected)
+    monkeypatch.setattr(otp_delivery.smtplib, "SMTP", unexpected)
+    assert delivery.deliver_registration_credentials(**credentials(phone=phone)) == {"channel": "librarian", "status": "manual"}
 
 
 def test_uncertain_registration_email_does_not_retry(monkeypatch, configured_email, caplog):

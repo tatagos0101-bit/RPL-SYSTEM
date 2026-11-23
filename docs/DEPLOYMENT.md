@@ -33,8 +33,9 @@ timeout explicitly, and run the same Cron command in protected dry-run mode befo
 activating real processing. The command raises for non-200 HTTP responses and
 never persists credentials in a request queue.
 Use [feature metadata checks](../supabase/operations/check_account_inactivity_access.sql)
-and advisors after the upgrade. Configure existing SMTP/optional Twilio separately;
-mocked transport success is not evidence of real inbox/phone delivery.
+and advisors after the upgrade. Configure existing SMTP separately;
+mocked transport success is not evidence of real inbox delivery. Inactivity notices
+without email remain in the member's account; pending legacy SMS notices never send.
 
 ## Main librarian and staff accounts
 
@@ -86,11 +87,13 @@ production PostgreSQL locking or real inbox delivery.
 
 ## Member registration delivery prerequisite
 
-The November 16 local revision makes government ID optional and adds email-first,
-registration-only SMS delivery with librarian fallback for shorter temporary
-passwords. No schema/dependency upgrade is required. Deploy the updated API before
-the frontend; older APIs still return a librarian-handoff password, which the new
-UI supports. Configure SMTP and optional Twilio settings only in the API server
+Government ID remains optional. Member registration now uses email-only delivery
+with librarian handoff for missing email or unconfirmed sending. Phone fields and
+SMS transports are removed; old Twilio settings have no effect. No schema/dependency
+upgrade is required. Deploy the updated API before the frontend because forced
+first-login password setup no longer submits the current password. The server
+allows omission only for authenticated accounts requiring a password change;
+normal changes still require it. Configure SMTP only in the API server
 and verify approved test recipients separately; see
 [registration credential delivery](CONTACT_VERIFICATION.md#new-member-registration-credentials).
 No live sending or production configuration was performed in the local session.

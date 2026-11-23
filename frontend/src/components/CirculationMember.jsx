@@ -51,7 +51,7 @@ export default function CirculationMember({ onSelect, mode = 'borrow' }) {
     try {
       const { data } = await getMembers({ search: identifier.trim(), limit: 10 });
       const match = findManualMemberMatch(data, identifier.trim());
-      if (!match) throw new Error('No exact member match. Use the full Member ID, exact email, phone, or numeric user ID.');
+      if (!match) throw new Error('No exact member match. Use the full Member ID, exact email, or numeric user ID.');
       const member = memberToSessionIdentity(match);
       webcam.current?.video?.srcObject?.getTracks().forEach(track => track.stop());
       if (mounted.current) onSelect(member);
@@ -74,7 +74,7 @@ export default function CirculationMember({ onSelect, mode = 'borrow' }) {
         <span>{scanStatus.message}</span>
       </p>
     </div>
-      : <input aria-label="Email or Member ID" value={identifier} onChange={event => setIdentifier(event.target.value)} placeholder="Email, Member ID, phone, or numeric ID"
+      : <input aria-label="Email or Member ID" value={identifier} onChange={event => setIdentifier(event.target.value)} placeholder="Email, Member ID, or numeric ID"
         className="w-full border border-line bg-panel rounded-lg p-3" />}
     {error && <p role="alert" className="text-danger">{error}</p>}
     {method === 'manual' && <button disabled={busy || !identifier.trim()} className="bg-action text-white rounded-lg p-3 disabled:opacity-50">{busy ? 'Identifying…' : 'Identify member'}</button>}

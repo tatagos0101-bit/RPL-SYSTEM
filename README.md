@@ -70,9 +70,11 @@ librarian administration, circulation, reporting, QR labels, and attendance.
   server pagination. Complete QR export downloads every matching identity in bounded
   PDF batches and assembles a ZIP with a label-count manifest.
   Registration creates a random 10-character temporary password and sends it by
-  email first, or by text if only a phone is supplied. Without contact details or
-  confirmed provider acceptance, the librarian receives it for direct handoff.
-  First login requires a password change. See [delivery setup](docs/CONTACT_VERIFICATION.md#new-member-registration-credentials).
+  email when supplied. Without email or confirmed delivery acceptance, the librarian
+  receives it for direct handoff. Phone fields and SMS delivery are unavailable.
+  First login requires only a new password and its confirmation; the authenticated
+  temporary-password session supplies authorization. Normal password changes still
+  require the current password. See [delivery setup](docs/CONTACT_VERIFICATION.md#new-member-registration-credentials).
   Account deletion removes personal details and referenced private files while
   retaining deidentified loan/attendance history; see the
   [member deletion policy and release checks](docs/MEMBER_MANAGEMENT.md).

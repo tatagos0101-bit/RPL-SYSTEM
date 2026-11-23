@@ -2,6 +2,9 @@ export const PASSWORD_RESET_REQUEST_PATH = '/api/auth/password-reset/request';
 export const PASSWORD_RESET_CONFIRM_PATH = '/api/auth/password-reset/confirm';
 
 export const buildPasswordResetRequest = (identifier, channel = 'auto') => {
+  if (channel && !['auto', 'email'].includes(channel)) {
+    throw new Error('Password recovery is available by email only.');
+  }
   const payload = { identifier: identifier.trim() };
 
   if (channel && channel !== 'auto') {

@@ -375,7 +375,6 @@ def _generate_temporary_password(length: int = 14) -> str:
 async def register_member(
     name:     str              = Form(..., max_length=120),
     email:    str | None       = Form(None, max_length=180),
-    phone:    str | None       = Form(None, max_length=30),
     location: str              = Form(..., max_length=120),
     id_image: UploadFile | None = File(None),
     upload_ticket: str | None = Form(None),
@@ -389,7 +388,6 @@ async def register_member(
             email = str(TypeAdapter(EmailStr).validate_python(email))
         except ValidationError:
             raise HTTPException(422, "Enter a valid email address.") from None
-    phone = (phone.strip() or None) if phone else None
     name  = name.strip()
 
     if not name:
@@ -424,7 +422,6 @@ async def register_member(
         email_verified = False,
         phone_verified = False,
         role          = "member",
-        phone         = phone,
         location      = location.strip(),
         status        = "active",
         id_image_url  = id_reference,
@@ -440,7 +437,7 @@ async def register_member(
 
     delivery = await run_in_threadpool(deliver_registration_credentials,
         member_id=new_user.member_id, temporary_password=temporary_password,
-        email=new_user.email, phone=new_user.phone)
+        email=new_user.email)
     return {
         "success":          True,
         "id":               new_user.id,

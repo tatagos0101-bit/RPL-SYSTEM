@@ -210,8 +210,8 @@ unanswered notice. Renewed activity/member replies prevent approval. The explici
 manual deletion path remains available with the existing outstanding-loan/private
 storage/history safeguards. New private `account_deletion_notices` and nullable
 `users.last_activity_at` require an additive upgrade and runtime RLS/grants before
-the compatible backend. In-app notices are durable; email-first/optional phone SMS
-delivery reports provider outcomes honestly. Future sign-ins/station encounters
+the compatible backend. In-app notices are durable; email is the only external
+delivery channel, and provider outcomes are reported honestly. Future sign-ins/station encounters
 persist activity; missing old session history is not reconstructed or claimed.
 The separate purpose-authenticated job is scheduled only after release checks;
 repository code alone is not evidence that a hosted schedule is enabled.
@@ -340,15 +340,16 @@ No schema changes, new auth roles, or browser database access are introduced.
 Member profile names are displayed as locked text while editing and are
 server-protected: changed or null names
 are rejected before any other profile field changes; an unchanged legacy name
-remains accepted. Members can still edit phone/location and use the existing
+remains accepted. Members can still edit location and use the existing
 password-confirmed email flow. Librarian own-profile name editing is unchanged.
 
 Librarian registration accepts an optional government ID; attached files/tickets
 retain the existing private-upload validation. It creates a random 10-character
 password with forced first-login change, commits the member, then attempts email
-first or SMS when only a phone is present. The registration-only
+when supplied. Without email, credentials are shown to the librarian. The registration-only
 [delivery service](../backend/services/registration_delivery.py) uses existing SMTP
-settings and separately enabled Twilio credentials. Accepted sends omit the plaintext
+settings. Phone inputs and SMS transports are removed; legacy Twilio settings are ignored.
+Accepted sends omit the plaintext
 password from the registration response. Missing contacts or unavailable/unconfirmed
 delivery return a librarian-handoff status and the same temporary password. Both
 existing registration modals show that outcome. No plaintext password is stored;
@@ -360,12 +361,19 @@ their original 14-character default and revocation behavior. See
 and redirects accounts requiring a password change. Backend dependencies also
 enforce this flag: authenticated profile retrieval, password change, and logout
 remain available; other protected operations are denied until completion.
+Forced password setup uses the current authenticated temporary-password session
+and accepts only the new password without requiring the temporary password again.
+Normal password changes still require the current password. Both paths retain
+password validation, 24-hour temporary-credential expiry, session revocation and
+cookie replacement. Client-supplied flags cannot bypass the server's requirement.
 Newly registered contact details remain unverified until ownership is established;
 existing verification flags are not rewritten. Public recovery requests return generic
 responses outside tests. [Contact verification](CONTACT_VERIFICATION.md) adds
 email-only Resend SMTP delivery, single-use purpose/contact-bound codes, and
-verified-email recovery. Registration-only SMS does not grant phone
-verification/recovery authority; phone numbers remain editable contact data. Email edits require password confirmation and
+verified-email recovery. New registrations/profile edits no longer accept phone
+fields; legacy phone values/verification metadata are retained without delivery or
+login authority. Member lookup accepts Member ID, email or numeric user ID.
+Email edits require password confirmation and
 clear verification/invalidate codes. Provider configuration, delivery acceptance and rollout
 remain separate requirements. `/api/auth/session` performs a fresh session/role
 check for navigation without avatar signing or biometric reads; full profiles

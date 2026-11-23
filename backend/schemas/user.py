@@ -1,11 +1,7 @@
-import re
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, Literal
 from datetime import datetime
 from services.passwords import validate_new_password
-
-_PHONE_RE = re.compile(r"^[\d\s\-\+\(\)]{7,20}$")
-
 
 class UserProfile(BaseModel):
     id:           int
@@ -31,7 +27,6 @@ class UserProfileUpdate(BaseModel):
     email: Optional[EmailStr] = Field(default=None, max_length=180)
     current_password: Optional[str] = Field(default=None, max_length=512)
     name:     Optional[str] = None
-    phone:    Optional[str] = None
     location: Optional[str] = None
 
     @field_validator("name")
@@ -44,18 +39,6 @@ class UserProfileUpdate(BaseModel):
             raise ValueError("Name cannot be empty")
         if len(v) > 100:
             raise ValueError("Name must be at most 100 characters")
-        return v
-
-    @field_validator("phone")
-    @classmethod
-    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        v = v.strip()
-        if not v:
-            return None
-        if not _PHONE_RE.match(v):
-            raise ValueError("Phone number must contain only digits, spaces, +, -, (, ) and be 7-20 characters")
         return v
 
     @field_validator("location")
@@ -75,7 +58,7 @@ class BiometricStatus(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
+    current_password: Optional[str] = Field(default=None, max_length=512)
     new_password:     str
 
     @field_validator("new_password")

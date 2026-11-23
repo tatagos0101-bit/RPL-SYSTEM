@@ -49,3 +49,14 @@ def test_librarian_member_search_accepts_numeric_user_id(client, db_session):
 
     assert response.status_code == 200
     assert [row["id"] for row in response.json()] == [member.id]
+
+
+def test_member_search_no_longer_uses_legacy_phone_numbers(client, db_session):
+    librarian = create_librarian(db_session)
+    member = create_member(db_session)
+    member.phone = "+639123456789"
+    db_session.commit()
+    token = login(client, librarian.email)
+    response = client.get("/api/librarian/users?search=639123456789",
+                          headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200 and response.json() == []

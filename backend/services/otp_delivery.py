@@ -59,7 +59,7 @@ def send_email(destination, subject, content, *, idempotency_prefix="rpl-otp", t
 def send_code(channel, destination, code, purpose):
     from services.password_reset import RESET_CODE_MINUTES, CONTACT_CODE_MINUTES
     minutes = RESET_CODE_MINUTES if purpose == "reset" else CONTACT_CODE_MINUTES
-    # Registration SMS does not enable phone verification or password recovery.
+    # Email is the only supported delivery channel.
     if channel != "email":
         raise DeliveryUnavailable()
     action = "verify your email" if purpose == "verify" else "reset your password"

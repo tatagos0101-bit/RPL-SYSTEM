@@ -2,17 +2,18 @@
 
 Implementation prepared November 7, 2026; this document does not establish a live rollout.
 FastAPI still owns accounts, passwords and sessions. Supabase Auth is not used.
-Login accepts email or RPL Member ID with the existing password. Phone numbers are
-editable contact information; registration-only texts can deliver initial sign-in details when email is absent, but phones cannot verify an account or receive reset codes. Existing contacts are not
-retroactively marked verified and accounts without a phone are not locked out.
+Login accepts email or RPL Member ID with the existing password. Phone fields and
+SMS sending are removed from registration, profiles and member lookup. Existing
+phone values/verification metadata are preserved for compatibility and have no
+authentication or delivery authority. Existing contacts are not retroactively
+marked verified.
 
 ## User flow
 
 - Members use Profile; librarians use Settings → Contact information.
 - Email edits require the current password, reject conflicting identities, clear
-  email verification and invalidate outstanding codes. Phone edits do not affect
-  email ownership or email codes. Existing phone-verification columns are retained
-  for compatibility but have no authentication authority.
+  email verification and invalidate outstanding codes. Legacy phone fields in
+  requests are ignored without altering stored contacts or verification metadata.
 - A current password is required to request an email verification code. Enter the
   six-digit code to confirm ownership.
 - Forgot Password accepts email or RPL ID and sends only to verified email.
@@ -113,13 +114,17 @@ forms; supplied documents retain their existing private Storage and ticket rules
 Name/address remain required. No schema migration or new dependency is needed.
 
 Registration generates a random 10-character password that meets the existing
-password policy. The account is committed before sending. Email takes priority
-when supplied; only a phone-only account attempts SMS. Without contacts, or when
-the selected provider is unavailable/acceptance is unconfirmed, the authenticated
+password policy. The account is committed before sending. Email is used when
+supplied. Without email, or when email delivery is unavailable/acceptance is
+unconfirmed, the authenticated
 librarian receives the password to give directly to the member. A successful
 provider acceptance returns its channel/status and no plaintext password. The
 password is never persisted as plaintext. All new members must change it on first
-login; sending does not set either contact's verified flag. Existing staff password
+login by entering and confirming a new password without re-entering the temporary
+password. The authenticated session authorizes this first-login change; normal
+password changes still require the current password. Temporary passwords expire
+after 24 hours, and recovery email codes expire after five minutes. Sending does
+not set either contact's verified flag. Existing staff password
 resets retain their original 14-character default and session-revocation behavior.
 
 Email uses the same `OTP_SMTP_*` and `OTP_EMAIL_FROM` server settings documented
@@ -131,37 +136,21 @@ instructs staff to check the member list before registering again; existing pass
 reset is available when sign-in details are inaccessible. This is not a durable
 message queue and has no registration resend endpoint.
 
-The prepared registration SMS adapter uses Twilio. It is disabled by default
-and requires all of these API-server-only
-settings from `backend/.env.example`:
-
-| Setting | Purpose |
-| --- | --- |
-| `REGISTRATION_SMS_PROVIDER` | `twilio` to enable; blank keeps librarian handoff |
-| `REGISTRATION_TWILIO_ACCOUNT_SID` | Private Twilio Account SID |
-| `REGISTRATION_TWILIO_AUTH_TOKEN` | Private Twilio account credential |
-| `REGISTRATION_TWILIO_FROM` | SMS-enabled sender number in international `+` format |
-
-Use an existing authorized provider account and SMS-enabled sender with the
-necessary destination permissions. Do not place these settings in `VITE_*`, browser
-storage, logs or Git. No account, paid resource, credential or production setting
-was provisioned by this change. The adapter uses Twilio's fixed HTTPS
-[Messages API](https://www.twilio.com/docs/messaging/api/message-resource#create-a-message-resource),
-Basic auth, one bounded attempt and no redirect/retry after an unknown outcome.
-Philippine `09...`, `9...` and `639...` mobile formats normalize to `+639...` for
-sending; explicit international E.164 numbers are also accepted. Original trimmed
-phone contact data is retained. Invalid SMS destinations fall back to the librarian.
-Provider acceptance is not proof of delivery; a later carrier rejection cannot be
-inferred from the synchronous response. No delivery webhooks were added.
+The former Twilio adapter is removed. Legacy SMS configuration cannot enable paid
+messages. Phone-only or contactless registration returns the temporary password
+only to the authenticated librarian, who gives it directly to the member. Existing
+phone data is not erased. Inactivity notices use email or the member's durable
+in-account notification; pending legacy SMS notices are changed to in-account
+delivery without a provider request. Historical delivery records remain intact.
 
 Email transport follows [Resend SMTP](https://resend.com/docs/send-with-smtp),
-including its SMTP idempotency header. This feature does not enable public SMS
+including its SMTP idempotency header. The system does not enable SMS
 verification or password recovery; those requests and legacy SMS codes remain
 rejected. Do not conflate sending initial credentials to staff-entered contact
 information with verified contact ownership.
 
-Local configuration was checked by presence only: both mail and registration SMS
-transports were unconfigured. All transport/browser checks used synthetic data and
-mocked providers; no live inbox/handset acceptance was tested. Configure credentials
+The original local configuration was checked by presence only; it did not establish
+production delivery. Transport/browser checks use synthetic data and mocked
+providers; they do not establish live inbox acceptance. Configure email credentials
 privately and check explicitly approved test recipients before claiming live
 sending. See the [local verification](superpowers/specs/2026-11-16-member-registration-verification.md).

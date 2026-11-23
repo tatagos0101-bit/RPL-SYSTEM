@@ -19,7 +19,7 @@ from models.notification import Notification
 from models.reservation import Reservation
 from models.transaction import Transaction
 from models.user import User
-from services import otp_delivery, registration_delivery
+from services import otp_delivery
 from services.member_deletion import delete_account, lock_existing_member
 from timezone_utils import as_ph, now_ph
 
@@ -111,7 +111,7 @@ def create_or_get(db, user_id):
     if activity is None or activity > cutoff(now) or db.scalar(select(outstanding(user_id))):
         raise HTTPException(409, "This member is not eligible for an inactivity notice.")
     deadline = now + timedelta(hours=72)
-    channel = "email" if member.email else "sms" if member.phone else "in_app"
+    channel = "email" if member.email else "in_app"
     notification = Notification(user_id=user_id, type="account_inactivity",
                                 message=message(member, activity, now, deadline), created_at=now)
     db.add(notification)
@@ -177,9 +177,14 @@ def deliver(db, notice_id, *, end=None):
         db.commit()
         return
     channel = notice.delivery_channel
-    destination = member.email if channel == "email" else member.phone
-    configured = otp_delivery.configured("email") if channel == "email" else registration_delivery.sms_configured()
-    if not configured or not destination:
+    if channel != "email":
+        # Pending notices from the retired SMS path keep their durable inbox notice.
+        notice.delivery_channel = "in_app"
+        notice.delivery_status = "in_app"
+        db.commit()
+        return
+    destination = member.email
+    if not otp_delivery.configured("email") or not destination:
         notice.delivery_status = "unavailable"
         db.commit()
         return
@@ -217,12 +222,11 @@ def send_once(channel, destination, body):
 
 
 def transport(channel, destination, body):
+    if channel != "email":
+        return "unavailable"
     try:
-        if channel == "email":
-            otp_delivery.send_email(destination, "Your library membership", body,
-                                    idempotency_prefix="rpl-inactivity", timeout=2, max_attempts=1)
-        else:
-            registration_delivery.send_sms(destination, body, timeout=2)
+        otp_delivery.send_email(destination, "Your library membership", body,
+                                idempotency_prefix="rpl-inactivity", timeout=2, max_attempts=1)
     except otp_delivery.DeliveryUncertain:
         return "unknown"
     except (otp_delivery.DeliveryUnavailable, ValueError):

@@ -57,7 +57,7 @@ export const markAllNotificationsRead = () =>
 
 export const changePassword = (currentPassword, newPassword) =>
   client.put('/api/user/change-password', {
-    current_password: currentPassword,
+    ...(currentPassword == null ? {} : { current_password: currentPassword }),
     new_password: newPassword,
   });
 

@@ -13,11 +13,12 @@ test('buildPasswordResetRequest trims identifier and omits automatic channel', (
   });
 });
 
-test('buildPasswordResetRequest includes explicit email or sms channel', () => {
-  assert.deepEqual(buildPasswordResetRequest('RPL-12345', 'sms'), {
+test('buildPasswordResetRequest accepts email and rejects SMS', () => {
+  assert.deepEqual(buildPasswordResetRequest('RPL-12345', 'email'), {
     identifier: 'RPL-12345',
-    channel: 'sms',
+    channel: 'email',
   });
+  assert.throws(() => buildPasswordResetRequest('RPL-12345', 'sms'), /email only/);
 });
 
 test('buildPasswordResetConfirm maps frontend fields to API shape', () => {

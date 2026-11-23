@@ -88,10 +88,6 @@ def update_profile(
             expire_unused_reset_codes_for_user(db, current_user.id)
     if body.name is not None:
         current_user.name = body.name
-    if "phone" in body.model_fields_set:
-        if body.phone != current_user.phone:
-            current_user.phone_verified = False
-        current_user.phone = body.phone
     if "location" in body.model_fields_set:
         current_user.location = body.location
     try:
@@ -113,7 +109,9 @@ def change_password(
     from services.passwords import hash_password, verify_password
 
     current_user = lock_active_account(db, current_user.id)
-    if not verify_password(body.current_password, current_user.password_hash):
+    if not current_user.must_change_password and (
+        not body.current_password or not verify_password(body.current_password, current_user.password_hash)
+    ):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
     current_user.password_hash = hash_password(body.new_password)

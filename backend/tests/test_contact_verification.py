@@ -151,14 +151,14 @@ def test_codes_are_bound_to_owner_and_channel(client, db_session, delivery):
 
 
 @pytest.mark.parametrize("role", ["member", "librarian"])
-def test_phone_edit_is_contact_only_and_email_change_requires_password(client, db_session, delivery, role):
+def test_retired_phone_edit_is_ignored_and_email_change_requires_password(client, db_session, delivery, role):
     user = account(client, db_session, role)
     user.email_verified = True
     db_session.commit()
     assert client.post("/api/auth/contact-verification/request", json={"channel": "email", "password": "Password1"}).status_code == 200
     code = delivery[-1][2]
     changed = client.put("/api/user/profile", json={"phone": "09999999999", "phone_verified": True})
-    assert changed.status_code == 200 and changed.json()["phone"] == "09999999999"
+    assert changed.status_code == 200 and changed.json()["phone"] == "09123456789"
     assert changed.json()["email_verified"] is True and changed.json()["phone_verified"] is False
     assert client.post("/api/auth/contact-verification/request", json={"channel": "sms", "password": "Password1"}).status_code == 422
     assert client.put("/api/user/profile", json={"email": "new@example.com"}).status_code == 400

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { buildMemberRegistrationForm, registrationDeliveryNotice, registrationErrorMessage } from './memberRegistration.js';
 
 test('optional ID is omitted while name/address and supplied contacts are trimmed', () => {
-  const body = buildMemberRegistrationForm({ name: ' Synthetic Member ', location: ' Test Library ', email: ' reader@example.com ', phone: ' ' }, null);
+  const body = buildMemberRegistrationForm({ name: ' Synthetic Member ', location: ' Test Library ', email: ' reader@example.com ', phone: '09123456789' }, null);
   assert.equal(body.get('name'), 'Synthetic Member');
   assert.equal(body.get('location'), 'Test Library');
   assert.equal(body.get('email'), 'reader@example.com');
@@ -17,22 +17,26 @@ test('optional attachment is retained as a File for the existing private upload 
   assert.equal(body.get('id_image'), file);
 });
 
-test('accepted email and SMS describe delivery without exposing a temporary password', () => {
-  for (const channel of ['email', 'sms']) {
-    const notice = registrationDeliveryNotice({ password_delivery: { channel, status: 'accepted' }, temporary_password: 'synthetic-private' });
+test('accepted email describes delivery without exposing a temporary password', () => {
+    const notice = registrationDeliveryNotice({ password_delivery: { channel: 'email', status: 'accepted' }, temporary_password: 'synthetic-private' });
     assert.equal(notice.tone, 'success');
     assert.equal(notice.temporaryPassword, null);
-    assert.match(notice.title, channel === 'email' ? /email/i : /text/i);
-  }
+    assert.match(notice.title, /email/i);
 });
 
 test('manual, unavailable and unknown provider outcomes offer the original handoff password', () => {
   for (const status of ['manual', 'unavailable', 'failed']) {
-    const notice = registrationDeliveryNotice({ password_delivery: { channel: status === 'manual' ? 'librarian' : 'sms', status }, temporary_password: 'Synthetic1' });
+    const notice = registrationDeliveryNotice({ password_delivery: { channel: status === 'manual' ? 'librarian' : 'email', status }, temporary_password: 'Synthetic1' });
     assert.equal(notice.tone, 'warning');
     assert.equal(notice.temporaryPassword, 'Synthetic1');
     assert.match(notice.message, /member/i);
   }
+});
+
+test('retired SMS responses do not advertise text-message delivery', () => {
+  const notice = registrationDeliveryNotice({ password_delivery: { channel: 'sms', status: 'accepted' } });
+  assert.equal(notice.tone, 'warning');
+  assert.doesNotMatch(notice.title + notice.message, /text.message|SMS|phone/i);
 });
 
 test('older registration response supports manual handoff without inventing delivery success', () => {

@@ -7,8 +7,8 @@ import { getStoredAuth, homeForRole, updateStoredProfile } from '../api/authRout
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ current: '', next: '', confirm: '' });
-  const [show, setShow] = useState({ current: false, next: false, confirm: false });
+  const [form, setForm] = useState({ next: '', confirm: '' });
+  const [show, setShow] = useState({ next: false, confirm: false });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const pending = useRef(false);
@@ -34,7 +34,7 @@ export default function ChangePasswordPage() {
     setSaving(true);
     setError('');
     try {
-      const { data } = await changePassword(form.current, form.next);
+      const { data } = await changePassword(null, form.next);
       if (data.success !== true) throw new Error('Password update was not confirmed.');
       // Older deployed API versions return only success/message. Stored metadata
       // supplies navigation during rollout; RequireRole still verifies the server.
@@ -46,7 +46,7 @@ export default function ChangePasswordPage() {
         must_change_password: false,
       };
       updateStoredProfile(profile);
-      setForm({ current: '', next: '', confirm: '' });
+      setForm({ next: '', confirm: '' });
       navigate(homeForRole(profile.role), { replace: true, state: { passwordChanged: true } });
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -87,7 +87,6 @@ export default function ChangePasswordPage() {
 
         <div className="space-y-4">
           {[
-            ['current', 'Current Password'],
             ['next', 'New Password'],
             ['confirm', 'Confirm New Password'],
           ].map(([key, label]) => (
@@ -100,7 +99,7 @@ export default function ChangePasswordPage() {
                   value={form[key]}
                   onChange={(event) => update(key, event.target.value)}
                   className="min-w-0 flex-1 bg-transparent outline-none text-base font-semibold text-ink placeholder:text-muted"
-                  autoComplete={key === 'current' ? 'current-password' : 'new-password'}
+                  autoComplete="new-password"
                   required
                   disabled={saving}
                 />

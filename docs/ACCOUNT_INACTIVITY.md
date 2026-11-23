@@ -14,13 +14,13 @@ Historical sign-in records are incomplete: expired sessions are cleaned and logo
 
 ## Delivery and replies
 
-Every notice has a durable member-only notification in the account. External delivery attempts email when an address is present, otherwise SMS when a phone is present and the existing Twilio configuration is enabled. Without an available external transport, the notice remains available in the account. Contact verification flags are not changed by sending a notice.
+Every notice has a durable member-only notification in the account. External delivery attempts email when an address is present. Without email or available email delivery, the notice remains available in the account. SMS sending is removed, and pending legacy SMS notices switch to in-account delivery without a provider request. Contact verification flags are not changed by sending a notice.
 
 - **Accepted** means the configured provider accepted the send, not that the inbox received/read it.
 - **Unavailable/failed** means external delivery was not confirmed; the in-app notice is still present.
 - **Pending/unknown** means sending has not completed or its outcome could not be established. A claimed uncertain send is never automatically repeated.
 
-The 72-hour window begins when the in-app notice is durably created. Members can sign in, use **Keep my account**, or contact the librarian. Staff can record an email/phone/in-person reply. The system does not read incoming email/SMS automatically. An old/repeated response is idempotent and cannot renew activity forever or cancel a newer review.
+The 72-hour window begins when the in-app notice is durably created. Members can sign in, use **Keep my account**, or contact the librarian. Staff can record an email or in-person reply. The system does not read incoming email automatically. An old/repeated response is idempotent and cannot renew activity forever or cancel a newer review.
 
 ## Deletion approval and manual deletion
 

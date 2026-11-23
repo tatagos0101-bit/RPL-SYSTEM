@@ -1,7 +1,7 @@
 import { isValidNewPassword, passwordPolicyMessage } from '../../api/passwordPolicy';
 import { useState, useEffect, useRef } from 'react';
 import {
-  BadgeCheck, MapPin, Phone, Shield, BookOpen,
+  BadgeCheck, MapPin, Shield, BookOpen,
   Calendar, RefreshCw, Check, X, Lock, Eye, EyeOff,
   KeyRound, ChevronDown, ChevronUp, AlertCircle, Camera,
   Edit3, UserCircle2,
@@ -247,7 +247,7 @@ export default function UserProfile() {
   const [error, setError] = useState('');
 
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({ phone: '', location: '' });
+  const [form, setForm] = useState({ location: '' });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -281,7 +281,7 @@ export default function UserProfile() {
       .then(([p, b]) => {
         setProfile(p.data);
         setBiometric(b.data);
-        setForm({ phone: p.data.phone || '', location: p.data.location || '' });
+        setForm({ location: p.data.location || '' });
       })
       .catch(() => setError('Failed to load profile.'))
       .finally(() => setLoading(false));
@@ -292,8 +292,8 @@ export default function UserProfile() {
   const handleSave = async () => {
     setSaving(true); setSaveError('');
     try {
-      const res = await updateProfile({ phone: form.phone.trim() || null, location: form.location.trim() || null });
-      const patch = { phone: res.data.phone, phone_verified: res.data.phone_verified, location: res.data.location };
+      const res = await updateProfile({ location: form.location.trim() || null });
+      const patch = { location: res.data.location };
       setProfile(previous => ({ ...previous, ...patch }));
       publishProfileUpdate(patch);
       setEditing(false);
@@ -378,7 +378,7 @@ export default function UserProfile() {
                   </button>
                 ) : (
                   <>
-                    <button onClick={() => { setEditing(false); setForm({ phone: profile.phone || '', location: profile.location || '' }); setSaveError(''); }}
+                    <button onClick={() => { setEditing(false); setForm({ location: profile.location || '' }); setSaveError(''); }}
                       disabled={saving}
                       className="flex items-center gap-1.5 px-4 py-2.5 border border-line text-muted hover:bg-subtle rounded-lg font-semibold text-sm tracking-normal transition-all disabled:opacity-50">
                       <X size={12} /> Cancel
@@ -438,14 +438,6 @@ export default function UserProfile() {
               <div className="space-y-2">
                 {/* Email */}
                 <EmailContact profile={profile} onUpdated={data => { const patch = { email: data.email, email_verified: data.email_verified }; setProfile(previous => ({ ...previous, ...patch })); publishProfileUpdate(patch); }} />
-
-                {/* Phone */}
-                {editing ? (
-                  <EditRow icon={<Phone size={13} />} label="Phone Number" value={form.phone}
-                    onChange={v => setForm(f => ({ ...f, phone: v }))} placeholder="+63 9XX XXX XXXX" type="tel" />
-                ) : (
-                  <InfoRow icon={<Phone size={13} />} label="Phone Number" value={profile.phone || '—'} />
-                )}
 
                 {/* Location */}
                 {editing ? (

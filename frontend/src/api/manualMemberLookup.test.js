@@ -37,6 +37,8 @@ test('findManualMemberMatch matches exact email or numeric user id', () => {
 test('findManualMemberMatch does not accept partial ambiguous identifiers', () => {
   assert.equal(findManualMemberMatch(members, 'RPL-000'), null);
   assert.equal(findManualMemberMatch(members, 'juan'), null);
+  assert.equal(findManualMemberMatch(members, '+63 912 345 6789'), null);
+  assert.equal(findManualMemberMatch(members, '639123456789'), null);
 });
 
 test('memberToSessionIdentity maps member result to borrow/return session member shape', () => {

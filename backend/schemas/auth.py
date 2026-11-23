@@ -3,9 +3,6 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Any, Optional, Literal
 from services.passwords import validate_login_password, validate_new_password
 
-_PHONE_RE = re.compile(r"^[\d\s\-\+\(\)]{7,20}$")
-
-
 class LoginRequest(BaseModel):
     email:    str  # accepts email address or Member ID (e.g. RPL-K7X2M)
     password: str
@@ -22,7 +19,6 @@ class SignupRequest(BaseModel):
     email:     EmailStr = Field(max_length=180)
     password:  str
     role:      Literal["member", "librarian"] = "member"
-    phone:     Optional[str] = None
     location:  Optional[str] = None
     auth_code: Optional[str] = None  # Required when role = "librarian"
 
@@ -39,18 +35,6 @@ class SignupRequest(BaseModel):
             raise ValueError("Name cannot be empty")
         if len(v) > 100:
             raise ValueError("Name must be at most 100 characters")
-        return v
-
-    @field_validator("phone")
-    @classmethod
-    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        v = v.strip()
-        if not v:
-            return None
-        if not _PHONE_RE.match(v):
-            raise ValueError("Phone number must contain only digits, spaces, +, -, (, ) and be 7-20 characters")
         return v
 
     @field_validator("location")

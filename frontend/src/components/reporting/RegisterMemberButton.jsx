@@ -4,7 +4,7 @@ import ModalFrame from '../ModalFrame';
 import { registerMember } from '../../api/librarian';
 import { buildMemberRegistrationForm, registrationErrorMessage } from '../../api/memberRegistration';
 import RegistrationDelivery from '../RegistrationDelivery';
-const EMPTY_FORM = { name: '', email: '', phone: '', location: '' };
+const EMPTY_FORM = { name: '', email: '', location: '' };
 export default function RegisterMemberButton({ onRegistered }) {
   const [showRegModal, setShowRegModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -127,13 +127,12 @@ const RegisterMemberModal = ({
           <Info size={15} className="mt-0.5 flex-shrink-0 text-link" />
           <div>
             <p className="text-sm font-semibold text-link">A unique temporary password will be generated.</p>
-            <p className="mt-0.5 text-sm text-link">Email is used first, then text if no email is provided. Otherwise, give the sign-in details directly to the member.</p>
+            <p className="mt-0.5 text-sm text-link">The temporary password is sent by email when provided. Without email, it will appear here for you to give directly to the member.</p>
           </div>
         </div>
 
         <FormInput label="Full Name" required value={form.name} onChange={(value) => setForm({ ...form, name: value })} placeholder="Juan dela Cruz" />
         <FormInput label="Email Address" value={form.email} onChange={(value) => setForm({ ...form, email: value })} placeholder="juan@email.com" type="email" optional />
-        <FormInput label="Phone" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} placeholder="09XX-XXX-XXXX" type="tel" optional />
         <FormInput label="Address / Barangay" required value={form.location} onChange={(value) => setForm({ ...form, location: value })} placeholder="Brgy. San Jose, Antipolo" />
 
         <div>

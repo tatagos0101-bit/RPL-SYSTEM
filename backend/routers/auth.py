@@ -145,7 +145,6 @@ def signup(request: Request, response: Response, body: SignupRequest, db: Sessio
         email=normalize_email(body.email),
         password_hash=_hash(body.password),
         role=body.role,
-        phone=body.phone,
         email_verified=False,
         phone_verified=False,
         location=body.location,

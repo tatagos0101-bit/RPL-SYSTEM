@@ -238,17 +238,29 @@ def test_outstanding_loan_blocks_mature_approval_and_new_notice(db_session):
     assert ineligible.value.status_code == 409
 
 
-def test_in_app_notice_for_unavailable_sms_and_no_automatic_retry(db_session, monkeypatch):
+def test_phone_only_member_receives_in_app_notice_without_external_delivery(db_session, monkeypatch):
     member = inactive(db_session, phone="+639000000000")
     notice = policy.create(db_session, member.id)
-    assert notice.delivery_channel == "sms"
-    policy.deliver(db_session, notice.id)
-    assert notice.delivery_status == "unavailable" and notice.notification_id
-    monkeypatch.setattr(policy.registration_delivery, "sms_configured", lambda: True)
+    assert notice.delivery_channel == "in_app"
+    assert notice.delivery_status == "in_app" and notice.notification_id
     calls = []
-    monkeypatch.setattr(policy.registration_delivery, "send_sms", lambda *a, **kw: calls.append(a))
+    monkeypatch.setattr(policy, "send_once", lambda *a, **kw: calls.append(a))
     policy.deliver(db_session, notice.id)
     assert calls == []
+
+
+def test_legacy_pending_sms_notice_falls_back_to_inbox_without_sending(db_session, monkeypatch):
+    member = inactive(db_session, phone="+639000000000")
+    notice = policy.create(db_session, member.id)
+    notice.delivery_channel = "sms"
+    notice.delivery_status = "pending"
+    db_session.commit()
+    calls = []
+    monkeypatch.setattr(policy, "send_once", lambda *a, **kw: calls.append(a))
+    policy.deliver(db_session, notice.id)
+    assert notice.delivery_channel == "in_app" and notice.delivery_status == "in_app"
+    assert notice.notification_id and calls == []
+    assert policy.transport("sms", member.phone, "Synthetic notice") == "unavailable"
 
 
 def test_job_reconciles_stale_reservation_without_deleting(db_session):

@@ -46,7 +46,7 @@ def test_same_member_name_is_a_legacy_noop_and_other_fields_remain_editable(clie
     user, headers = account(db_session)
     response = client.put("/api/user/profile", headers=headers, json={"name": user.name, "phone": None, "location": "New location"})
     assert response.status_code == 200
-    assert response.json()["name"] == "Library Approved Name" and response.json()["phone"] is None
+    assert response.json()["name"] == "Library Approved Name" and response.json()["phone"] == "09123456789"
     assert response.json()["location"] == "New location"
 
 

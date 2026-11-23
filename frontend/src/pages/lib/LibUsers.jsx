@@ -130,7 +130,7 @@ function PasswordResetModal({ user, onClose }) {
 
 function RegisterMemberModal({ onClose, onSuccess }) {
   const fileRef = useRef(null);
-  const [form,      setForm]      = useState({ name:'', email:'', phone:'', location:'' });
+  const [form,      setForm]      = useState({ name:'', email:'', location:'' });
   const [idFile,    setIdFile]    = useState(null);
   const [idPreview, setIdPreview] = useState(null);
   const [errors,    setErrors]    = useState({});
@@ -250,7 +250,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                 <div>
                   <p className="text-sm font-semibold text-link">A unique temporary password will be generated.</p>
                   <p className="text-sm text-link mt-0.5">
-                    Email is used first, then text if no email is provided. Otherwise, give the sign-in details directly to the member.
+                    The temporary password is sent by email when provided. Without email, it will appear here for you to give directly to the member.
                   </p>
                 </div>
               </div>
@@ -270,18 +270,11 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                 {errors.email && <p className="mt-1 text-sm font-bold text-danger">{errors.email}</p>}
               </div>
 
-              {/* Phone + Location */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Phone</label>
-                  <input aria-label="Phone" {...field('phone')} type="tel" placeholder="+63 9XX XXX XXXX" className={inp(false)}/>
-                  <p className="mt-1 text-sm font-medium text-muted">Receives the temporary password when no email is provided.</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Address <span className="text-danger">*</span></label>
-                  <input aria-label="Address" {...field('location')} type="text" placeholder="City, Province" className={inp(errors.location)}/>
-                  {errors.location && <p className="mt-1 text-sm font-bold text-danger">{errors.location}</p>}
-                </div>
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Address <span className="text-danger">*</span></label>
+                <input aria-label="Address" {...field('location')} type="text" placeholder="City, Province" className={inp(errors.location)}/>
+                {errors.location && <p className="mt-1 text-sm font-bold text-danger">{errors.location}</p>}
               </div>
 
               {/* ── Valid ID Upload ── */}
