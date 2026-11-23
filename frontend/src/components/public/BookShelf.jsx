@@ -5,8 +5,10 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 export default function BookShelf({ heading, headingLevel = 2, label, controlsLabel = 'books', kind = 'books', horizontal = false, resetKey, description, headingAction, before, after, children }) {
   const trackRef = useRef(null);
   const headingId = useId();
+  const trackId = useId();
   const [position, setPosition] = useState({ previous: false, next: false });
   const Heading = headingLevel === 1 ? 'h1' : 'h2';
+  const categoryShelf = kind === 'categories';
 
   useEffect(() => {
     const track = trackRef.current;
@@ -38,25 +40,28 @@ export default function BookShelf({ heading, headingLevel = 2, label, controlsLa
     track.scrollBy({ left: direction * Math.max(track.clientWidth * 0.8, 160), behavior: reducedMotion ? 'auto' : 'smooth' });
   };
 
+  const controls = (
+    <div className="catalog-rail-controls" hidden={!position.previous && !position.next}>
+      <button type="button" aria-label={`Scroll ${controlsLabel} left`} aria-controls={trackId} disabled={!position.previous} onClick={() => scroll(-1)}>
+        <ChevronLeft size={19} aria-hidden="true" />
+      </button>
+      <button type="button" aria-label={`Scroll ${controlsLabel} right`} aria-controls={trackId} disabled={!position.next} onClick={() => scroll(1)}>
+        <ChevronRight size={19} aria-hidden="true" />
+      </button>
+    </div>
+  );
+  const track = <div id={trackId} ref={trackRef} className="catalog-rail-track" role="region" aria-label={label} tabIndex={0}>
+    {children}
+  </div>;
+
   return (
     <section className={`catalog-rail catalog-rail-${kind}${horizontal ? ' catalog-rail-horizontal' : ''}`} aria-labelledby={headingId}>
       <div className="catalog-rail-heading">
         <div><Heading id={headingId}>{heading}</Heading>{description}</div>
-        <div className="catalog-rail-tools">{headingAction}
-          <div className="catalog-rail-controls" hidden={!position.previous && !position.next}>
-            <button type="button" aria-label={`Scroll ${controlsLabel} left`} disabled={!position.previous} onClick={() => scroll(-1)}>
-              <ChevronLeft size={19} aria-hidden="true" />
-            </button>
-            <button type="button" aria-label={`Scroll ${controlsLabel} right`} disabled={!position.next} onClick={() => scroll(1)}>
-              <ChevronRight size={19} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
+        {(!categoryShelf || headingAction) && <div className="catalog-rail-tools">{headingAction}{!categoryShelf && controls}</div>}
       </div>
       {before}
-      <div ref={trackRef} className="catalog-rail-track" role="region" aria-label={label} tabIndex={0}>
-        {children}
-      </div>
+      {categoryShelf ? <div className="catalog-rail-viewport">{track}{controls}</div> : track}
       {after}
     </section>
   );

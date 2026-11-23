@@ -303,9 +303,14 @@
 .rpl-catalog .catalog-rail-controls button:disabled { opacity: .4; }
 .rpl-catalog .catalog-rail-controls button:enabled:hover { background: var(--rpl-info-soft); }
 .rpl-catalog .catalog-rail-track { display: flex; align-items: stretch; min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--rpl-line) transparent; padding: 6px 6px 12px; gap: 24px; }
-.rpl-catalog .catalog-rail-categories .catalog-rail-track { gap: 10px; padding-bottom: 19px; }
+.rpl-catalog .catalog-rail-categories .catalog-rail-track { flex-wrap: nowrap; gap: 10px; padding-bottom: 19px; scroll-snap-type: x proximity; scroll-padding-inline: 6px; }
+.rpl-catalog .catalog-rail-viewport { position: relative; }
+.rpl-catalog .catalog-rail-viewport .catalog-rail-controls { position: absolute; inset: 0 6px 13px; z-index: 2; justify-content: space-between; pointer-events: none; }
+.rpl-catalog .catalog-rail-viewport .catalog-rail-controls button { height: 56px; border-radius: 16px; color: var(--rpl-ink); box-shadow: 0 2px 8px rgb(10 25 16 / 18%); pointer-events: auto; }
+.rpl-catalog .catalog-rail-viewport .catalog-rail-controls button:disabled { visibility: hidden; pointer-events: none; }
 .rpl-catalog .catalog-category { display: flex; flex: 0 0 108px; min-width: 0; min-height: 130px; padding: 12px 8px; align-items: center; justify-content: center; flex-direction: column; gap: 10px; position: relative; border: 1px solid var(--rpl-line); border-radius: 10px; background: var(--rpl-panel); font-size: .8125rem; line-height: 1.2; font-weight: 500; color: var(--rpl-ink); transition: background 180ms ease, border-color 180ms ease; }
 .rpl-catalog .catalog-category > span:last-child { max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+.rpl-catalog .catalog-category { scroll-snap-align: start; }
 .rpl-catalog .catalog-category:hover { background: var(--rpl-subtle); }
 .rpl-catalog .catalog-category.is-active { border-color: #ab8759; background: var(--rpl-info-soft); }
 .rpl-catalog .catalog-category.is-active::after { content: ""; position: absolute; bottom: -8px; left: calc(50% - 7px); width: 14px; height: 14px; transform: rotate(45deg); background: var(--rpl-info-soft); border-bottom: 1px solid #ab8759; border-right: 1px solid #ab8759; }
@@ -546,8 +551,7 @@
 .rpl-catalog .catalog-shelf-state { grid-column: 1 / -1; }
 @media (min-width: 800px) and (hover: hover) and (pointer: fine) {
   .rpl-catalog .catalog-rail-books .catalog-rail-track { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); align-items: start; overflow: visible; gap: 28px 24px; }
-  .rpl-catalog .catalog-rail-categories .catalog-rail-track { flex-wrap: wrap; overflow: visible; }
-  .rpl-catalog .catalog-rail-controls { display: none; }
+  .rpl-catalog .catalog-rail-books .catalog-rail-controls { display: none; }
 }
 
 .rpl-member .rpl-member-catalog { padding-top: 24px; background: var(--rpl-canvas); }

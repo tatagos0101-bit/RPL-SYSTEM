@@ -30,7 +30,8 @@ librarian administration, circulation, reporting, QR labels, and attendance.
 - **Public catalogue:** search titles/authors, filter categories and availability,
   browse genre shelves, and look up books or physical copies through QR codes.
   Landing searches retain the query and highlight matching title/author text.
-  Desktop catalogs wrap into vertical grids; phone shelves retain horizontal swiping.
+  Category cards scroll in one horizontal row on all screens. Desktop book results
+  use a grid, while phone shelves retain horizontal swiping.
   Catalogue contents come from uploaded library inventory; there is no fixed
   number of books per category. Book details show optional librarian-entered
   descriptions; Add Book can use an online ISBN summary or a manual note.

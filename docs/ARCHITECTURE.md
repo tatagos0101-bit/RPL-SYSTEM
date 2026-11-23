@@ -86,9 +86,11 @@ session on the server.
 [PublicBrowse](../frontend/src/pages/public/PublicBrowse.jsx) shares small category
 cover collages, [BookShelf](../frontend/src/components/public/BookShelf.jsx) and
 [CatalogBookCard](../frontend/src/components/public/CatalogBookCard.jsx) styling
-with the member catalog. On desktop (at least800px, hover/fine pointer), full catalogs form a vertical
-wrapping grid and category tiles wrap; mobile/coarse-pointer devices retain swipe
-scrolling even in wide landscape. Member Featured collections keep horizontal
+with the member catalog. Category cards stay in one horizontal row on every screen,
+with side arrows when the row overflows and native swipe scrolling. On desktop
+(at least 800px, hover/fine pointer), full book results form a vertical wrapping
+grid. Mobile and coarse-pointer devices retain swipe scrolling for book results
+even in wide landscape. Member Featured collections keep horizontal
 scrolling at every screen size, as explicitly requested in the latest clarification.
 Shelf arrows only scroll the loaded view; server pagination remains separate.
 Landing Search routes to `/browse?q=...`, and the public search uses URL-backed
