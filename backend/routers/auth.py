@@ -28,6 +28,7 @@ from services.auth_cookie import AUTH_COOKIE_NAME, clear_auth_cookie, set_auth_c
 from services.auth_sessions import create_session_token, revoke_token_session, revoke_user_sessions
 from services.password_reset import (
     RESET_CODE_MINUTES,
+    CONTACT_CODE_MINUTES,
     choose_reset_channel,
     issue_code, consume_code, deliver_recovery,
     find_user_by_identifier,
@@ -241,7 +242,7 @@ def request_contact_code(request: Request, body: ContactCodeRequest,
     if not verify_password(body.password, user.password_hash):
         raise HTTPException(400, "Current password is incorrect.")
     issue_code(db, user, body.channel, "verify")
-    return {"success": True, "message": "Code sent. It expires in 15 minutes."}
+    return {"success": True, "message": f"Code sent. It expires in {CONTACT_CODE_MINUTES} minutes."}
 
 
 @router.post("/contact-verification/confirm")

@@ -58,6 +58,6 @@ def test_email_templates_state_the_correct_lifetimes(monkeypatch):
     otp_delivery.send_code('email', 'synthetic@example.com', '123456', 'reset')
     assert '5 minutes' in sent[-1]
     otp_delivery.send_code('email', 'synthetic@example.com', '123456', 'verify')
-    assert '15 minutes' in sent[-1]
+    assert '5 minutes' in sent[-1]
     registration_delivery.send_registration_email(destination='synthetic@example.com', member_id='SYN-1', temporary_password='Synthetic1')
     assert '24 hours' in sent[-1]

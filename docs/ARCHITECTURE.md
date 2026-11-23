@@ -426,8 +426,8 @@ tracks generated members/loans/visits in private library-settings batch receipts
 generated manual visits do not claim a successful face scan. Existing real records
 and actual biometric data remain separate.
 
-Password-reset email codes expire after five minutes; contact-verification codes
-retain their separate 15-minute lifetime. Reset confirmation also caps previously
+Password-reset and contact-verification email codes expire after five minutes.
+Both confirmation paths also cap previously
 issued longer-lived challenges at five minutes from creation. Registration and
 librarian-assisted member resets, including main-librarian staff creation, store
 `users.temporary_password_expires_at` at issuance plus 24 hours. Expired temporary

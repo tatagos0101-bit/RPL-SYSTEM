@@ -7,7 +7,7 @@ from models.user import User
 from routers import auth
 from services import otp_delivery
 from services.password_reset import issue_code
-from timezone_utils import now_ph
+from timezone_utils import now_ph, as_ph
 
 
 @pytest.fixture
@@ -26,6 +26,30 @@ def account(client, db, role="member"):
     response = client.post("/api/auth/login", json={"email": user.member_id, "password": "Password1"})
     assert response.status_code == 200
     return user
+
+
+@pytest.mark.parametrize("role", ["member", "librarian"])
+@pytest.mark.parametrize("legacy", [False, True])
+@pytest.mark.parametrize("age,expected", [(299, 200), (300, 400)])
+def test_verification_five_minute_boundary_and_legacy_cap(client, db_session, monkeypatch, delivery, role, legacy, age, expected):
+    from services import password_reset
+
+    user = account(client, db_session, role)
+    issued = now_ph()
+    monkeypatch.setattr(password_reset, "_now", lambda: issued)
+    response = client.post("/api/auth/contact-verification/request", json={"channel": "email", "password": "Password1"})
+    assert response.status_code == 200
+    assert response.json()["message"] == "Code sent. It expires in 5 minutes."
+    challenge = db_session.query(PasswordResetCode).filter_by(user_id=user.id, purpose="verify").one()
+    assert as_ph(challenge.expires_at) == issued + timedelta(minutes=5)
+    if legacy:
+        challenge.expires_at = issued + timedelta(minutes=15)
+        db_session.commit()
+    monkeypatch.setattr(password_reset, "_now", lambda: issued + timedelta(seconds=age))
+    confirmed = client.post("/api/auth/contact-verification/confirm", json={"channel": "email", "code": delivery[-1][2]})
+    assert confirmed.status_code == expected
+    db_session.refresh(user)
+    assert user.email_verified is (expected == 200)
 
 
 @pytest.mark.parametrize("role", ["member", "librarian"])

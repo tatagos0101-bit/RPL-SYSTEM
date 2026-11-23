@@ -1,4 +1,3 @@
-import { acquisitionSources } from '../../api/acquisitions';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -23,14 +22,13 @@ const LibInventory = () => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [uploadingId, setUploadingId] = useState(null);
-  const [source, setSource] = useState('');
   const [editingBook, setEditingBook] = useState(null);
   const [viewingBook, setViewingBook] = useState(null);
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef(null);
   const uploadTargetId = useRef(null);
 
-  const listing = useServerPage('/api/inventory/books', { search, source, category: activeCategory === 'All' ? '' : activeCategory });
+  const listing = useServerPage('/api/inventory/books', { search, category: activeCategory === 'All' ? '' : activeCategory });
   const { items: books, setItems: setBooks, loading, reload } = listing;
   const [operationError, setOperationError] = useState('');
   const fetchData = useCallback(() => {
@@ -113,13 +111,12 @@ const LibInventory = () => {
         {/* Stats */}
         {success && <p role="status" className="mb-6 rounded-xl border border-success bg-success-soft px-5 py-4 text-sm font-semibold text-success">{success}</p>}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-10 animate-fade-in-up delay-100">
-          <StatCard label="Total Books" val={invStats.total_titles ?? 0} icon={<Library size={18} />} color="bg-violet-500" />
-          <StatCard label="Total Copies" val={invStats.total_copies ?? 0} icon={<Package size={18} />} color="bg-blue-500" />
-          <StatCard label="Available" val={invStats.available_copies ?? 0} icon={<CheckCircle size={18} />} color="bg-emerald-500" />
-          <StatCard label="Borrowed" val={invStats.borrowed_copies ?? 0} icon={<Clock size={18} />} color="bg-rose-500" />
+          <StatCard label="Total Books" val={invStats.total_titles ?? 0} icon={<Library size={18} />} color="bg-info-soft text-link" />
+          <StatCard label="Total Copies" val={invStats.total_copies ?? 0} icon={<Package size={18} />} color="bg-subtle text-muted" />
+          <StatCard label="Available" val={invStats.available_copies ?? 0} icon={<CheckCircle size={18} />} color="bg-success-soft text-success" />
+          <StatCard label="Borrowed" val={invStats.borrowed_copies ?? 0} icon={<Clock size={18} />} color="bg-warning-soft text-warning" />
         </div>
 
-        <label className="mb-4 block max-w-xs"><span className="mb-1 block text-sm font-semibold text-muted">Acquisition source</span><select aria-label="Acquisition source" value={source} onChange={event => setSource(event.target.value)} className="w-full rounded-lg border border-line bg-panel px-3 py-2.5 text-base"><option value="">All sources</option>{Object.entries(acquisitionSources).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
         {/* Filters */}
         <div className="animate-fade-in-up delay-200 flex flex-col lg:flex-row gap-4 mb-8">
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
@@ -183,7 +180,6 @@ const LibInventory = () => {
                             <div className="min-w-0">
                               <p className="font-bold text-sm text-ink">{book.title}</p>
                               <p className="text-sm text-muted font-medium">{book.author}</p>
-                              <p className="mt-1 text-sm text-muted">{Object.entries(book.acquisition_sources || {}).map(([key, count]) => `${acquisitionSources[key]}: ${count}`).join(' · ') || 'No current physical copies'}</p>
                             </div>
                           </div>
                         </td>
@@ -256,7 +252,7 @@ const LibInventory = () => {
 
 const StatCard = ({ label, val, icon, color }) => (
   <div className="bg-panel p-4 sm:p-6 rounded-xl border border-line shadow-sm flex flex-col items-start sm:flex-row sm:items-center gap-3 sm:gap-4 transition-all">
-    <div className={`${color} w-12 h-12 rounded-xl flex items-center justify-center text-ink shadow-md flex-shrink-0`}>{icon}</div>
+    <div className={`${color} w-12 h-12 rounded-xl border border-line flex items-center justify-center flex-shrink-0`}>{icon}</div>
     <div>
       <p className="text-sm font-semibold text-muted tracking-normal mb-0.5">{label}</p>
       <p className="text-3xl font-semibold text-ink tracking-normal leading-none">{val}</p>

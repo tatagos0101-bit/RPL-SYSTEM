@@ -12,7 +12,7 @@ from timezone_utils import now_ph, as_ph
 from services.email_identity import find_email_user
 
 RESET_CODE_MINUTES = 5
-CONTACT_CODE_MINUTES = 15
+CONTACT_CODE_MINUTES = 5
 RESET_CODE_LENGTH = 6
 
 
@@ -61,13 +61,15 @@ def create_password_reset_code(
     purpose: str = "reset",
 ) -> tuple[str, PasswordResetCode]:
     code = f"{secrets.randbelow(10 ** RESET_CODE_LENGTH):0{RESET_CODE_LENGTH}d}"
+    issued_at = _now()
     reset = PasswordResetCode(
         user_id=user.id,
         channel=channel,
         purpose=purpose,
         context_hash=contact_context(user, channel, purpose),
         code_hash=_hash_code(f"{user.id}:{purpose}:{channel}:{code}"),
-        expires_at=_now() + timedelta(minutes=RESET_CODE_MINUTES if purpose == "reset" else CONTACT_CODE_MINUTES),
+        created_at=issued_at,
+        expires_at=issued_at + timedelta(minutes=RESET_CODE_MINUTES if purpose == "reset" else CONTACT_CODE_MINUTES),
     )
     db.add(reset)
     db.commit()
@@ -140,7 +142,8 @@ def consume_code(db, user, code, purpose, channel=None):
     challenge = query.order_by(PasswordResetCode.id.desc()).with_for_update().first()
     if not challenge:
         raise invalid
-    if purpose == "reset" and as_ph(challenge.created_at) + timedelta(minutes=RESET_CODE_MINUTES) <= _now():
+    lifetime = RESET_CODE_MINUTES if purpose == "reset" else CONTACT_CODE_MINUTES
+    if as_ph(challenge.created_at) + timedelta(minutes=lifetime) <= _now():
         raise invalid
     try:
         context_valid = challenge.context_hash == contact_context(user, challenge.channel, purpose)
