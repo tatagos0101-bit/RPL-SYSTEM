@@ -64,7 +64,6 @@ export default function LibReports() {
       <div className="staff-page-actions">
         <button className={buttonClass} disabled={busy || exporting} onClick={() => apply()}><RefreshCw size={14} className={busy ? 'animate-spin' : ''} />Refresh</button>
         <button className={`${buttonClass} staff-export-csv`} disabled={disabled} onClick={() => exportData('csv')}><Download size={14} />CSV</button>
-        <button className={buttonClass} disabled={disabled} onClick={() => exportData('xlsx')}>Excel</button>
         <button className={buttonClass} disabled={disabled} onClick={() => exportData('pdf')}>PDF</button>
         <button className={`${buttonClass} staff-export-print`} disabled={disabled} onClick={() => exportData('print')}><Printer size={14} />Print</button>
       </div>
