@@ -43,6 +43,7 @@ def delete_face_data(db, member):
     # Include inactive/legacy templates: disabling only the current template
     # would leave old biometric material behind.
     member.face_encoding = None
+    member.face_enrollment_display_only = False
     db.query(FaceEmbedding).filter(FaceEmbedding.user_id == member.id).delete(synchronize_session=False)
     db.query(SecurityAlert).filter(SecurityAlert.user_id == member.id).update(
         {SecurityAlert.snapshot_b64: None}, synchronize_session=False)

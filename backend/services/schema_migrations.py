@@ -45,6 +45,7 @@ ADDITIONS = {
         ("avatar_url", String(300), None),
         ("must_change_password", Boolean, false()),
         ("temporary_password_expires_at", DateTime(timezone=True), None),
+        ("face_enrollment_display_only", Boolean, false()),
         ("email_verified", Boolean, false()),
         ("phone_verified", Boolean, false()),
     ],

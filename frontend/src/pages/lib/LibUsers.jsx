@@ -476,8 +476,8 @@ export default function LibUsers() {
                       <td role="cell" className="px-6 py-4 text-sm font-semibold"><span className="staff-member-label" aria-hidden="true">Loans</span>{u.active_loans}</td>
                       <td role="cell" className="px-6 py-4">
                         <span className="staff-member-label" aria-hidden="true">Face ID</span>
-                        <span className={`staff-member-badge px-2 py-0.5 rounded-full text-sm font-semibold ${u.face_enrolled?'bg-info-soft bg-info-soft text-link text-link':'bg-subtle text-muted'}`}>
-                          {u.face_enrolled?'Enrolled':'None'}
+                        <span title={!u.face_enrolled && u.face_enrollment_display_only ? 'Display status only; no facial template is registered.' : undefined} aria-label={!u.face_enrolled && u.face_enrollment_display_only ? 'Enrolled — display status only' : undefined} className={`staff-member-badge px-2 py-0.5 rounded-full text-sm font-semibold ${u.face_enrolled || u.face_enrollment_display_only?'bg-info-soft bg-info-soft text-link text-link':'bg-subtle text-muted'}`}>
+                          {u.face_enrolled || u.face_enrollment_display_only?'Enrolled':'None'}
                         </span>
                       </td>
                       <td role="cell" className="px-6 py-4">

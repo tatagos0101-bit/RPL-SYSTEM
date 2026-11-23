@@ -101,6 +101,7 @@ class LibMemberOut(BaseModel):
     location:     Optional[str]
     status:       str
     face_enrolled: bool
+    face_enrollment_display_only: bool = False
     active_loans: int
     total_loans:  int
     joined_at:    datetime

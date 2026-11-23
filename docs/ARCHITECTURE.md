@@ -407,6 +407,17 @@ or production migration is needed on an initialized database.
 
 ## Facial recognition and attendance
 
+Generated datasets can use `users.face_enrollment_display_only` to present an
+Enrolled badge in the librarian member list. The API returns it separately from
+`face_enrolled`; its tooltip/accessibility label identifies a display-only status.
+It does not create encodings/embedding rows, change enrollment statistics, hide
+Register Face, enable Delete Face, alter own-profile biometric status or participate
+in detection/matching/authentication. Genuine enrollment or face removal clears it.
+No public endpoint accepts this presentation flag. Privileged dataset preparation
+tracks generated members/loans/visits in private library-settings batch receipts;
+generated manual visits do not claim a successful face scan. Existing real records
+and actual biometric data remain separate.
+
 Password-reset email codes expire after five minutes; contact-verification codes
 retain their separate 15-minute lifetime. Reset confirmation also caps previously
 issued longer-lived challenges at five minutes from creation. Registration and

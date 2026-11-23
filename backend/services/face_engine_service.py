@@ -391,6 +391,7 @@ def upsert_face_embedding(
 
 def store_enrollment_face(db: Session, user: User, face: dict, *, source: str = "enrollment") -> None:
     invalidate_gallery(db)
+    user.face_enrollment_display_only = False
     # Explicit replacement must not leave an older engine recognizing the old face.
     db.query(FaceEmbedding).filter(FaceEmbedding.user_id == user.id).delete(synchronize_session=False)
     user.face_encoding = None

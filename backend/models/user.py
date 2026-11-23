@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, Text, Enum, DateTime
+from sqlalchemy import Boolean, Column, Integer, String, Text, Enum, DateTime, false
 from sqlalchemy.orm import deferred, relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -15,6 +15,8 @@ class User(Base):
     password_hash  = Column(String(255), nullable=False)
     must_change_password = Column(Boolean, nullable=False, default=False)
     temporary_password_expires_at = Column(DateTime(timezone=True), nullable=True)
+    # Generated-data presentation only; never an identity/authentication signal.
+    face_enrollment_display_only = Column(Boolean, nullable=False, default=False, server_default=false())
     email_verified = Column(Boolean, nullable=False, default=False)
     phone_verified = Column(Boolean, nullable=False, default=False)
     role           = Column(Enum("member", "librarian", name="user_role", native_enum=False, create_constraint=True), nullable=False, default="member")

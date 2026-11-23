@@ -325,6 +325,7 @@ def list_members(
             location     = m.location,
             status       = m.status,
             face_enrolled = m.id in enrolled_ids,
+            face_enrollment_display_only = bool(m.face_enrollment_display_only),
             active_loans = count.active if count else 0,
             total_loans  = count.total if count else 0,
             joined_at    = m.created_at,
