@@ -20,7 +20,7 @@ const PASSWORD_CHANGE_PATH = {
   librarian: '/librarian/change-password',
 };
 
-const AUTH_KEYS = ['token', 'isLoggedIn', 'userRole', 'userName', 'userId', 'mustChangePassword'];
+const AUTH_KEYS = ['token', 'isLoggedIn', 'userRole', 'userName', 'userId', 'mustChangePassword', 'canManageLibrarians'];
 
 export const homeForRole = (role) => PORTAL_HOME[role] || '/';
 
@@ -66,11 +66,13 @@ export const getStoredAuth = () => ({
   name: localStorage.getItem('userName'),
   userId: localStorage.getItem('userId'),
   mustChangePassword: localStorage.getItem('mustChangePassword') === 'true',
+  canManageLibrarians: localStorage.getItem('canManageLibrarians') === 'true',
 });
 
 export const persistStoredAuth = ({ user_id, name, role, must_change_password = false }) => {
   invalidateSharedReads();
   localStorage.removeItem('token');
+  localStorage.removeItem('canManageLibrarians');
   localStorage.setItem('isLoggedIn', 'true');
   localStorage.setItem('userRole', role);
   localStorage.setItem('userName', name);
@@ -78,7 +80,7 @@ export const persistStoredAuth = ({ user_id, name, role, must_change_password = 
   localStorage.setItem('mustChangePassword', String(Boolean(must_change_password)));
 };
 
-export const updateStoredProfile = ({ id, name, role, must_change_password = false }) => {
+export const updateStoredProfile = ({ id, name, role, must_change_password = false, can_manage_librarians = false }) => {
   if (localStorage.getItem('userId') !== String(id) || localStorage.getItem('userRole') !== role
     || localStorage.getItem('mustChangePassword') !== String(Boolean(must_change_password))) invalidateSharedReads();
   localStorage.setItem('isLoggedIn', 'true');
@@ -86,6 +88,7 @@ export const updateStoredProfile = ({ id, name, role, must_change_password = fal
   localStorage.setItem('userName', name);
   localStorage.setItem('userId', String(id));
   localStorage.setItem('mustChangePassword', String(Boolean(must_change_password)));
+  localStorage.setItem('canManageLibrarians', String(role === 'librarian' && Boolean(can_manage_librarians)));
 };
 
 export const clearStoredAuth = () => {

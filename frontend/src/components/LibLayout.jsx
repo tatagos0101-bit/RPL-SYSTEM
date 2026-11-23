@@ -4,7 +4,7 @@ import { getNotifications, markNotificationRead, markAllNotificationsRead } from
 import { getLibrarianShellClasses } from '../api/librarianShell';
 import { STAFF_LIBRARIAN_NAV_LINKS } from '../api/librarianNavigation';
 import { parseApiDateTime } from '../api/dateTime';
-import { isPasswordChangePath } from '../api/authRoutes';
+import { getStoredAuth, isPasswordChangePath } from '../api/authRoutes';
 import { notificationHref, notifyNotificationsUpdated, NOTIFICATIONS_UPDATED } from '../api/notificationLinks';
 import {
   BookOpen, PlusSquare, Users, LayoutDashboard, ArrowLeftRight,
@@ -22,6 +22,7 @@ const NAV_ICONS = {
   'due-books': <AlertTriangle size={18} />,
   reports: <FileText size={18} />,
   users: <Users size={18} />,
+  staff: <ShieldCheck size={18} />,
   'add-book': <PlusSquare size={18} />,
   'qr-bulk': <QrCode size={18} />,
   'public-catalog': <BookOpen size={18} />,
@@ -37,6 +38,7 @@ const LibLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const changingPassword = isPasswordChangePath(location.pathname);
+  const { canManageLibrarians } = getStoredAuth();
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
   const shellClasses = getLibrarianShellClasses(sidebarOpen);
@@ -127,7 +129,7 @@ const LibLayout = () => {
   const navGroups = [
     ['Workspace', ['home', 'entry-station', 'inventory', 'users']],
     ['Circulation', ['borrow-return', 'reservations', 'due-books']],
-    ['Library management', ['reports', 'add-book', 'qr-bulk', 'public-catalog']],
+    ['Library management', ['reports', 'staff', 'add-book', 'qr-bulk', 'public-catalog']],
   ];
 
   return (
@@ -239,7 +241,7 @@ const LibLayout = () => {
           <nav className="staff-navigation" aria-label="Librarian pages">
             {navGroups.map(([group, keys]) => <div className="staff-nav-group" key={group}>
               <p className="staff-nav-label">{group}</p>
-              {keys.map(key => STAFF_LIBRARIAN_NAV_LINKS.find(link => link.key === key)).map(link => {
+              {keys.map(key => STAFF_LIBRARIAN_NAV_LINKS.find(link => link.key === key)).filter(link => !link.managerOnly || canManageLibrarians).map(link => {
                 const active = location.pathname === link.to;
                 return <Link key={link.to} aria-current={active ? 'page' : undefined} to={link.to} onClick={close} className={`staff-nav-link ${active ? 'is-active' : ''}`}>
                   <span aria-hidden="true">{NAV_ICONS[link.key] || <BookOpen size={18} />}</span>

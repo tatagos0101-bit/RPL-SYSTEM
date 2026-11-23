@@ -204,6 +204,12 @@ For a fresh local installation, use the development API docs to call
 `/librarian/login`, register members, and add/import inventory. Do not use shared
 default credentials. Production bootstrap instructions are in the deployment guide.
 
+For ongoing staff creation, an operator explicitly designates the main librarian
+using the [staff-account setup](docs/DEPLOYMENT.md#main-librarian-and-staff-accounts).
+That account can open **Librarian menu → Library management → Librarian Accounts**.
+This page is separate from member registration. It creates staff with a temporary
+password and a mandatory first-login change; other librarians cannot add staff.
+
 ## Deployment
 
 The Vercel `rpl-system` project builds the frontend from repository root `.`;

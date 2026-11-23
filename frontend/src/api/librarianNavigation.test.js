@@ -43,3 +43,11 @@ test('staff librarian navigation exposes printable reports', () => {
     { to: '/librarian/reports', label: 'Reports' },
   );
 });
+
+test('librarian account creation has its own main-librarian-only route', () => {
+  const staff = STAFF_LIBRARIAN_NAV_LINKS.find(link => link.key === 'staff');
+  const members = STAFF_LIBRARIAN_NAV_LINKS.find(link => link.key === 'users');
+  assert.equal(staff.to, '/librarian/staff');
+  assert.equal(staff.managerOnly, true);
+  assert.notEqual(staff.to, members.to);
+});

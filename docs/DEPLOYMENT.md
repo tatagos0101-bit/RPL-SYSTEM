@@ -36,6 +36,45 @@ Use [feature metadata checks](../supabase/operations/check_account_inactivity_ac
 and advisors after the upgrade. Configure existing SMTP/optional Twilio separately;
 mocked transport success is not evidence of real inbox/phone delivery.
 
+## Main librarian and staff accounts
+
+The existing `library_settings` table stores a single explicitly designated
+main librarian ID under `librarian_account_manager_id`. This is a permission
+within the existing `librarian` role; it is not a new role or a Supabase Auth user.
+There is no automatic grant and no schema migration for this feature.
+
+An operator must identify the intended existing active librarian. From `backend/`,
+with the **intended database target configured**, run a dry run first:
+
+```powershell
+uv run python designate_librarian.py --user-id <existing-librarian-id>
+uv run python designate_librarian.py --user-id <existing-librarian-id> --apply
+```
+
+The dry run does not save changes. `--apply` changes the configured database.
+The command rejects members, suspended/deleted accounts, and accounts still
+requiring a password change. Replacing a different existing designation requires
+the additional `--replace` flag. Never choose an account implicitly by creation
+order or reuse an existing member's identity.
+
+After refreshing/signing in, the main librarian can open **Menu → Library
+management → Librarian Accounts** (`/librarian/staff`). Name, email, and their own
+current password create a separate staff account. New librarians must change
+their temporary password before protected operations and cannot create other staff.
+The member-registration page is unchanged. Existing private-code API signup remains
+available for operator bootstrap and does not grant main-librarian permission.
+
+Existing registration SMTP settings deliver credentials after the account commits.
+The UI distinguishes delivery acceptance from unconfirmed delivery and shows the
+same one-time password for private handoff only when delivery is unconfirmed.
+Passwords are not in staff lists or browser storage. If a request's result is
+unknown, check the staff list/email before retrying; creation is not auto-replayed.
+Keep browser-role access to `users` and `library_settings` revoked and the existing
+runtime permissions/RLS intact. Verify anonymous, member, ordinary librarian,
+suspended, and forced-password-change requests are denied; then check the selected
+main account and first-login flow. Local SQLite/mock SMTP tests do not verify
+production PostgreSQL locking or real inbox delivery.
+
 ## Member registration delivery prerequisite
 
 The November 16 local revision makes government ID optional and adds email-first,

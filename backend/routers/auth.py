@@ -10,6 +10,7 @@ import secrets
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from services.passwords import hash_password, verify_password, needs_legacy_replacement
 from services.email_identity import find_email_user, email_matches, normalize_email
+from services.librarian_accounts import can_manage_librarians
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import or_, and_
@@ -45,11 +46,12 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 
 @router.get("/session")
-def session_status(response: Response, user: User = Depends(get_session_user)):
+def session_status(response: Response, user: User = Depends(get_session_user), db: Session = Depends(get_db)):
     """Fresh access check without avatar signing or biometric reads."""
     response.headers["Cache-Control"] = "no-store"
     return {"id": user.id, "name": user.name, "role": user.role,
-            "must_change_password": bool(user.must_change_password)}
+            "must_change_password": bool(user.must_change_password),
+            "can_manage_librarians": can_manage_librarians(db, user)}
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

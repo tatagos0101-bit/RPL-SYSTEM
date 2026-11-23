@@ -31,6 +31,7 @@ const LibAddBook = lazy(() => import('./pages/lib/LibAddBook'));
 const LibQRBulk = lazy(() => import('./pages/lib/LibQRBulk'));
 const LibBorrowReturn = lazy(() => import('./pages/lib/LibBorrowReturn'));
 const LibUsers = lazy(() => import('./pages/lib/LibUsers'));
+const LibStaffAccounts = lazy(() => import('./pages/lib/LibStaffAccounts'));
 const LibDueBooks = lazy(() => import('./pages/lib/LibDueBooks'));
 const LibReservations = lazy(() => import('./pages/lib/LibReservations'));
 const LibReports = lazy(() => import('./pages/lib/LibReports'));
@@ -103,6 +104,7 @@ const AppContent = () => {
               <Route path="/librarian/reservations" element={<LibReservations />} />
               <Route path="/librarian/reports" element={<LibReports />} />
               <Route path="/librarian/settings" element={<LibSettings />} />
+              <Route path="/librarian/staff" element={<LibStaffAccounts />} />
               <Route path="/librarian/notifications" element={<NotificationsPage role="librarian" />} />
               <Route path="/librarian/notifications/:notificationId" element={<NotificationsPage role="librarian" />} />
               <Route path="/librarian/entry" element={<Navigate to="/entry-station" replace />} />

@@ -317,6 +317,26 @@ Only `member` and `librarian` are persisted roles. Public catalog access is anon
 Resource ownership is enforced by individual routes; not every user route uses the
 strict `require_member` dependency. Librarian signup requires a private authorization
 code; the librarian registration flow issues temporary member passwords.
+
+Staff creation has a separate [Librarian Accounts page](../frontend/src/pages/lib/LibStaffAccounts.jsx)
+at `/librarian/staff`, under Library management in the staff menu. Its
+[API](../backend/routers/librarian_accounts.py) requires an active, unrestricted
+librarian whose ID matches the private `library_settings.librarian_account_manager_id`
+setting. There is no implicit first-account grant and no public designation API.
+An operator explicitly designates the main librarian with
+`backend/designate_librarian.py`; see [deployment setup](DEPLOYMENT.md#main-librarian-and-staff-accounts).
+The session endpoint returns `can_manage_librarians` for navigation only; the
+server checks the designation on every staff list/create request. Other librarians
+and members cannot use these endpoints. Creation requires the main librarian's
+current password, always assigns `librarian`, and issues a random 14-character
+temporary password with a mandatory first-login change. Email delivery is attempted
+after commit using the existing registration delivery service. Accepted delivery
+omits the password; unconfirmed delivery exposes a one-time main-librarian handoff.
+Delivery acceptance does not prove inbox delivery. Contact ownership remains
+unverified. New staff do not inherit account-management permission, the current
+main-librarian session is preserved, and member registration remains separate.
+No schema changes, new auth roles, or browser database access are introduced.
+
 Member profile names are displayed as locked text while editing and are
 server-protected: changed or null names
 are rejected before any other profile field changes; an unchanged legacy name
