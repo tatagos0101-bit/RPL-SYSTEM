@@ -72,6 +72,11 @@ const LoginPage = ({ expectedRole = 'member' }) => {
       lookup: (image, config) => faceAuth(image, expectedRole, config),
       onStatus: status => {
         if (!active || status.phase === 'recognized') return;
+        if (status.reason === 'member_setup_required') {
+          setError(status.message);
+          setTab('password');
+          return;
+        }
         setFaceStatus(status.phase === 'error' ? 'failed' : 'scanning');
         if (status.reason === 'Spoofing Detected') {
           spoofConfidence++;
@@ -307,7 +312,7 @@ const LoginPage = ({ expectedRole = 'member' }) => {
               {isLibrarianPortal ? (
                 <>Librarian access is issued by authorized administrators only. Member accounts cannot enter the staff console.</>
               ) : (
-                <>Account registration is done in person at the <strong>Taytay branch</strong>. A librarian will set up your account and enroll your Face ID.</>
+                <>Register in person at the <strong>Taytay branch</strong>. A librarian will set up your account and can help you enroll in Face ID if you choose.</>
               )}
             </p>
             <div className="auth-location">

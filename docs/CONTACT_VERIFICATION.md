@@ -123,8 +123,11 @@ librarian receives the password to give directly to the member. A successful
 provider acceptance returns its channel/status and no plaintext password. The
 password is never persisted as plaintext. All new members must change it on first
 login by entering and confirming a new password without re-entering the temporary
-password. The authenticated session authorizes this first-login change; normal
-password changes still require the current password. Temporary passwords expire
+password. Librarian-created members must also acknowledge the privacy notice
+covering account information and service emails before the system saves the new
+password. Facial recognition has its own opt-in at enrollment. The authenticated
+session authorizes first-login changes. Normal password changes still require the
+current password. Temporary passwords expire
 after 24 hours, and recovery email codes expire after five minutes. Sending does
 not set either contact's verified flag. Existing staff password
 resets retain their original 14-character default and session-revocation behavior.

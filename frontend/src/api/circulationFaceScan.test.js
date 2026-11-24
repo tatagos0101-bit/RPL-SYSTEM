@@ -132,3 +132,13 @@ test('lost authorization stops automatic requests and never selects a member', a
     assert.deepEqual(matches, []);
   }
 });
+
+test('face sign-in stops and reports pending member setup', async () => {
+  const detail = { code: 'member_setup_required', message: 'Sign in with your temporary or recovered password.' };
+  const { time, statuses, matches } = session({ purpose: 'login',
+    lookup: async () => { throw { response: { status: 403, data: { detail } } }; } });
+  await time.run();
+  assert.deepEqual(statuses.at(-1), { phase: 'error', reason: detail.code, message: detail.message });
+  assert.equal(time.count(), 0);
+  assert.deepEqual(matches, []);
+});

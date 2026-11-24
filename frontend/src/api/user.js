@@ -1,6 +1,7 @@
 import client from './client';
 import { prepareUploadForm } from './uploads';
 import { getStoredAuth } from './authRoutes';
+import { buildPasswordChangeRequest } from './passwordPolicy';
 import { createSharedRead } from './sharedReads';
 
 const readScope = () => {
@@ -55,11 +56,8 @@ export const markNotificationRead = (id) =>
 export const markAllNotificationsRead = () =>
   client.post('/api/user/notifications/read-all');
 
-export const changePassword = (currentPassword, newPassword) =>
-  client.put('/api/user/change-password', {
-    ...(currentPassword == null ? {} : { current_password: currentPassword }),
-    new_password: newPassword,
-  });
+export const changePassword = (currentPassword, newPassword, options) =>
+  client.put('/api/user/change-password', buildPasswordChangeRequest(currentPassword, newPassword, options));
 
 export const uploadAvatar = async (file) => {
   const form = new FormData();

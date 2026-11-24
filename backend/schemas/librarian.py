@@ -99,6 +99,7 @@ class LibMemberOut(BaseModel):
     email_verified: bool = False
     phone_verified: bool = False
     location:     Optional[str]
+    location_is_generated: bool = False
     status:       str
     face_enrolled: bool
     face_enrollment_display_only: bool = False

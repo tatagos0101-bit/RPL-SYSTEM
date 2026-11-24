@@ -1,5 +1,6 @@
 import { exportCopyBatches } from './zipDownload';
 import client from './client';
+import { buildFaceEnrollment } from './faceConsent';
 import { resetMemberPasswordPath } from './passwordRecovery';
 import { prepareUploadForm } from './uploads';
 
@@ -31,14 +32,17 @@ export const registerMember = async (formData) =>
 export const getMemberStats = () =>
   client.get('/api/librarian/users/stats');
 
+export const fillMissingMemberAddresses = () =>
+  client.post('/api/librarian/users/fill-missing-addresses');
+
 export const updateMemberStatus = (userId, status) =>
   client.put(`/api/librarian/users/${userId}/status`, { status });
 
 export const resetMemberPassword = (userId) =>
   client.post(resetMemberPasswordPath(userId));
 
-export const enrollMemberFace = (userId, imageBase64) =>
-  client.post(`/api/librarian/users/${userId}/enroll-face`, { image: imageBase64 });
+export const enrollMemberFace = (userId, imageBase64, acceptFaceRecognition) =>
+  client.post(`/api/librarian/users/${userId}/enroll-face`, buildFaceEnrollment(imageBase64, acceptFaceRecognition));
 
 export const deleteMemberFace = (userId, currentPassword) =>
   client.delete(`/api/librarian/users/${userId}/face`, { data: { current_password: currentPassword } });

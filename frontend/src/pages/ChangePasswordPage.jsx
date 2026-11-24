@@ -1,13 +1,16 @@
 import { isValidNewPassword, passwordPolicyMessage } from '../api/passwordPolicy';
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { AlertCircle, Check, Eye, EyeOff, KeyRound, Lock, RefreshCw } from 'lucide-react';
 import { changePassword } from '../api/user';
 import { getStoredAuth, homeForRole, updateStoredProfile } from '../api/authRoutes';
+import PrivacyNoticeContent from '../components/PrivacyNoticeContent';
 
 export default function ChangePasswordPage() {
   const navigate = useNavigate();
+  const requiresPrivacyConsent = useOutletContext() === true;
   const [form, setForm] = useState({ next: '', confirm: '' });
+  const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(false);
   const [show, setShow] = useState({ next: false, confirm: false });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -21,6 +24,10 @@ export default function ChangePasswordPage() {
   const submit = async (event) => {
     event.preventDefault();
     if (pending.current) return;
+    if (requiresPrivacyConsent && !acceptedPrivacyPolicy) {
+      setError('Accept the Privacy Notice to finish setting up your account.');
+      return;
+    }
     if (!isValidNewPassword(form.next)) {
       setError(passwordPolicyMessage);
       return;
@@ -34,7 +41,9 @@ export default function ChangePasswordPage() {
     setSaving(true);
     setError('');
     try {
-      const { data } = await changePassword(null, form.next);
+      const { data } = await changePassword(null, form.next, {
+        acceptPrivacyPolicy: requiresPrivacyConsent && acceptedPrivacyPolicy,
+      });
       if (data.success !== true) throw new Error('Password update was not confirmed.');
       // Older deployed API versions return only success/message. Stored metadata
       // supplies navigation during rollout; RequireRole still verifies the server.
@@ -62,7 +71,7 @@ export default function ChangePasswordPage() {
 
   return (
     <div className="rpl-page min-h-screen bg-panel text-ink flex items-center justify-center px-4 py-10">
-      <form onSubmit={submit} className="w-full max-w-md bg-panel border border-line rounded-xl p-6 shadow-sm">
+      <form onSubmit={submit} className={`w-full ${requiresPrivacyConsent ? 'max-w-2xl' : 'max-w-md'} bg-panel border border-line rounded-xl p-5 shadow-sm sm:p-6`}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-11 h-11 rounded-xl bg-info-soft border border-line flex items-center justify-center">
             <KeyRound size={20} className="text-link" />
@@ -74,15 +83,35 @@ export default function ChangePasswordPage() {
         </div>
 
         <p className="mb-6 text-sm leading-6 text-muted">
-          Choose a new password to finish setting up your account. After it is saved,
-          you will go to your homepage.
+          {requiresPrivacyConsent
+            ? 'Read the privacy notice and choose a new password to activate your library account.'
+            : 'Choose a new password to finish setting up your account. After it is saved, you will go to your homepage.'}
         </p>
 
-        {error && (
-          <div role="alert" className="mb-4 flex items-start gap-2.5 rounded-xl border border-danger bg-danger-soft px-4 py-3">
-            <AlertCircle size={15} className="text-danger mt-0.5 flex-shrink-0" />
-            <p className="text-sm font-bold text-danger">{error}</p>
-          </div>
+        {requiresPrivacyConsent && (
+          <section className="mb-6">
+            <h2 id="setup-privacy-title" className="rpl-section-title">Library Privacy Notice</h2>
+            <p id="setup-privacy-hint" className="mb-2 text-sm text-muted">Scroll to read the full notice.</p>
+            <div role="region" aria-labelledby="setup-privacy-title" aria-describedby="setup-privacy-hint" tabIndex={0}
+              className="max-h-72 overflow-y-auto rounded-xl border border-line bg-subtle p-4 text-sm leading-6 text-ink focus-visible:outline-2 focus-visible:outline-link">
+              <PrivacyNoticeContent headingTag="h3" />
+            </div>
+            <label className="mt-4 flex items-start gap-3 rounded-xl border border-line px-4 py-3 text-sm leading-6 text-ink">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0 accent-[var(--rpl-action)]"
+                checked={acceptedPrivacyPolicy}
+                onChange={(event) => {
+                  setAcceptedPrivacyPolicy(event.target.checked);
+                  setError('');
+                }}
+                disabled={saving}
+                required
+              />
+              <span>I acknowledge the Library Privacy Notice and agree that the library may use my email address, if provided, for the account and library service messages described above.</span>
+            </label>
+            <p className="mt-2 text-sm text-muted">Facial recognition is optional and requires separate consent when you enroll.</p>
+          </section>
         )}
 
         <div className="space-y-4">
@@ -116,9 +145,16 @@ export default function ChangePasswordPage() {
           ))}
         </div>
 
+        {error && (
+          <div role="alert" className="mt-4 flex items-start gap-2.5 rounded-xl border border-danger bg-danger-soft px-4 py-3">
+            <AlertCircle size={15} className="text-danger mt-0.5 flex-shrink-0" />
+            <p className="text-sm font-bold text-danger">{error}</p>
+          </div>
+        )}
+
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || (requiresPrivacyConsent && !acceptedPrivacyPolicy)}
           className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg bg-action px-5 py-3.5 text-sm font-semibold tracking-normal text-white hover:bg-action-hover disabled:opacity-60"
         >
           {saving ? <RefreshCw size={15} className="animate-spin" /> : <Check size={15} />}

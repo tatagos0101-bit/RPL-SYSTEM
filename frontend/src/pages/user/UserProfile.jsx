@@ -1,5 +1,6 @@
 import { isValidNewPassword, passwordPolicyMessage } from '../../api/passwordPolicy';
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BadgeCheck, MapPin, Shield, BookOpen,
   Calendar, RefreshCw, Check, X, Lock, Eye, EyeOff,
@@ -532,6 +533,7 @@ export default function UserProfile() {
                   <p className="text-sm text-muted leading-relaxed">
                     Managed by library staff. Bring a valid ID to enroll or update your biometric data.
                   </p>
+                  <Link to="/privacy-policy" className="mt-2 inline-block text-sm font-semibold text-link underline underline-offset-4">Read the Library Privacy Notice</Link>
                 </div>
               </div>
             </div>

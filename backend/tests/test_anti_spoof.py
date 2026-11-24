@@ -13,6 +13,7 @@ from models.face_embedding import FaceEmbedding
 from models.user import User
 from routers.auth import _make_token
 from services import anti_spoof_service as pad, face_engine_service, liveness_service
+from services.face_enrollment_consent import FACE_CONSENT_VERSION
 
 
 IMAGE = "data:image/jpeg;base64," + base64.b64encode(b"invalid").decode()
@@ -80,10 +81,12 @@ def test_photo_cannot_overwrite_enrollment(client, db_session, monkeypatch, assi
     monkeypatch.setattr(pad, "score_face", lambda *a: ("spoof", .01))
     who = staff if assisted else member
     path = f"/api/librarian/users/{member.id}/enroll-face" if assisted else "/api/auth/enroll-face"
-    response = client.post(path, json={"image": _frame()}, headers={"Authorization": f"Bearer {_make_token(who.id)}"})
+    response = client.post(path, json={"image": _frame(), "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION},
+                           headers={"Authorization": f"Bearer {_make_token(who.id)}"})
     assert response.status_code == 422
     db_session.refresh(member)
     assert member.face_encoding == "[0.1]"
+    assert member.face_consent_at is None
     assert db_session.query(FaceEmbedding).count() == 0
 
 
@@ -185,7 +188,8 @@ def test_reference_models_protect_enrollment(client, db_session, monkeypatch, as
     db_session.add_all([staff, member]); db_session.commit()
     who = staff if assisted else member
     path = f"/api/librarian/users/{member.id}/enroll-face" if assisted else "/api/auth/enroll-face"
-    response = client.post(path, json={"image": frame}, headers={"Authorization": f"Bearer {_make_token(who.id)}"})
+    response = client.post(path, json={"image": frame, "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION},
+                           headers={"Authorization": f"Bearer {_make_token(who.id)}"})
     assert response.status_code == (200 if accepted else 422)
     db_session.refresh(member)
     assert bool(member.face_encoding) is accepted

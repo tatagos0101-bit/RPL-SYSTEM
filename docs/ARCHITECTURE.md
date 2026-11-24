@@ -343,6 +343,15 @@ are rejected before any other profile field changes; an unchanged legacy name
 remains accepted. Members can still edit location and use the existing
 password-confirmed email flow. Librarian own-profile name editing is unchanged.
 
+The librarian [Users page](../frontend/src/pages/lib/LibUsers.jsx) can fill missing
+member addresses across all pages. It assigns the same generated barangay to
+matching normalized surnames and labels the result as unverified. Generated
+locations are stored separately from member-provided addresses and are cleared
+when a member supplies their own address. The assignment uses barangays in
+[Angono](https://psa.gov.ph/classification/psgc/barangays/0405801000),
+[Cainta](https://psa.gov.ph/classification/psgc/barangays/0405805000), and
+[Taytay](https://psa.gov.ph/classification/psgc/barangays/0405813000).
+
 Librarian registration accepts an optional government ID; attached files/tickets
 retain the existing private-upload validation. It creates a random 10-character
 password with forced first-login change, commits the member, then attempts email
@@ -352,8 +361,8 @@ settings. Phone inputs and SMS transports are removed; legacy Twilio settings ar
 Accepted sends omit the plaintext
 password from the registration response. Missing contacts or unavailable/unconfirmed
 delivery return a librarian-handoff status and the same temporary password. Both
-existing registration modals show that outcome. No plaintext password is stored;
-no registration resend queue or new schema is added. Staff password resets retain
+existing registration modals show that outcome. No plaintext password is stored,
+and there is no registration resend queue. Staff password resets retain
 their original 14-character default and revocation behavior. See
 [registration delivery setup](CONTACT_VERIFICATION.md#new-member-registration-credentials).
 
@@ -361,8 +370,11 @@ their original 14-character default and revocation behavior. See
 and redirects accounts requiring a password change. Backend dependencies also
 enforce this flag: authenticated profile retrieval, password change, and logout
 remain available; other protected operations are denied until completion.
-Forced password setup uses the current authenticated temporary-password session
-and accepts only the new password without requiring the temporary password again.
+Forced password setup uses the authenticated session without asking the member to
+re-enter the temporary password. Librarian-created member accounts must acknowledge
+the current privacy notice before setup can complete. The server saves the notice
+version and acceptance time with the password change. Issuing a replacement
+temporary password or using email recovery preserves an outstanding requirement.
 Normal password changes still require the current password. Both paths retain
 password validation, 24-hour temporary-credential expiry, session revocation and
 cookie replacement. Client-supplied flags cannot bypass the server's requirement.
@@ -523,8 +535,13 @@ The existing TEXT columns remain compatible with staged backfill; production
 requires server keys and transition/strict mode. This is implementation capability,
 not confirmation that existing live rows have been migrated. Spoof branches may
 retain facial snapshots; encryption does not make them anonymous.
-No explicit biometric consent, retention/purge workflow, or complete security-alert
-management UI was found. Do not infer these from design documents or invent policy.
+New face enrollments require a separate opt-in before the application processes
+enrollment images. Assisted enrollment asks the librarian to confirm the member's
+choice in person before opening the camera. The server stores the consent version,
+time, recording method, and actor with successful enrollment and clears that
+record when face data is removed. Existing templates are kept without assigning
+retroactive consent. There is no scheduled biometric purge or complete
+security-alert management UI.
 
 The public `/privacy-policy` information page is linked beside the landing copyright
 and at the entrance station. The station shows its notice before an explicit camera

@@ -23,10 +23,12 @@ from services.upload_validation import IMAGE_EXTS, validate_upload_bytes
 from services.storage_service import save_upload, resolve_upload_url, delete_upload
 from services.cloud_uploads import read_upload
 from logger import get_logger
+from timezone_utils import now_ph
 
 logger = get_logger("users")
 
 router = APIRouter(prefix="/api/user", tags=["User"])
+PRIVACY_POLICY_VERSION = "2026-11-24"
 
 
 def _face_enrolled(db: Session, user: User) -> bool:
@@ -52,6 +54,7 @@ def _build_profile(user: User, db: Session) -> UserProfile:
         location=user.location,
         status=user.status,
         must_change_password=bool(user.must_change_password),
+        requires_privacy_consent=user.requires_privacy_consent,
         face_enrolled=_face_enrolled(db, user),
         member_since=user.created_at,
         member_id=user.member_id or f"RPL-{user.id:05d}",
@@ -90,6 +93,8 @@ def update_profile(
         current_user.name = body.name
     if "location" in body.model_fields_set:
         current_user.location = body.location
+        if body.location is not None:
+            current_user.generated_location = None
     try:
         db.commit()
     except IntegrityError:
@@ -114,6 +119,15 @@ def change_password(
     ):
         raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
+    if current_user.requires_privacy_consent:
+        if not body.accept_privacy_policy:
+            raise HTTPException(422, "Accept the Privacy Notice to finish setting up your account.")
+        if body.privacy_policy_version != PRIVACY_POLICY_VERSION:
+            raise HTTPException(409, "The Privacy Notice has changed. Refresh this page and review the current notice.")
+        current_user.privacy_policy_version = PRIVACY_POLICY_VERSION
+        current_user.privacy_policy_accepted_at = now_ph()
+        current_user.privacy_consent_pending = False
+
     current_user.password_hash = hash_password(body.new_password)
     current_user.must_change_password = False
     current_user.temporary_password_expires_at = None
@@ -128,6 +142,7 @@ def change_password(
         success=True, message="Password updated successfully.",
         id=current_user.id, name=current_user.name, role=current_user.role,
         must_change_password=bool(current_user.must_change_password),
+        requires_privacy_consent=current_user.requires_privacy_consent,
     )
 
 

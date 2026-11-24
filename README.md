@@ -36,8 +36,8 @@ librarian administration, circulation, reporting, QR labels, and attendance.
   number of books per category. Book details show optional librarian-entered
   descriptions; Add Book can use an online ISBN summary or a manual note.
 - **Member accounts:** email or Member ID/password login, profile and avatar
-  updates, face enrollment/login, and a password-change screen for temporary
-  passwords issued by staff.
+  updates, optional face enrollment/login, and first-login password setup with
+  a privacy notice for members registered by staff.
 - **Member dashboard:** active loans, due dates, fines, borrowing history,
   activity, and reading goals. Returned loans remain part of historical statistics.
 - **Member Browse Books:** an Open Library-inspired Featured view shows
@@ -72,12 +72,16 @@ librarian administration, circulation, reporting, QR labels, and attendance.
   Registration creates a random 10-character temporary password and sends it by
   email when supplied. Without email or confirmed delivery acceptance, the librarian
   receives it for direct handoff. Phone fields and SMS delivery are unavailable.
-  First login requires only a new password and its confirmation; the authenticated
-  temporary-password session supplies authorization. Normal password changes still
-  require the current password. See [delivery setup](docs/CONTACT_VERIFICATION.md#new-member-registration-credentials).
+  First login requires a new password, its confirmation, and acknowledgment of
+  the privacy notice covering account information and service emails. Members
+  give separate consent if they choose to enroll their face. Normal password
+  changes require the current password. See
+  [delivery setup](docs/CONTACT_VERIFICATION.md#new-member-registration-credentials).
   Account deletion removes personal details and referenced private files while
   retaining deidentified loan/attendance history; see the
   [member deletion policy and release checks](docs/MEMBER_MANAGEMENT.md).
+  **Fill Missing Addresses** on the librarian Users page assigns explicitly
+  unverified Rizal barangay placeholders to members with missing addresses.
 - **Entrance station:** a station PIN unlocks camera scanning and recent entry
   logs. Recognized enrolled faces create time-in/out sessions; frames can contain
   multiple people. Kiosk scans do not issue login tokens; website face login does

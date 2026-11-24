@@ -13,6 +13,7 @@ def test_first_login_password_change_returns_confirmed_state_and_persists(client
     db_session.commit()
     login = client.post("/api/auth/login", json={"email": user.member_id, "password": "TemporaryPass1"})
     assert login.json()["must_change_password"] is True
+    assert login.json()["requires_privacy_consent"] is False
     payload = {"new_password": "NewPassword2"}
     if include_current:
         payload["current_password"] = "TemporaryPass1"
@@ -62,3 +63,21 @@ def test_normal_password_change_still_requires_current_password(client, db_sessi
 
 def test_initial_password_setup_requires_an_authenticated_session(client):
     assert client.put("/api/user/change-password", json={"new_password": "NewPassword2"}).status_code == 401
+
+
+def test_password_recovery_cannot_complete_pending_member_setup(client, db_session):
+    member = User(name="Synthetic Pending Member", email="setup@example.com", email_verified=True,
+                  password_hash=_hash("TemporaryPass1"), must_change_password=True, privacy_consent_pending=True)
+    db_session.add(member)
+    db_session.commit()
+    requested = client.post("/api/auth/password-reset/request", json={"identifier": member.email})
+    assert requested.status_code == 200
+    reset = client.post("/api/auth/password-reset/confirm", json={
+        "identifier": member.email, "code": requested.json()["debug_code"], "new_password": "RecoveredPass2",
+    })
+    assert reset.status_code == 200
+    logged_in = client.post("/api/auth/login", json={"email": member.email, "password": "RecoveredPass2"})
+    assert logged_in.status_code == 200
+    assert logged_in.json()["must_change_password"] is True
+    assert logged_in.json()["requires_privacy_consent"] is True
+    assert client.get("/api/user/notifications").status_code == 403

@@ -3,9 +3,12 @@ import math
 
 import pytest
 
+from models.auth_session import AuthSession
 from models.face_embedding import FaceEmbedding
 from models.user import User
 from routers.auth import _hash
+from routers.users import PRIVACY_POLICY_VERSION
+from services.face_enrollment_consent import FACE_CONSENT_VERSION
 
 
 IMAGE = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD"
@@ -46,12 +49,15 @@ def _token(client, email):
     return response.json()["access_token"]
 
 
-def test_enroll_face_stores_dlib_legacy_and_insightface_embedding(client, db_session, monkeypatch):
+@pytest.mark.parametrize("assisted", [False, True])
+def test_enroll_face_stores_dlib_legacy_insightface_and_consent(client, db_session, monkeypatch, assisted):
     import services.face_engine_service as face_engine_service
     import services.liveness_service as liveness_service
 
     user = _member(db_session, dlib_encoding=None)
-    token = _token(client, user.email)
+    actor = _librarian(db_session) if assisted else user
+    token = _token(client, actor.email)
+    path = f"/api/librarian/users/{user.id}/enroll-face" if assisted else "/api/auth/enroll-face"
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _image: ("ok", 1.0))
     monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
     monkeypatch.setattr(
@@ -71,18 +77,85 @@ def test_enroll_face_stores_dlib_legacy_and_insightface_embedding(client, db_ses
     monkeypatch.setattr(face_engine_service, "find_best_match", lambda db, encoding, engine, **kwargs: None)
 
     response = client.post(
-        "/api/auth/enroll-face",
+        path,
         headers={"Authorization": f"Bearer {token}"},
-        json={"image": IMAGE},
+        json={"image": IMAGE, "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION},
     )
 
     assert response.status_code == 200
     db_session.refresh(user)
     assert json.loads(user.face_encoding) == [0.2] * 128
+    assert user.face_consent_version == FACE_CONSENT_VERSION
+    assert user.face_consent_at is not None
+    assert user.face_consent_method == ("librarian_assisted" if assisted else "self")
+    assert user.face_consent_recorded_by_id == actor.id
     stored = db_session.query(FaceEmbedding).filter_by(user_id=user.id, engine="insightface").one()
     assert stored.dimension == 512
     assert json.loads(stored.embedding) == [0.1] * 512
     assert stored.quality_score == pytest.approx(0.92)
+
+
+@pytest.mark.parametrize("assisted", [False, True])
+def test_face_enrollment_rejects_missing_or_invalid_consent_before_processing(client, db_session, monkeypatch, assisted):
+    user = _member(db_session, dlib_encoding=[0.1])
+    actor = _librarian(db_session) if assisted else user
+    token = _token(client, actor.email)
+    path = f"/api/librarian/users/{user.id}/enroll-face" if assisted else "/api/auth/enroll-face"
+
+    def fail_if_processed(*args, **kwargs):
+        pytest.fail("An enrollment without consent must not process the image")
+
+    monkeypatch.setattr("services.liveness_service.check_liveness", fail_if_processed)
+    monkeypatch.setattr("services.face_engine_service.detect_faces", fail_if_processed)
+    invalid_consents = (
+        ({}, "must agree"),
+        ({"accept_face_recognition": False}, "must agree"),
+        ({"accept_face_recognition": "true"}, None),
+        ({"accept_face_recognition": True}, "current facial recognition notice"),
+        ({"accept_face_recognition": True, "face_consent_version": "old"}, "current facial recognition notice"),
+    )
+    for consent, expected_detail in invalid_consents:
+        response = client.post(path, headers={"Authorization": f"Bearer {token}"}, json={"image": IMAGE, **consent})
+        assert response.status_code == 422
+        if expected_detail:
+            assert expected_detail in response.json()["detail"]
+        else:
+            assert response.json()["detail"][0]["loc"] == ["body", "accept_face_recognition"]
+
+    db_session.refresh(user)
+    assert json.loads(user.face_encoding) == [0.1]
+    assert user.face_consent_at is None
+
+
+def test_face_sign_in_cannot_replace_first_login_password_setup(client, db_session, monkeypatch):
+    user = _member(db_session, dlib_encoding=[0.1])
+    user.must_change_password = user.privacy_consent_pending = True
+    db_session.commit()
+    monkeypatch.setattr("config.ENTRY_STATION_PIN", "1234")
+    monkeypatch.setattr("services.liveness_service.check_liveness", lambda _: ("ok", 1.0))
+    monkeypatch.setattr("services.anti_spoof_service.check_detected_faces_liveness", lambda *a: ("ok", 1.0))
+    monkeypatch.setattr("services.face_engine_service.detect_faces",
+                        lambda *a, **kw: [{"engine": "dlib", "encoding": [0.1]}])
+
+    sign_in = client.post("/api/auth/face", json={"image": IMAGE, "expected_role": "member"})
+    assert sign_in.status_code == 403
+    assert sign_in.json()["detail"]["code"] == "member_setup_required"
+    assert "set-cookie" not in sign_in.headers
+    assert db_session.query(AuthSession).filter_by(user_id=user.id).count() == 0
+
+    attendance = client.post("/api/kiosk/face", json={"image": IMAGE, "station_pin": "1234"})
+    assert attendance.status_code == 200 and attendance.json()["matched"]
+    assert not attendance.json()["token"] and "set-cookie" not in attendance.headers
+
+    _token(client, user.email)
+    completed = client.put("/api/user/change-password", json={
+        "new_password": "CompletedPass2", "accept_privacy_policy": True, "privacy_policy_version": PRIVACY_POLICY_VERSION,
+    })
+    assert completed.status_code == 200
+    client.cookies.clear()
+    sign_in = client.post("/api/auth/face", json={"image": IMAGE, "expected_role": "member"})
+    assert sign_in.status_code == 200 and sign_in.json()["token"]
+    assert "set-cookie" in sign_in.headers
 
 
 def test_face_lookup_prefers_insightface_embedding_over_dlib(client, db_session, monkeypatch):

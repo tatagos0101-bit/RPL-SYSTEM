@@ -13,7 +13,8 @@ def test_session_check_is_private_and_skips_avatar_and_biometrics(client, db_ses
     headers = {"Authorization": "Bearer " + _make_token(user.id)}
     response = client.get("/api/auth/session", headers=headers)
     assert response.status_code == 200 and response.json() == {
-        "id": user.id, "name": "Synthetic", "role": "member", "must_change_password": True}
+        "id": user.id, "name": "Synthetic", "role": "member", "must_change_password": True,
+        "requires_privacy_consent": False, "can_manage_librarians": False}
     assert "no-store" in response.headers["cache-control"]
     assert client.get("/api/user/notifications", headers=headers).status_code == 403
     user.status = "suspended"; db_session.commit()

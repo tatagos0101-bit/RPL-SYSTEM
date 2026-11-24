@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, StrictBool, field_validator
 from typing import Optional, Literal
 from datetime import datetime
 from services.passwords import validate_new_password
@@ -14,6 +14,7 @@ class UserProfile(BaseModel):
     location:     Optional[str]
     status:       str
     must_change_password: bool = False
+    requires_privacy_consent: bool = False
     face_enrolled: bool
     member_since: datetime
     member_id:    Optional[str] = None
@@ -60,6 +61,8 @@ class BiometricStatus(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: Optional[str] = Field(default=None, max_length=512)
     new_password:     str
+    accept_privacy_policy: StrictBool = False
+    privacy_policy_version: Optional[str] = Field(default=None, max_length=32)
 
     @field_validator("new_password")
     @classmethod
@@ -74,3 +77,4 @@ class ChangePasswordResponse(BaseModel):
     name: str
     role: Literal["member", "librarian"]
     must_change_password: bool
+    requires_privacy_consent: bool

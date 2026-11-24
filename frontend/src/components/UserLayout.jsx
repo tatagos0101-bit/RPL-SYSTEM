@@ -1,6 +1,6 @@
 import FineContent from './FineContent';
 import { useState, useEffect, useRef } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { clearAuth } from '../api/auth';
 import { isPasswordChangePath } from '../api/authRoutes';
 import { getNotifications, markAllNotificationsRead, getFines, getProfile } from '../api/user';
@@ -52,6 +52,7 @@ const UserLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const changingPassword = isPasswordChangePath(location.pathname);
+  const requiresPrivacyConsent = useOutletContext();
 
   useEffect(() => {
     const changed = event => { if (event.detail?.role === 'member') setHeaderVersion(value => value + 1); };
@@ -371,7 +372,7 @@ const UserLayout = () => {
 
       {/* ── PAGE CONTENT ── */}
       <main className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-        <Outlet />
+        <Outlet context={requiresPrivacyConsent} />
       </main>
     </div>
   );

@@ -49,6 +49,7 @@ from models.user import User
 from services.auth_sessions import revoke_user_sessions
 from services.loan_policy import sync_overdue_loans
 from services.manual_visitor_service import serialize_entry_log
+from services.member_address_fill import fill_missing_member_addresses
 from services.reservation_policy import (
     promote_next_pending_reservation,
     renumber_pending_queue,
@@ -314,6 +315,7 @@ def list_members(
     result = []
     for m in members:
         count = counts.get(m.id)
+        location_is_generated = bool(m.generated_location and not (m.location or "").strip())
         result.append(LibMemberOut(
             id           = m.id,
             member_id    = m.member_id or f"RPL-{m.id:05d}",
@@ -322,7 +324,8 @@ def list_members(
             phone        = m.phone,
             email_verified = bool(m.email_verified),
             phone_verified = bool(m.phone_verified),
-            location     = m.location,
+            location     = m.generated_location if location_is_generated else m.location,
+            location_is_generated = location_is_generated,
             status       = m.status,
             face_enrolled = m.id in enrolled_ids,
             face_enrollment_display_only = bool(m.face_enrollment_display_only),
@@ -337,6 +340,13 @@ def list_members(
 def count_members(search: str = Query("", max_length=200), status: str = Query(""),
                   db: Session = Depends(get_db), _: User = Depends(require_librarian)):
     return {"total": member_query(db, search, status).count()}
+
+
+@router.post("/users/fill-missing-addresses")
+def fill_missing_addresses(db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    updated = fill_missing_member_addresses(db)
+    db.commit()
+    return {"updated": updated}
 
 # ── Member stats ──────────────────────────────────────────────────────────────
 
@@ -419,6 +429,7 @@ async def register_member(
         password_hash = hash_password(temporary_password),
         must_change_password = True,
         temporary_password_expires_at = temporary_password_deadline(),
+        privacy_consent_pending = True,
         email_verified = False,
         phone_verified = False,
         role          = "member",
@@ -551,17 +562,19 @@ def librarian_enroll_face(
     body:    EnrollFaceRequest,
     request: Request,
     db:      Session = Depends(get_db),
-    _:       User    = Depends(require_librarian),
+    librarian: User = Depends(require_librarian),
 ):
     """
     Allows a librarian to enroll (or re-enroll) a face for any member.
     """
     import services.face_engine_service as face_engine_service
+    from services.face_enrollment_consent import record_enrollment_consent, require_enrollment_consent
     from logger import security_logger
 
     member = lock_existing_member(db, user_id)
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
+    require_enrollment_consent(body.accept_face_recognition, body.face_consent_version)
 
     ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
 
@@ -592,6 +605,7 @@ def librarian_enroll_face(
         )
 
     face_engine_service.store_enrollment_face(db, member, face)
+    record_enrollment_consent(member, librarian=librarian)
     db.commit()
 
     return {"success": True, "message": f"Face enrolled for {member.name}"}

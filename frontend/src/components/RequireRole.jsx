@@ -44,6 +44,7 @@ export default function RequireRole({ allowedRoles }) {
           role: data.role,
           userId: data.id,
           mustChangePassword: Boolean(data.must_change_password),
+          requiresPrivacyConsent: data.requires_privacy_consent === true,
         });
       })
       .catch((error) => {
@@ -147,7 +148,7 @@ export default function RequireRole({ allowedRoles }) {
           </button>
         </div>
       )}
-      <Outlet key={`${state.userId}:${state.role}`} />
+      <Outlet key={`${state.userId}:${state.role}`} context={state.requiresPrivacyConsent} />
     </>
   );
 }

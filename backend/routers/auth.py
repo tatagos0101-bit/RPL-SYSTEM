@@ -53,6 +53,7 @@ def session_status(response: Response, user: User = Depends(get_session_user), d
     response.headers["Cache-Control"] = "no-store"
     return {"id": user.id, "name": user.name, "role": user.role,
             "must_change_password": bool(user.must_change_password),
+            "requires_privacy_consent": user.requires_privacy_consent,
             "can_manage_librarians": can_manage_librarians(db, user)}
 
 
@@ -123,6 +124,7 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
         name=user.name,
         role=user.role,
         must_change_password=bool(user.must_change_password),
+        requires_privacy_consent=user.requires_privacy_consent,
     )
 
 
@@ -227,7 +229,7 @@ def confirm_password_reset(
 ):
     user = verify_password_reset_code(db, body.identifier, body.code)
     user.password_hash = _hash(body.new_password)
-    user.must_change_password = False
+    user.must_change_password = user.requires_privacy_consent
     user.temporary_password_expires_at = None
     revoke_user_sessions(db, user.id)
     expire_unused_reset_codes_for_user(db, user.id)
@@ -624,6 +626,11 @@ def process_entry_face(
     matched_user, first_face = first_match
     if issue_token:
         require_current_temporary_password(matched_user)
+        if matched_user.requires_privacy_consent:
+            raise HTTPException(403, {
+                "code": "member_setup_required",
+                "message": "Sign in with your temporary or recovered password to finish setting up your account.",
+            })
     _last_seen_by_ip[ip] = {"user_id": matched_user.id, "ts": time()}
     security_logger.info("FACE_ENTRY_SUCCESS user_id=%d", matched_user.id)
 
@@ -743,8 +750,10 @@ def enroll_face(
     current_user: User = Depends(get_locked_current_user),
     db: Session = Depends(get_db),
 ):
+    from services.face_enrollment_consent import record_enrollment_consent, require_enrollment_consent
     from services.member_deletion import lock_active_account
     current_user = lock_active_account(db, current_user.id)
+    require_enrollment_consent(body.accept_face_recognition, body.face_consent_version)
     import services.face_engine_service as face_engine_service
     from services.liveness_service import check_liveness
     from models.security_alert import SecurityAlert
@@ -800,6 +809,7 @@ def enroll_face(
         )
 
     face_engine_service.store_enrollment_face(db, current_user, face)
+    record_enrollment_consent(current_user)
     db.commit()
 
     return {"success": True, "message": "Face enrolled successfully"}

@@ -139,3 +139,4 @@ def test_librarian_can_issue_temporary_password_and_force_change(client, db_sess
     temp_login = login(client, member.email, body["temporary_password"])
     assert temp_login.status_code == 200
     assert temp_login.json()["must_change_password"] is True
+    assert temp_login.json()["requires_privacy_consent"] is False

@@ -15,6 +15,13 @@ class User(Base):
     password_hash  = Column(String(255), nullable=False)
     must_change_password = Column(Boolean, nullable=False, default=False)
     temporary_password_expires_at = Column(DateTime(timezone=True), nullable=True)
+    privacy_consent_pending = Column(Boolean, nullable=False, default=False, server_default=false())
+    privacy_policy_version = Column(String(32), nullable=True)
+    privacy_policy_accepted_at = Column(DateTime(timezone=True), nullable=True)
+    face_consent_version = Column(String(32), nullable=True)
+    face_consent_at = Column(DateTime(timezone=True), nullable=True)
+    face_consent_method = Column(String(24), nullable=True)
+    face_consent_recorded_by_id = Column(Integer, nullable=True)
     # Generated-data presentation only; never an identity/authentication signal.
     face_enrollment_display_only = Column(Boolean, nullable=False, default=False, server_default=false())
     email_verified = Column(Boolean, nullable=False, default=False)
@@ -22,6 +29,7 @@ class User(Base):
     role           = Column(Enum("member", "librarian", name="user_role", native_enum=False, create_constraint=True), nullable=False, default="member")
     phone          = Column(String(30), nullable=True)
     location       = Column(String(120), nullable=True)
+    generated_location = Column(String(120), nullable=True)
     status         = Column(Enum("active", "suspended", name="user_status", native_enum=False, create_constraint=True), nullable=False, default="active")
 
     # JSON in server memory; encrypted TEXT at rest when encryption is enabled.
@@ -38,6 +46,10 @@ class User(Base):
     updated_at     = Column(DateTime(timezone=True), onupdate=func.now())
     # An identity-free, permanently disabled row preserves historical foreign keys.
     deleted_at     = Column(DateTime(timezone=True), nullable=True)
+
+    @property
+    def requires_privacy_consent(self) -> bool:
+        return self.role == "member" and bool(self.privacy_consent_pending)
 
     # Relationships
     transactions   = relationship("Transaction",  back_populates="user")

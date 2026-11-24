@@ -44,6 +44,10 @@ def delete_face_data(db, member):
     # would leave old biometric material behind.
     member.face_encoding = None
     member.face_enrollment_display_only = False
+    member.face_consent_version = None
+    member.face_consent_at = None
+    member.face_consent_method = None
+    member.face_consent_recorded_by_id = None
     db.query(FaceEmbedding).filter(FaceEmbedding.user_id == member.id).delete(synchronize_session=False)
     db.query(SecurityAlert).filter(SecurityAlert.user_id == member.id).update(
         {SecurityAlert.snapshot_b64: None}, synchronize_session=False)
@@ -153,8 +157,11 @@ def delete_account(db, member):
     member.name = "Deleted member"
     member.member_id = None
     member.email = member.phone = member.location = None
+    member.generated_location = None
     member.id_image_url = member.avatar_url = None
     member.email_verified = member.phone_verified = member.must_change_password = False
+    member.privacy_consent_pending = False
+    member.privacy_policy_version = member.privacy_policy_accepted_at = None
     member.password_hash = "!deleted"
     member.status = "suspended"
     member.deleted_at = now_ph()

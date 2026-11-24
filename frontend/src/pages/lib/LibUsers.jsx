@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, User, BadgeCheck, UserPlus, MoreHorizontal, RefreshCw,
   ScanFace, X, Camera, Upload, ImageIcon, CheckCircle2, Info,
-  KeyRound, Trash2,
+  KeyRound, MapPin, Trash2,
 } from 'lucide-react';
 import FaceEnrollModal from '../../components/FaceEnrollModal';
 import MemberDeletionModal from '../../components/MemberDeletionModal';
@@ -18,6 +18,7 @@ import {
   updateMemberStatus,
   registerMember,
   resetMemberPassword,
+  fillMissingMemberAddresses,
 } from '../../api/librarian';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
 import '../../styles/librarian-members.css';
@@ -27,6 +28,51 @@ const formatApiError = (err, fallback) => {
   if (Array.isArray(detail)) return detail.map((item) => item.msg).join(', ');
   return detail || fallback;
 };
+
+function FillMissingAddressesModal({ onClose, onApplied }) {
+  const pending = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const close = () => { if (!pending.current) onClose(); };
+
+  const fillAddresses = async () => {
+    if (pending.current) return;
+    pending.current = true;
+    setSaving(true);
+    setError('');
+    try {
+      const { data } = await fillMissingMemberAddresses();
+      if (!Number.isInteger(data?.updated) || data.updated < 0) throw new Error('Address update was not confirmed.');
+      onApplied(data.updated);
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setError(typeof detail === 'string' ? detail : 'The address update could not be confirmed. Refresh the member list before retrying.');
+    } finally {
+      pending.current = false;
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalFrame onClose={close} aria-labelledby="fill-addresses-title" aria-describedby="fill-addresses-description"
+      className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 p-4">
+      <div className="w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border border-line bg-panel p-6 text-ink">
+        <h2 id="fill-addresses-title" className="rpl-section-title">Fill Missing Addresses</h2>
+        <div id="fill-addresses-description" className="mt-3 space-y-2 text-sm leading-6 text-muted">
+          <p>Assign an unverified barangay in Angono, Cainta, or Taytay to each member with a blank address and no placeholder. Members with the same last name receive the same generated location.</p>
+          <p>This action covers all members with missing addresses across all pages and search results. Existing addresses are preserved.</p>
+        </div>
+        {error && <p role="alert" className="mt-4 text-sm text-danger">{error}</p>}
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button type="button" onClick={close} disabled={saving} className="rounded-lg border border-line px-4 py-3 text-sm font-semibold hover:bg-subtle disabled:opacity-60">Cancel</button>
+          <button type="button" onClick={fillAddresses} disabled={saving} className="rounded-lg bg-action px-4 py-3 text-sm font-semibold text-white hover:bg-action-hover disabled:opacity-60">
+            {saving ? 'Assigning addresses…' : 'Assign addresses'}
+          </button>
+        </div>
+      </div>
+    </ModalFrame>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Register Member Modal
@@ -216,7 +262,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
             <div className="flex items-start gap-2.5 px-4 py-3 bg-warning-soft border border-warning rounded-xl w-full max-w-xs text-left mb-6">
               <Info size={14} className="text-warning flex-shrink-0 mt-0.5"/>
               <p className="text-sm font-medium text-warning">
-                The member must change this password on their first login.
+                The member must review and accept the Privacy Notice and choose a new password on their first sign-in.
               </p>
             </div>
             <button onClick={() => { onSuccess(); onClose(); }} className="px-8 py-3 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all">Done</button>
@@ -252,6 +298,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                   <p className="text-sm text-link mt-0.5">
                     The temporary password is sent by email when provided. Without email, it will appear here for you to give directly to the member.
                   </p>
+                  <p className="mt-2 text-sm text-ink">Share the <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-link underline underline-offset-4">Library Privacy Notice (opens in a new tab)</a> with the member before registering.</p>
                 </div>
               </div>
 
@@ -365,6 +412,8 @@ export default function LibUsers() {
   const [noticeRevision, setNoticeRevision] = useState(0);
   const [resetTarget,  setResetTarget]  = useState(null);
   const [showRegister, setShowRegister] = useState(false);
+  const [showFillAddresses, setShowFillAddresses] = useState(false);
+  const [addressNotice, setAddressNotice] = useState('');
 
   const listing = useServerPage('/api/librarian/users', { search }, '/api/librarian/users/count');
   const { items: users, loading, reload } = listing;
@@ -379,6 +428,13 @@ export default function LibUsers() {
   const toggleStatus = (id, cur) => {
     updateMemberStatus(id, cur==='active'?'suspended':'active').then(fetchMembers).catch(() => setOperationError('Status update could not be confirmed. Refresh before retrying.'));
     setActionMenu(null);
+  };
+
+  const onAddressesApplied = (updated) => {
+    setShowFillAddresses(false);
+    setAddressNotice(updated === 0 ? 'No new addresses were assigned.' :
+      `Assigned ${updated} generated ${updated === 1 ? 'address' : 'addresses'}.`);
+    fetchMembers();
   };
 
   const filtered = users;
@@ -396,13 +452,22 @@ export default function LibUsers() {
               Registered <span className="text-link">Users</span>
             </h1>
           </div>
-          <button
-            onClick={() => setShowRegister(true)}
-            className="group flex items-center gap-2 px-6 py-3.5 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all shadow-sm flex-shrink-0"
-          >
-            <UserPlus size={14} className="transition-transform"/> Register Member
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button type="button"
+              onClick={() => { setAddressNotice(''); setShowFillAddresses(true); }}
+              className="flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-3.5 text-sm font-semibold text-ink hover:bg-subtle">
+              <MapPin size={14} /> Fill Missing Addresses
+            </button>
+            <button type="button"
+              onClick={() => setShowRegister(true)}
+              className="group flex items-center gap-2 px-6 py-3.5 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all shadow-sm flex-shrink-0"
+            >
+              <UserPlus size={14} className="transition-transform"/> Register Member
+            </button>
+          </div>
         </div>
+
+        {addressNotice && <p role="status" className="mb-6 rounded-lg border border-line bg-info-soft px-4 py-3 text-sm text-ink">{addressNotice}</p>}
 
         {/* Stats */}
         <div className="grid grid-cols-1 min-[360px]:grid-cols-3 gap-3 sm:gap-4 mb-7">
@@ -461,7 +526,11 @@ export default function LibUsers() {
                         </div>
                       </td>
                       <td role="cell" className="staff-member-id px-6 py-4 font-sans text-sm text-link font-semibold"><span className="staff-member-label" aria-hidden="true">Member ID</span>{u.member_id}</td>
-                      <td role="cell" className="px-6 py-4 text-sm text-muted font-medium"><span className="staff-member-label" aria-hidden="true">Location</span>{u.location||'—'}</td>
+                      <td role="cell" className="px-6 py-4 text-sm text-muted font-medium">
+                        <span className="staff-member-label" aria-hidden="true">Location</span>
+                        {u.location || '—'}
+                        {u.location_is_generated && <span className="block text-xs text-muted">Generated · Unverified</span>}
+                      </td>
                       <td role="cell" className="staff-member-joined px-6 py-4 text-sm text-muted font-medium">
                         <span className="staff-member-label" aria-hidden="true">Joined</span>
                         {toUtcDate(u.joined_at).toLocaleDateString('en-PH',{month:'short',year:'numeric'})}
@@ -537,6 +606,7 @@ export default function LibUsers() {
           onSuccess={fetchMembers}
         />
       )}
+      {showFillAddresses && <FillMissingAddressesModal onClose={() => setShowFillAddresses(false)} onApplied={onAddressesApplied} />}
       {enrollTarget && (
         <FaceEnrollModal
           user={enrollTarget}

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Webcam from 'react-webcam';
 import { Camera, RefreshCw, ScanFace, X } from 'lucide-react';
 import ModalFrame from './ModalFrame';
@@ -11,7 +11,8 @@ const VIDEO_CONSTRAINTS = {
 export default function FaceEnrollModal({ user, onClose, onSuccess }) {
   const webcam = useRef(null);
   const submitting = useRef(false);
-  const [step, setStep] = useState('preview');
+  const [step, setStep] = useState('consent');
+  const [consented, setConsented] = useState(false);
   const [ready, setReady] = useState(false);
   const [cameraAttempt, setCameraAttempt] = useState(0);
   const [image, setImage] = useState(null);
@@ -20,6 +21,19 @@ export default function FaceEnrollModal({ user, onClose, onSuccess }) {
   const resetting = Boolean(user.face_enrolled);
   const title = resetting ? 'Reset Face Data' : 'Face Registration';
   const close = () => { if (!submitting.current) onClose(); };
+
+  useEffect(() => {
+    if (step !== 'preview') return;
+    const pauseCamera = () => {
+      if (!document.hidden) return;
+      setReady(false);
+      setConsented(false);
+      setError('');
+      setStep('consent');
+    };
+    document.addEventListener('visibilitychange', pauseCamera);
+    return () => document.removeEventListener('visibilitychange', pauseCamera);
+  }, [step]);
 
   const restart = () => {
     setReady(false);
@@ -45,12 +59,12 @@ export default function FaceEnrollModal({ user, onClose, onSuccess }) {
   };
 
   const enroll = async () => {
-    if (!image || submitting.current) return;
+    if (!consented || !image || submitting.current) return;
     submitting.current = true;
     setError('');
     setStep('loading');
     try {
-      await enrollMemberFace(user.id, image);
+      await enrollMemberFace(user.id, image, consented);
       setImage(null);
       setStep('success');
       onSuccess();
@@ -69,7 +83,19 @@ export default function FaceEnrollModal({ user, onClose, onSuccess }) {
         <button aria-label="Close" disabled={busy} onClick={close} className="absolute right-4 top-4 p-2 text-muted disabled:opacity-50"><X size={18}/></button>
         <h2 className="rpl-section-title pr-8 font-semibold text-ink">{title}</h2>
         <p className="mb-4 text-sm text-muted">{user.name}</p>
-        {resetting && step !== 'success' && <p className="mb-4 text-sm text-muted">Capture a new live photo to replace the saved face data. Existing face data stays unchanged until enrollment succeeds.</p>}
+        {step === 'consent' && (
+          <div className="space-y-4 text-sm leading-6 text-muted">
+            <p className="font-semibold text-ink">Ask the member to review this notice and make their own choice before starting the camera.</p>
+            <p>The library uses a live camera image to create a facial template. It uses the template for library identification during borrowing and returns, face sign-in, and entrance attendance. The system may retain a camera image when it detects a possible spoof for security review.</p>
+            <p>Face enrollment is optional. You can sign in with your password, and library staff can help with identification for transactions and visits. Ask staff if you later want to remove your enrolled face data.</p>
+            <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="inline-block text-link underline underline-offset-4">Read the library privacy notice (opens in a new tab)</a>
+            <label className="flex items-start gap-3 rounded-lg border border-line bg-subtle p-3 text-ink">
+              <input type="checkbox" checked={consented} onChange={event => setConsented(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-action" />
+              <span>I agree to have my face enrolled and used for the library purposes described above.</span>
+            </label>
+          </div>
+        )}
+        {resetting && (step === 'preview' || step === 'captured') && <p className="mb-4 text-sm text-muted">Capture a new live photo to replace the saved face data when enrollment succeeds.</p>}
         {step === 'preview' && (
           <>
             <div className="aspect-[4/3] overflow-hidden rounded-xl bg-subtle">
@@ -94,6 +120,10 @@ export default function FaceEnrollModal({ user, onClose, onSuccess }) {
         {busy && <p role="status" className="my-4 flex items-center gap-2"><RefreshCw className="animate-spin" size={18}/> Enrolling face…</p>}
         {step === 'success' && <p role="status" className="my-6 font-semibold text-success">{resetting ? 'Face data reset successfully.' : 'Face enrolled successfully.'}</p>}
         <div className="mt-4 flex flex-wrap gap-3">
+          {step === 'consent' && <>
+            <button onClick={close} className="rounded-lg border border-line px-4 py-3 text-sm">Cancel</button>
+            <button onClick={() => setStep('preview')} disabled={!consented} className="flex items-center gap-2 rounded-lg bg-action px-4 py-3 text-white disabled:opacity-50"><Camera size={16}/> Start camera</button>
+          </>}
           {step === 'preview' && <>
             <button onClick={restart} className="rounded-lg border border-line px-4 py-3 text-sm">Retry camera</button>
             <button onClick={capture} disabled={!ready} className="flex items-center gap-2 rounded-lg bg-action px-4 py-3 text-white disabled:opacity-50"><Camera size={16}/> Capture</button>

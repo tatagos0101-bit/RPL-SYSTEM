@@ -1,5 +1,5 @@
 import re
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, StrictBool, field_validator
 from typing import Any, Optional, Literal
 from services.passwords import validate_login_password, validate_new_password
 
@@ -65,6 +65,7 @@ class TokenResponse(BaseModel):
     name:         str
     role:         str
     must_change_password: bool = False
+    requires_privacy_consent: bool = False
 
 
 class PasswordResetRequest(BaseModel):
@@ -203,8 +204,10 @@ class FaceLookupResponse(BaseModel):
 
 
 class EnrollFaceRequest(BaseModel):
-    """Enroll or re-enroll a face for the currently authenticated user."""
+    """Enroll or re-enroll a face with the account holder's consent."""
     image: str   # base64 JPEG
+    accept_face_recognition: StrictBool = False
+    face_consent_version: str | None = Field(default=None, max_length=32)
 
     @field_validator("image")
     @classmethod

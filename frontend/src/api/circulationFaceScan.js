@@ -51,7 +51,11 @@ export function startAutomaticFaceScan({ capture, lookup, onStatus, onMatch, pur
     } catch (error) {
       if (stopped) return;
       const status = error?.response?.status;
-      if ([401, 403].includes(status)) {
+      const detail = error?.response?.data?.detail;
+      if (purpose === 'login' && status === 403 && detail?.code === 'member_setup_required') {
+        stop();
+        onStatus({ phase: 'error', reason: detail.code, message: detail.message });
+      } else if ([401, 403].includes(status)) {
         stop();
         onStatus({ phase: 'error', message: purpose === 'login'
           ? 'Face sign-in could not be completed. Please use password sign-in.'

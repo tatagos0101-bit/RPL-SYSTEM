@@ -72,6 +72,37 @@ def test_librarian_registration_uses_random_temp_password_and_requires_change(cl
 
     login_response = login(client, "first@example.com", first.json()["temporary_password"])
     assert login_response.json()["must_change_password"] is True
+    assert login_response.json()["requires_privacy_consent"] is True
+    assert client.get("/api/auth/session").json()["requires_privacy_consent"] is True
+    assert client.get("/api/user/profile").json()["requires_privacy_consent"] is True
+
+    member = db_session.get(User, first.json()["id"])
+    new_password = {"new_password": "Replacement1"}
+    for payload in (new_password, {**new_password, "accept_privacy_policy": False},
+                    {**new_password, "accept_privacy_policy": "true"}):
+        result = client.put("/api/user/change-password", json=payload)
+        assert result.status_code == 422
+        assert "set-cookie" not in result.headers
+        assert client.get("/api/user/notifications").status_code == 403
+        db_session.refresh(member)
+        assert member.privacy_policy_version is None and member.privacy_policy_accepted_at is None
+
+    accepted = {**new_password, "accept_privacy_policy": True}
+    for payload in (accepted, {**accepted, "privacy_policy_version": "2026-11-23"}):
+        result = client.put("/api/user/change-password", json=payload)
+        assert result.status_code == 409
+        assert "set-cookie" not in result.headers
+    changed = client.put("/api/user/change-password", json={**accepted, "privacy_policy_version": "2026-11-24"})
+    assert changed.status_code == 200
+    assert changed.json()["requires_privacy_consent"] is False
+    assert changed.json()["must_change_password"] is False
+    assert client.get("/api/user/notifications").status_code == 200
+    old_token = login_response.json()["access_token"]
+    assert client.get("/api/auth/session", headers={"Authorization": f"Bearer {old_token}"}).status_code == 401
+    db_session.refresh(member)
+    assert member.privacy_policy_version == "2026-11-24"
+    assert member.privacy_policy_accepted_at is not None
+    assert member.face_consent_at is None
 
 
 def test_librarian_registration_rejects_extension_spoofed_upload(client, db_session):

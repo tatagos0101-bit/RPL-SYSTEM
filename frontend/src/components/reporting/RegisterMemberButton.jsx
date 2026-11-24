@@ -111,7 +111,7 @@ const RegisterMemberModal = ({
           </div>
           <div className="flex w-full items-start gap-2.5 rounded-xl border border-warning bg-warning-soft px-4 py-3 text-left">
             <Info size={14} className="mt-0.5 flex-shrink-0 text-warning" />
-            <p className="text-sm font-medium text-warning">The member must change this password on their first login.</p>
+            <p className="text-sm font-medium text-warning">The member must review and accept the Privacy Notice and choose a new password on their first sign-in.</p>
           </div>
           <button
             onClick={onClose}
@@ -128,6 +128,7 @@ const RegisterMemberModal = ({
           <div>
             <p className="text-sm font-semibold text-link">A unique temporary password will be generated.</p>
             <p className="mt-0.5 text-sm text-link">The temporary password is sent by email when provided. Without email, it will appear here for you to give directly to the member.</p>
+            <p className="mt-2 text-sm text-ink">Share the <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-link underline underline-offset-4">Library Privacy Notice (opens in a new tab)</a> with the member before registering.</p>
           </div>
         </div>
 

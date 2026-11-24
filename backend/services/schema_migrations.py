@@ -43,8 +43,16 @@ ADDITIONS = {
         ("member_id", String(20), None),
         ("id_image_url", String(300), None),
         ("avatar_url", String(300), None),
+        ("generated_location", String(120), None),
         ("must_change_password", Boolean, false()),
         ("temporary_password_expires_at", DateTime(timezone=True), None),
+        ("privacy_consent_pending", Boolean, false()),
+        ("privacy_policy_version", String(32), None),
+        ("privacy_policy_accepted_at", DateTime(timezone=True), None),
+        ("face_consent_version", String(32), None),
+        ("face_consent_at", DateTime(timezone=True), None),
+        ("face_consent_method", String(24), None),
+        ("face_consent_recorded_by_id", Integer, None),
         ("face_enrollment_display_only", Boolean, false()),
         ("email_verified", Boolean, false()),
         ("phone_verified", Boolean, false()),
@@ -54,12 +62,14 @@ ADDITIONS = {
 
 
 def upgrade_schema(conn, metadata) -> None:
-    legacy_temporary_passwords = "temporary_password_expires_at" not in {c["name"] for c in inspect(conn).get_columns("users")}
+    user_columns = {column["name"] for column in inspect(conn).get_columns("users")}
+    legacy_temporary_passwords = "temporary_password_expires_at" not in user_columns
+    legacy_privacy_setup = "privacy_consent_pending" not in user_columns
     for table_name, columns in ADDITIONS.items():
         existing = {c["name"] for c in inspect(conn).get_columns(table_name)}
         for name, column_type, default in columns:
             if name not in existing:
-                column = Column(name, column_type, server_default=default)
+                column = Column(name, column_type, nullable=name != "privacy_consent_pending", server_default=default)
                 definition = str(CreateColumn(column).compile(dialect=conn.dialect))
                 table = conn.dialect.identifier_preparer.quote(table_name)
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {definition}"))
@@ -68,6 +78,14 @@ def upgrade_schema(conn, metadata) -> None:
         from services.credential_expiry import temporary_password_deadline
         # Old issue times were not recorded. One rollout window, never renewed.
         conn.execute(text("UPDATE users SET temporary_password_expires_at = :deadline WHERE must_change_password = true AND deleted_at IS NULL"), {"deadline": temporary_password_deadline()})
+
+    if legacy_privacy_setup:
+        # Initial registration inserts the temporary credential; password resets update the user.
+        conn.execute(text("""
+            UPDATE users SET privacy_consent_pending = true
+            WHERE role = 'member' AND must_change_password = true AND deleted_at IS NULL
+                AND temporary_password_expires_at IS NOT NULL AND updated_at IS NULL
+        """))
 
     # create_all does not add indexes to tables that already exist.
     for table_name, index_name in (

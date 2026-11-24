@@ -63,6 +63,42 @@ def test_additive_migration_keeps_existing_rows_and_runs_twice(monkeypatch):
     legacy.dispose()
 
 
+def test_consent_migration_marks_only_identifiable_initial_setups_and_preserves_receipts(monkeypatch):
+    legacy = create_engine("sqlite+pysqlite://")
+    with legacy.begin() as conn:
+        conn.execute(text("""
+            CREATE TABLE users (id INTEGER PRIMARY KEY, name VARCHAR(120), email VARCHAR(180),
+                password_hash VARCHAR(255), role VARCHAR(20), status VARCHAR(20), created_at DATETIME,
+                updated_at DATETIME, must_change_password BOOLEAN, temporary_password_expires_at DATETIME)
+        """))
+        conn.execute(text("""
+            INSERT INTO users (id, name, password_hash, role, status, updated_at,
+                must_change_password, temporary_password_expires_at) VALUES
+                (1, 'Initial member', 'unused', 'member', 'active', NULL, true, '2026-11-25'),
+                (2, 'Reissued reset', 'unused', 'member', 'active', '2026-11-24', true, '2026-11-25'),
+                (3, 'Existing member', 'unused', 'member', 'active', NULL, false, NULL),
+                (4, 'Initial librarian', 'unused', 'librarian', 'active', NULL, true, '2026-11-25')
+        """))
+    try:
+        monkeypatch.setattr(database, "engine", legacy)
+        database.init_db()
+        with legacy.begin() as conn:
+            assert conn.execute(text("SELECT privacy_consent_pending FROM users ORDER BY id")).scalars().all() == [1, 0, 0, 0]
+            conn.execute(text("""
+                UPDATE users SET privacy_consent_pending = false, privacy_policy_version = '2026-11-24',
+                    privacy_policy_accepted_at = '2026-11-24 08:00:00' WHERE id = 1
+            """))
+        database.init_db()
+        with legacy.connect() as conn:
+            assert conn.execute(text("""
+                SELECT privacy_consent_pending, privacy_policy_version, privacy_policy_accepted_at,
+                    face_consent_version, face_consent_at, face_consent_method, face_consent_recorded_by_id
+                FROM users WHERE id = 1
+            """)).one() == (0, "2026-11-24", "2026-11-24 08:00:00", None, None, None, None)
+    finally:
+        legacy.dispose()
+
+
 @pytest.fixture()
 def cloud_storage(monkeypatch):
     requests = []

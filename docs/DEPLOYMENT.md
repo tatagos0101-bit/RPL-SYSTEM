@@ -98,6 +98,27 @@ and verify approved test recipients separately; see
 [registration credential delivery](CONTACT_VERIFICATION.md#new-member-registration-credentials).
 No live sending or production configuration was performed in the local session.
 
+## Member setup privacy notice and face enrollment consent
+
+Before releasing the API, apply the additive `users` upgrade through
+`backend/migrate.py` on the authorized database. It adds a pending flag and
+notice version/time for member setup, plus version/time/method/actor fields for
+face enrollment. Keep `AUTO_MIGRATE=false` and the existing database grants and
+RLS. Release the API and frontend together so both use the same notice versions.
+There are no new environment variables or dependencies.
+The same upgrade adds `users.generated_location` for the librarian's missing
+address tool. Adding the column does not assign new locations. Run **Librarian
+→ Users → Fill Missing Addresses** on the chosen environment to generate and
+label placeholders for blank addresses.
+
+The one-time upgrade marks unfinished legacy member registrations with an original
+temporary credential and no recorded user-row update. Legacy accounts already
+signed in, edited, or reissued before the upgrade cannot reliably be distinguished
+from ordinary resets by those fields. Existing enrolled templates are preserved
+without a newly assigned consent record. Confirm the library's approved retention
+schedule, lawful basis, and privacy contact before publishing this notice as the
+library's official policy.
+
 ## Entrance station manual attendance prerequisite
 
 The November 20 entrance-station revision adds manual visitor name/location,
