@@ -110,6 +110,48 @@ def read_id_text(rgb: np.ndarray) -> list[str]:
         raise HTTPException(503, "ID text checking is temporarily unavailable. Try again or ask the library desk for help.") from None
 
 
+def _tin_name_candidates(lines: list[str]) -> list[str]:
+    """Some TIN layouts print the holder's name without a field label.
+
+    Skip recognizable field labels and issuer headings. Ambiguous candidates
+    support layout recognition but are not used for automatic name filling.
+    """
+    headings = set("ADDRESS BIR BIRTH BIRTHDATE BUREAU CARD CITY COMMISSIONER COUNTRY DATE DEPARTMENT DIGITAL DISTRICT FINANCE FORM GOVERNMENT HOLDER IDENTIFICATION INTERNAL ISSUANCE ISSUED MUNICIPALITY NAME NATIONALITY NONTRANSFERABLE NUMBER OF OFFICE PHOTO PHILIPPINES PROVINCE REGISTRATION REPUBLIC REVENUE SIGNATURE TAX TAXPAYER TIN VALID VERIFICATION".split())
+    candidates = []
+    for line in lines:
+        value = line.strip()
+        words = _normalize(value).split()
+        if not 2 <= len(words) <= 12 or not 5 <= len(value) <= 120:
+            continue
+        if headings.intersection(words) or not all(character.isalpha() or character in " .,'-\u2019" for character in value):
+            continue
+        if value not in candidates:
+            candidates.append(value)
+    return candidates
+
+
+def _is_tin_card(text: str) -> bool:
+    issuer = re.search(r"\bBUREAU\s*OF\s*INTERNAL\s*REVENUE\b|\bBIR\b", text)
+    heading = re.search(
+        r"\bTAX\s*PAYER(?:\s*S)?\s*IDENTIFICATION\s*(?:NUMBER|CARD)\b|"
+        r"\bTAX\s*IDENTIFICATION\s*(?:NUMBER|CARD)\b|\b(?:DIGITAL\s*)?TIN\s*ID\b|"
+        r"\bBIR\s*FORM(?:\s*NO)?\s*1931\b", text
+    )
+    if not issuer or not heading:
+        return False
+    # A TIN can also appear on tax forms, invoices and certificates. These are
+    # not photo IDs. Form 1931 is the physical TIN card itself.
+    forms = re.findall(r"\b(?:BIR\s*)?FORM(?:\s*NO)?\s*(\d{4})\b", text)
+    if any(number != "1931" for number in forms) or re.search(
+        r"\b(?:CERTIFICATE OF REGISTRATION|CERTIFICATION OF REGISTRATION|OFFICIAL RECEIPT|SALES INVOICE|TAX RETURN|TAX CLEARANCE|APPLICATION FOR REGISTRATION)\b", text
+    ):
+        raise HTTPException(422, "Upload the photo side of the TIN ID, not a BIR tax form, receipt or registration certificate.")
+    # Format recognition only; never store/return the tax number or claim BIR authentication.
+    if not re.search(r"(?<![A-Z0-9])\d{3}(?: ?\d{3}){2}(?: ?\d{3})?(?![A-Z0-9])", text):
+        raise HTTPException(422, "The TIN ID heading was detected, but its printed number is not readable. Upload a clearer photo of the complete front, including the name and portrait.")
+    return True
+
+
 def classify_document(lines: list[str]) -> str:
     text = " ".join(_normalize(line) for line in lines)
     if re.search(r"\b(SPECIMEN|NOT VALID|FAKE ID|SAMPLE ONLY)\b", text):
@@ -126,6 +168,14 @@ def classify_document(lines: list[str]) -> str:
                     break
                 except ValueError:
                     continue
+    is_tin = _is_tin_card(text)
+    has_name = re.search(r"\b(NAME|APELYIDO|PANGALAN|SURNAME|HOLDER)\b", text)
+    if is_tin:
+        if not (has_name or _tin_name_candidates(lines)):
+            raise HTTPException(422, "The TIN ID was detected, but the holder's name is not readable. Upload a clearer photo of the complete front, with the name and portrait visible.")
+        return "tin_id"
+    if len(text) < 65 or not has_name:
+        raise HTTPException(422, "This does not look like a readable photo ID. Include the complete ID with its name, issuer and portrait.")
     kinds = (
         ("national_id", r"PHILIPPINE IDENTIFICATION|PAMBANSANG (?:PAGKAKAKILANLAN|PAGKAKAKILAN|PAGKILALA)|PHILSYS"),
         ("drivers_license", r"LAND TRANSPORTATION OFFICE|DRIVER.?S? LICENSE|LISENSYA NG PAGMAMANEHO"),
@@ -139,15 +189,13 @@ def classify_document(lines: list[str]) -> str:
         ("senior_citizen", r"SENIOR CITIZEN"),
         ("pwd", r"PERSONS? WITH DISABILIT|PERSONS? WITH DISABILITY"),
     )
-    if len(text) < 65 or not re.search(r"\b(NAME|APELYIDO|PANGALAN|SURNAME|HOLDER)\b", text):
-        raise HTTPException(422, "This does not look like a readable photo ID. Include the complete ID with its name, issuer and portrait.")
     for kind, pattern in kinds:
         if re.search(pattern, text):
             return kind
     raise HTTPException(422, "The ID type could not be identified. Use a supported Philippine government photo ID, or ask the library desk for help.")
 
 
-def suggested_fields(lines: list[str]) -> tuple[str | None, str | None]:
+def suggested_fields(lines: list[str], *, document_type: str | None = None) -> tuple[str | None, str | None]:
     """Conservative label extraction. Suggestions must be reviewed by staff."""
     def value_after(labels):
         for index, line in enumerate(lines):
@@ -161,12 +209,15 @@ def suggested_fields(lines: list[str]) -> tuple[str | None, str | None]:
                 if index + 1 < len(lines) and not re.search(r"date|birth|sex|nationality|name|address|kasarian", lines[index + 1], re.I):
                     return lines[index + 1].strip()[:120]
         return None
-    name = value_after([r"full\s+name", r"name(?=\s|:|$)", r"pangalan(?=\s|:|$)"])
+    name = value_after([r"full\s+name", r"taxpayer(?:'s)?\s+name", r"name\s+of\s+taxpayer", r"name(?=\s|:|$)", r"pangalan(?=\s|:|$)"])
     if not name:
         last = value_after([r"(?:last\s+name|surname|apelyido)(?:\s*/\s*(?:last\s+name|surname))?"])
         first = value_after([r"(?:given\s+names?|first\s+name|mga\s+pangalan)(?:\s*/\s*(?:given\s+names?|first\s+name))?"])
         middle = value_after([r"(?:middle\s+name|gitnang\s+apelyido)(?:\s*/\s*middle\s+name)?"])
         name = " ".join(value for value in (first, middle, last) if value) if first and last else None
+    if not name and document_type == "tin_id":
+        candidates = _tin_name_candidates(lines)
+        name = candidates[0] if len(candidates) == 1 else None
     location = value_after([r"address(?=\s|:|$)", r"tirahan(?=\s|:|$)"])
     return (name[:120] if name else None), location
 
@@ -186,7 +237,7 @@ def inspect_document(content: bytes) -> DocumentCheck:
     rgb, frame = document_image(content)
     lines = read_id_text(rgb)
     kind = classify_document(lines)
-    name, location = suggested_fields(lines)
+    name, location = suggested_fields(lines, document_type=kind)
     return DocumentCheck(hashlib.sha256(content).hexdigest(), kind, name, location, document_face(frame))
 
 

@@ -69,11 +69,20 @@ this dependency and model directory; install/sync from the updated manifest and
 lockfile. The smaller text reader replaces the first oversized OCR deployment
 package; it does not change the face or liveness engines.
 
-Supported text checks cover Philippine National ID, driver's license, passport,
+Supported text checks cover Philippine National ID, physical/digital BIR TIN photo ID, driver's license, passport,
 UMID, PRC, Postal, SSS, GSIS, voter, senior-citizen and PWD photo IDs. Poor text,
 unsupported layouts, unusable portraits and ambiguous multi-portrait documents
 require desk assistance. Explicit specimen/invalid markings and readable expired
 ISO/month-name dates are rejected. Staff still inspect the actual document.
+
+TIN recognition checks the BIR issuer, a TIN-card heading and a readable printed
+number. Physical Form 1931 layouts and digital TIN IDs can have an unlabeled name;
+only an unambiguous name is suggested automatically. Tax forms, receipts and
+registration certificates do not qualify. A usable portrait is still required for
+online face comparison. The tax number is not copied into separate member fields
+or returned in the inspection response. These format checks do not query BIR/ORUS
+or authenticate its QR code. See BIR [RMC 58-2023](https://bir-cdn.bir.gov.ph/local/pdf/RMC%20No.%2058-2023%20%281%29.pdf)
+and the [RMC 120-2023 listing](https://www.bir.gov.ph/2023-Revenue-Memorandum-Circulars).
 
 **These checks do not authenticate an ID with its issuing authority or guarantee
 that an edited/counterfeit document is genuine.** OCR, document suitability, face
