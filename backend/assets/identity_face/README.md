@@ -6,12 +6,16 @@ five-landmark detection models, pinned to revision
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |
-| face_recognition_sface_2021dec_int8.onnx | 9,896,933 | 2b0e941e6f16cc048c20aee0c8e31f569118f65d702914540f7bfdc14048d78a |
+| face_recognition_sface_2021dec_int8.onnx.gz | 7,081,754 | 9320d3038fbd57f97daf65ac7d2e45cb0618f255b02021de3bb4b5732db885ed |
 | face_detection_yunet_2023mar.onnx | 232,589 | 8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4 |
 
-The hashes and sizes match the pinned upstream Git LFS pointers. The binaries
-came from the corresponding `media.githubusercontent.com/media/opencv/opencv_zoo`
-paths at that revision. SFace is Apache-2.0 (`LICENSE_SFACE`); YuNet is MIT
+The binaries came from the corresponding `media.githubusercontent.com/media/opencv/opencv_zoo`
+paths at that revision. SFace is losslessly gzip-packaged (`mtime=0`) for the
+Vercel function limit. Its unpacked bytes remain identical to the upstream Git
+LFS pointer: 9,896,933 bytes, SHA-256
+`2b0e941e6f16cc048c20aee0c8e31f569118f65d702914540f7bfdc14048d78a`.
+Both the packed and unpacked hashes are checked. YuNet's hash/size match its
+upstream pointer directly. SFace is Apache-2.0 (`LICENSE_SFACE`); YuNet is MIT
 (`LICENSE_YUNET`). No library documents, portraits or facial templates belong here.
 
 ## Operation and limits
@@ -22,6 +26,10 @@ runtime download or external biometric service is used. The encoder is reused
 only inside the current scan context and released at its end. Native output
 buffers are copied before the next inference. There is no cross-request image
 or descriptor cache and no diagnostic image output.
+OpenCV 4.10 requires a model path, so verified, unpacked public model weights use
+one temporary file only during native initialization; it is removed immediately
+after loading, including on failure. No ID/camera images or descriptors are
+written to that file or any other local artifact.
 
 YuNet uses confidence >= 0.90 and requires exactly one face in the bounded
 portrait crop. Its face must overlap and have its center inside the face already

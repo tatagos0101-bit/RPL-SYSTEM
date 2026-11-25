@@ -3,8 +3,10 @@
 The detector is bound to the face already checked by the enrollment pipeline.
 Models are bundled/checksummed; no network calls or persistent patron artifacts.
 """
+import gzip
 import hashlib
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from threading import Lock
 
 from fastapi import HTTPException
@@ -14,9 +16,10 @@ from services.face_frame import current_frame
 
 MODEL_ROOT = Path(__file__).resolve().parents[1] / "assets" / "identity_face"
 MODEL_HASHES = {
-    "face_recognition_sface_2021dec_int8.onnx": "2b0e941e6f16cc048c20aee0c8e31f569118f65d702914540f7bfdc14048d78a",
+    "face_recognition_sface_2021dec_int8.onnx.gz": "9320d3038fbd57f97daf65ac7d2e45cb0618f255b02021de3bb4b5732db885ed",
     "face_detection_yunet_2023mar.onnx": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4",
 }
+SFACE_RAW_SHA256 = "2b0e941e6f16cc048c20aee0c8e31f569118f65d702914540f7bfdc14048d78a"
 # OpenCV's published SFace baseline. The existing cosine policy can be stricter.
 REFERENCE_MAX_DISTANCE = 1.0 - .363
 _CONTEXT_KEY = ("id_portrait_encoder", "sface_2021dec_int8")
@@ -58,8 +61,21 @@ class _PortraitEncoder:
         if not model_assets_valid():
             raise RuntimeError("Portrait model checksum mismatch")
         self.lock = Lock()
-        self.recognizer = cv2.FaceRecognizerSF_create(str(MODEL_ROOT / "face_recognition_sface_2021dec_int8.onnx"), "",
-            cv2.dnn.DNN_BACKEND_OPENCV, cv2.dnn.DNN_TARGET_CPU)
+        raw = gzip.decompress((MODEL_ROOT / "face_recognition_sface_2021dec_int8.onnx.gz").read_bytes())
+        if len(raw) != 9_896_933 or hashlib.sha256(raw).hexdigest() != SFACE_RAW_SHA256:
+            raise RuntimeError("Unpacked portrait model checksum mismatch")
+        # OpenCV 4.10's FaceRecognizerSF accepts a path, not an ONNX buffer.
+        # Only public model weights touch this temporary file, never patron data.
+        temporary_model = None
+        try:
+            with NamedTemporaryFile(mode="wb", prefix="rpl-sface-", suffix=".onnx", delete=False) as output:
+                temporary_model = Path(output.name)
+                output.write(raw)
+            self.recognizer = cv2.FaceRecognizerSF_create(str(temporary_model), "",
+                cv2.dnn.DNN_BACKEND_OPENCV, cv2.dnn.DNN_TARGET_CPU)
+        finally:
+            if temporary_model is not None:
+                temporary_model.unlink(missing_ok=True)
         self.detector = cv2.FaceDetectorYN_create(str(MODEL_ROOT / "face_detection_yunet_2023mar.onnx"), "",
             (320, 320), .9, .3, 5000, cv2.dnn.DNN_BACKEND_OPENCV, cv2.dnn.DNN_TARGET_CPU)
 

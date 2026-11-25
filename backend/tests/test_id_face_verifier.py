@@ -124,6 +124,8 @@ def test_new_comparator_is_used_for_the_previously_detected_portrait(monkeypatch
 def test_bundled_native_models_load_without_network_and_reject_blank_pixels(monkeypatch, tmp_path):
     def no_network(*args): pytest.fail("Verification cannot send images or download models")
     monkeypatch.setattr("socket.socket.connect", no_network)
+    make_file = verifier.NamedTemporaryFile
+    monkeypatch.setattr(verifier, "NamedTemporaryFile", lambda **kwargs: make_file(dir=tmp_path, **kwargs))
     before = set(tmp_path.rglob("*"))
     with frame_scope() as state:
         encoder = verifier._encoder()
@@ -135,6 +137,28 @@ def test_bundled_native_models_load_without_network_and_reject_blank_pixels(monk
             verifier.encode_portrait(np.zeros((317, 289, 3), np.uint8), (50, 230, 250, 50), "synthetic ID")
         assert failure.value.status_code == 422
     assert not state.models and not state.source
+    assert set(tmp_path.rglob("*")) == before
+
+
+def test_model_file_is_removed_even_when_native_loading_fails(monkeypatch, tmp_path):
+    import cv2
+    before = set(tmp_path.rglob("*"))
+    make_file = verifier.NamedTemporaryFile
+    monkeypatch.setattr(verifier, "NamedTemporaryFile", lambda **kwargs: make_file(dir=tmp_path, **kwargs))
+    def fail(*args): raise RuntimeError("synthetic native loading failure")
+    monkeypatch.setattr(cv2, "FaceRecognizerSF_create", fail)
+    with pytest.raises(HTTPException) as failure:
+        verifier.encode_portrait(np.zeros((320, 320, 3), np.uint8), (50, 250, 250, 50), "ID")
+    assert failure.value.status_code == 503
+    assert set(tmp_path.rglob("*")) == before
+
+
+def test_unpacked_model_hash_is_required_before_native_loading(monkeypatch, tmp_path):
+    before = set(tmp_path.rglob("*"))
+    monkeypatch.setattr(verifier.gzip, "decompress", lambda packed: b"synthetic corrupted model")
+    with pytest.raises(HTTPException) as failure:
+        verifier.encode_portrait(np.zeros((320, 320, 3), np.uint8), (50, 250, 250, 50), "ID")
+    assert failure.value.status_code == 503
     assert set(tmp_path.rglob("*")) == before
 
 
