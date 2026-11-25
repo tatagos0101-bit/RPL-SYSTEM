@@ -15,8 +15,7 @@ python-dotenv==1.2.2
 numpy==1.26.4
 Pillow==13.0.0
 opencv-python-headless==4.10.0.84
-rapidocr==3.10.0
-onnxruntime==1.32.0
+tesserocr==2.13.0
 face_recognition==1.3.0
 # face_recognition_models imports pkg_resources; see docs/SECURITY_ROLLOUT.md.
 setuptools==80.10.2

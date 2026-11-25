@@ -60,11 +60,14 @@ No new retention schedule or automatic biometric purge is introduced.
 
 ## Checks and limits
 
-OCR uses pinned `rapidocr` 3.10.0 / `onnxruntime` 1.32.0 with checksummed models
-bundled in the package. Models load lazily, use CPU inference with bounded threads
-and do not download at runtime. Identity documents are not sent to an external OCR
+OCR uses pinned `tesserocr` 2.13.0 with the checksummed official Tesseract integer
+LSTM text model in `backend/assets/id_ocr`. The reader loads lazily, serializes CPU
+inference and clears image/output/adaptive state after each request. It does not
+download at runtime. Identity documents are not sent to an external OCR
 or identity-verification service. The existing Docker and Vercel manifests include
-these dependencies; install/sync from the updated manifest and lockfile.
+this dependency and model directory; install/sync from the updated manifest and
+lockfile. The smaller text reader replaces the first oversized OCR deployment
+package; it does not change the face or liveness engines.
 
 Supported text checks cover Philippine National ID, driver's license, passport,
 UMID, PRC, Postal, SSS, GSIS, voter, senior-citizen and PWD photo IDs. Poor text,

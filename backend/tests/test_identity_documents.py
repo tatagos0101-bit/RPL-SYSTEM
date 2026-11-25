@@ -7,7 +7,7 @@ import json
 
 from fastapi import HTTPException
 import jwt
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 import pytest
 
@@ -238,6 +238,23 @@ def test_failed_ocr_asset_check_is_unavailable_not_a_document_pass(monkeypatch):
         ids.read_id_text(np.zeros((600, 900, 3), dtype="uint8"))
     assert failure.value.status_code == 503
     assert "missing-synthetic" not in failure.value.detail
+
+
+def test_bundled_ocr_reads_synthetic_text_and_rejects_its_invalid_marking(monkeypatch):
+    image = Image.new("RGB", (1300, 760), "white")
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default(size=32)
+    for index, value in enumerate(["SYNTHETIC DOCUMENT - NOT VALID", "REPUBLIC OF THE PHILIPPINES",
+        "PHILIPPINE IDENTIFICATION CARD", "FULL NAME: SYNTHETIC TEST PERSON", "ADDRESS: TEST TOWN RIZAL"]):
+        draw.text((30, 30 + 90 * index), value, font=font, fill="black")
+    def no_network(*args):
+        pytest.fail("ID text reading must not use a network service")
+    monkeypatch.setattr("socket.socket.connect", no_network)
+    lines = ids.read_id_text(np.array(image))
+    assert ids.suggested_fields(lines) == ("SYNTHETIC TEST PERSON", "TEST TOWN RIZAL")
+    with pytest.raises(HTTPException) as failure:
+        ids.classify_document(lines)
+    assert failure.value.status_code == 422
 
 
 def test_identity_upgrade_is_additive_repeatable_and_does_not_verify_legacy_ids():

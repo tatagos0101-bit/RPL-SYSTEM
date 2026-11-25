@@ -25,11 +25,8 @@ ID_CHECK_VERSION = "2026-11-25"
 MAX_ID_BYTES = 10 * 1024 * 1024
 _ocr = None
 _ocr_lock = Lock()
-_MODEL_HASHES = {
-    "PP-OCRv6_det_small.onnx": "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f",
-    "PP-OCRv6_rec_small.onnx": "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884",
-    "ch_ppocr_mobile_v2.0_cls_mobile.onnx": "e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c",
-}
+_MODEL_HASHES = {"eng.traineddata": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"}
+_MODEL_ROOT = Path(__file__).resolve().parents[1] / "assets" / "id_ocr"
 
 
 @dataclass
@@ -78,34 +75,38 @@ def document_image(content: bytes) -> tuple[np.ndarray, str]:
 
 
 def read_id_text(rgb: np.ndarray) -> list[str]:
-    """Pinned bundled models only. No external OCR service or runtime download."""
+    """Local LSTM OCR with a bundled model. No external service or downloads."""
     global _ocr
     try:
         with _ocr_lock:
             if _ocr is None:
-                import rapidocr
-                from rapidocr import RapidOCR
-                root = Path(rapidocr.__file__).parent / "models"
+                from tesserocr import OEM, PSM, PyTessBaseAPI
                 for filename, expected in _MODEL_HASHES.items():
-                    if hashlib.sha256((root / filename).read_bytes()).hexdigest() != expected:
+                    if hashlib.sha256((_MODEL_ROOT / filename).read_bytes()).hexdigest() != expected:
                         raise RuntimeError("OCR model checksum mismatch")
-                _ocr = RapidOCR(params={
-                    "Global.log_level": "critical", "Global.max_side_len": 1600,
-                    "Det.model_path": str(root / "PP-OCRv6_det_small.onnx"),
-                    "Rec.model_path": str(root / "PP-OCRv6_rec_small.onnx"),
-                    "Cls.model_path": str(root / "ch_ppocr_mobile_v2.0_cls_mobile.onnx"),
-                    "Det.limit_side_len": 960, "Det.limit_type": "max",
-                    "EngineConfig.onnxruntime.intra_op_num_threads": 2,
-                    "EngineConfig.onnxruntime.inter_op_num_threads": 1,
-                })
-            result = _ocr(rgb[:, :, ::-1].copy())  # RapidOCR expects BGR arrays.
-            texts, scores = result.txts, result.scores
-            if texts is None or scores is None:
-                return []
-            return [str(value).strip() for value, score in zip(texts, scores)
-                    if float(score) >= 0.65 and str(value).strip()][:100]
+                _ocr = PyTessBaseAPI(path=str(_MODEL_ROOT), lang="eng", oem=OEM.LSTM_ONLY, psm=PSM.SPARSE_TEXT)
+                _ocr.SetVariable("user_defined_dpi", "300")
+            try:
+                from tesserocr import RIL, iterate_level
+                _ocr.SetImage(Image.fromarray(rgb))
+                _ocr.Recognize()
+                iterator = _ocr.GetIterator()
+                if iterator is None:
+                    return []
+                lines = []
+                for row in iterate_level(iterator, RIL.TEXTLINE):
+                    value = (row.GetUTF8Text(RIL.TEXTLINE) or "").strip()
+                    if value and row.Confidence(RIL.TEXTLINE) >= 65:
+                        lines.append(value)
+                    if len(lines) >= 100:
+                        break
+                return lines
+            finally:
+                # Do not carry an ID image, OCR output or adaptive state to the next request.
+                _ocr.ClearAdaptiveClassifier()
+                _ocr.Clear()
     except Exception:
-        # No upstream exception text: OCR inputs and private paths must stay private.
+        # Do not return native errors, recognized text or private paths.
         raise HTTPException(503, "ID text checking is temporarily unavailable. Try again or ask the library desk for help.") from None
 
 
