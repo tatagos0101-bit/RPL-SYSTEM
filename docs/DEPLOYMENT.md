@@ -14,6 +14,17 @@ Authentication remains in FastAPI. Supabase Auth is not used by this application
 Database passwords and Supabase secret/service-role keys belong only in server
 environment variables. Never put them in a `VITE_*` variable or commit `.env` files.
 
+## Borrowing and membership workflow prerequisite
+
+Before releasing this API, apply the reviewed additive schema for non-circulating
+titles, copy condition, blacklist metadata, transaction inspections/assessments and
+private `member_applications` / `member_account_actions` tables. Keep RLS enabled,
+revoke PUBLIC/anon/authenticated table access, and keep `AUTO_MIGRATE=false`.
+See [workflow changes, fee policy and upgrade requirements](LIBRARY_WORKFLOWS.md).
+Existing loans, copy QR identities and assessed fines must remain unchanged.
+Anonymous member signup no longer issues active accounts; `/register` applications
+are reviewed in `/librarian/applications` before borrowing access is issued.
+
 ## Inactive member notices prerequisite
 
 The [inactive account review](ACCOUNT_INACTIVITY.md) feature adds nullable

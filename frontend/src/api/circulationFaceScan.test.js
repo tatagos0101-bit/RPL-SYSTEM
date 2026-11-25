@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startCirculationFaceScan } from './circulationFaceScan.js';
+import { ENTRY_SCAN_INTERVAL_MS } from './entryStationState.js';
 
 function clock() {
   const queue = new Map();
@@ -37,7 +38,7 @@ test('automatically scans ready frames and waits for the camera without sending 
   assert.equal(statuses.at(-1).phase, 'starting');
   ready = true; await time.run();
   assert.equal(requests, 1);
-  assert.equal(time.delay(), 1500);
+  assert.equal(time.delay(), ENTRY_SCAN_INTERVAL_MS);
   assert.match(statuses.at(-1).message, /No face detected/);
   loop.stop(); assert.equal(time.count(), 0);
 });
@@ -51,7 +52,7 @@ test('slow recognition never queues another request while the first is running',
   assert.equal(time.count(), 0);
   resolve({ data: { matched: false, message: 'no_face' } }); await inFlight;
   assert.equal(time.count(), 1);
-  assert.equal(time.delay(), 1500);
+  assert.equal(time.delay(), ENTRY_SCAN_INTERVAL_MS);
   loop.stop();
 });
 
@@ -69,7 +70,7 @@ test('lighting, unknown faces and uncertain liveness retry without identifying a
   const { loop, time, statuses, matches } = session({
     lookup: async () => ({ data: { matched: false, message: replies.shift() } }),
   });
-  for (let index = 0; index < 5; index++) { await time.run(); assert.equal(time.delay(), 1500); }
+  for (let index = 0; index < 5; index++) { await time.run(); assert.equal(time.delay(), ENTRY_SCAN_INTERVAL_MS); }
   assert.deepEqual(matches, []);
   assert.ok(statuses.some(status => status.message.includes('Too dark')));
   assert.ok(statuses.some(status => status.message.includes('Face not recognized')));

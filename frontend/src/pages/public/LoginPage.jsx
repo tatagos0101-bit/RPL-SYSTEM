@@ -312,9 +312,10 @@ const LoginPage = ({ expectedRole = 'member' }) => {
               {isLibrarianPortal ? (
                 <>Librarian access is issued by authorized administrators only. Member accounts cannot enter the staff console.</>
               ) : (
-                <>Register in person at the <strong>Taytay branch</strong>. A librarian will set up your account and can help you enroll in Face ID if you choose.</>
+                <>Apply online or visit the <strong>Taytay branch</strong>. A librarian reviews your details before issuing an account. Face ID enrollment is optional.</>
               )}
             </p>
+            {!isLibrarianPortal && <Link to="/register" className="auth-guidance-link">Apply for membership <ArrowRight size={17} aria-hidden="true" /></Link>}
             <div className="auth-location">
               <MapPin size={16} aria-hidden="true" />
               <p>Taytay Municipal Compound, Taytay, Rizal<span>Mon – Fri · 8:00 AM – 5:00 PM</span></p>

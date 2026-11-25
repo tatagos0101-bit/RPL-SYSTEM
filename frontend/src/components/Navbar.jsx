@@ -11,7 +11,7 @@ const Navbar = () => {
   );
   const navigate = useNavigate();
   const location = useLocation();
-  const isPublicDiscovery = ['/', '/browse'].includes(location.pathname);
+  const isPublicDiscovery = ['/', '/browse', '/register'].includes(location.pathname);
 
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   const userRole = localStorage.getItem('userRole');

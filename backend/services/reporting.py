@@ -25,9 +25,9 @@ from models.copy_acquisition import CopyAcquisition
 from timezone_utils import PH_TZ, as_ph, now_ph
 
 CATEGORIES = {
-    'visits': 'Library usage', 'patrons': 'Patrons', 'circulation': 'Circulation',
-    'collection': 'Collection', 'acquisitions': 'Acquisitions',
-    'inventory': 'Inventory checks',
+    'visits': 'Library visits logbook', 'patrons': 'Patrons', 'circulation': 'Circulation and return inspections',
+    'collection': 'Collection and borrower counts', 'acquisitions': 'Book acquisitions',
+    'inventory': 'Inventory accountability',
 }
 MAX_SCAN = 100_000
 MAX_EXPORT = 20_000
@@ -142,9 +142,14 @@ def projection(db, f, as_of):
             Transaction.user_id.label('patron_key'),
             case((User.deleted_at.is_(None), User.member_id), else_=None).label('member_id'),
             Book.title.label('title'), Book.author.label('author'), Book.category.label('category'),
+            Book.year.label('publication_year'), Book.isbn.label('isbn'),
+            Transaction.return_condition.label('return_condition'), Transaction.inspection_reason.label('inspection_remark'),
+            Transaction.inspection_notes.label('inspection_notes'), Transaction.inspected_by_id.label('inspected_by'),
+            Transaction.inspected_at.label('inspected_at'), Transaction.fine_amount.label('assessed_charges'),
+            Transaction.late_fee.label('late_fee'), Transaction.condition_fee.label('damage_loss_fee'),
             BookCopy.qr_code.label('copy_qr'), Transaction.borrow_date.label('borrowed'),
             Transaction.return_date.label('returned'), Transaction.due_date.label('due'),
-            case((Transaction.return_date <= as_of, 'returned'), (overdue(as_of), 'overdue'), else_='outstanding').label('status'))
+            case((Transaction.return_condition == 'lost', 'reported lost'), (Transaction.return_date <= as_of, 'returned'), (overdue(as_of), 'overdue'), else_='outstanding').label('status'))
         q = q.join(Book, Book.id == Transaction.book_id).join(User, User.id == Transaction.user_id).outerjoin(BookCopy, BookCopy.id == Transaction.copy_id)
         if f.loan_status in ('outstanding', 'overdue'):
             # Current snapshot drill-down: date range is explicitly not a borrow-date restriction.
@@ -152,11 +157,14 @@ def projection(db, f, as_of):
         else:
             basis = {'borrowed': Transaction.borrow_date, 'returned': Transaction.return_date, 'due': Transaction.due_date}.get(f.date_basis)
             q = q.filter(between(basis, start, end) if basis is not None else or_(between(Transaction.borrow_date, start, end), between(Transaction.return_date, start, end)))
-            if f.loan_status == 'returned': q = q.filter(Transaction.return_date <= as_of)
+            if f.loan_status == 'returned': q = q.filter(Transaction.return_date <= as_of, or_(Transaction.return_condition.is_(None), Transaction.return_condition != 'lost'))
             if f.loan_status in ('on-time', 'late'):
+                q = q.filter(or_(Transaction.return_condition.is_(None), Transaction.return_condition != 'lost'))
                 q = q.filter(Transaction.return_date <= as_of, Transaction.due_date.isnot(None),
                     Transaction.return_date <= Transaction.due_date if f.loan_status == 'on-time' else Transaction.return_date > Transaction.due_date)
         q = book_filters(q, f)
+        if f.return_condition:
+            q = q.filter(Transaction.return_condition.is_(None) if f.return_condition == 'unrecorded' else Transaction.return_condition == f.return_condition)
         if f.member_id: q = q.filter(User.member_id == f.member_id, User.deleted_at.is_(None))
         if f.qr: q = q.filter(or_(BookCopy.qr_code == f.qr, Book.qr_code == f.qr))
         if f.query: q = q.filter(or_(Book.title.ilike('%' + f.query + '%'), Book.author.ilike('%' + f.query + '%'), User.member_id.ilike('%' + f.query + '%')))
@@ -177,17 +185,18 @@ def projection(db, f, as_of):
         if f.participation == 'visited': q = q.filter(visits > 0)
         if f.participation == 'neither': q = q.filter(borrows == 0, visits == 0)
     elif f.category in ('collection', 'acquisitions'):
-        borrow_totals = db.query(Transaction.book_id, func.count().label('count')).filter(between(Transaction.borrow_date, start, end)).group_by(Transaction.book_id).subquery()
+        borrow_totals = db.query(Transaction.book_id, func.count().label('count'), func.count(func.distinct(Transaction.user_id)).label('borrowers')).filter(between(Transaction.borrow_date, start, end)).group_by(Transaction.book_id).subquery()
         borrow_count = func.coalesce(borrow_totals.c.count, 0)
         columns = [(func.coalesce(BookCopy.id, -Book.id) if f.category == 'collection' else BookCopy.id).label('id'), Book.id.label('book_id'), Book.title.label('title'), Book.author.label('author'),
             Book.category.label('category'), Book.year.label('publication_year'), Book.isbn.label('isbn'), Book.location_shelf.label('shelf'),
+            Book.is_borrowable.label('borrowable'), BookCopy.condition.label('last_inspected_condition'),
             BookCopy.qr_code.label('copy_qr'), BookCopy.status.label('copy_status'), BookCopy.created_at.label('copy_recorded'), Book.created_at.label('title_recorded')]
         if f.category == 'acquisitions':
             columns += [func.coalesce(CopyAcquisition.source, 'unknown').label('source'), CopyAcquisition.acquired_on.label('acquired'),
                 CopyAcquisition.party.label('donor_supplier'), CopyAcquisition.cost.label('cost'), CopyAcquisition.currency.label('currency'),
                 CopyAcquisition.reference.label('reference'), CopyAcquisition.recorded_by.label('recorded_by'), CopyAcquisition.updated_by.label('updated_by'),
                 CopyAcquisition.updated_at.label('version')]
-        else: columns += [borrow_count.label('title_borrows')]
+        else: columns += [borrow_count.label('title_borrows'), func.coalesce(borrow_totals.c.borrowers, 0).label('distinct_borrowers_in_period')]
         q = db.query(*columns).select_from(Book).outerjoin(BookCopy, BookCopy.book_id == Book.id) if f.category == 'collection' else db.query(*columns).join(Book, Book.id == BookCopy.book_id)
         if f.category == 'acquisitions':
             q = q.outerjoin(CopyAcquisition, CopyAcquisition.copy_id == BookCopy.id)
@@ -206,11 +215,14 @@ def projection(db, f, as_of):
         if f.query: q = q.filter(or_(Book.title.ilike('%' + f.query + '%'), Book.author.ilike('%' + f.query + '%'), BookCopy.qr_code.ilike('%' + f.query + '%')))
     else:  # inventory reconciliation (one row per title, never a repair)
         copy_totals = db.query(BookCopy.book_id, amount(BookCopy.status != 'retired').label('held'),
-            amount(BookCopy.status == 'available').label('available'), amount(BookCopy.status == 'borrowed').label('borrowed')).group_by(BookCopy.book_id).subquery()
+            amount(BookCopy.status == 'available').label('available'), amount(BookCopy.status == 'borrowed').label('borrowed'),
+            amount(BookCopy.status == 'damaged').label('damaged'), amount(BookCopy.status == 'lost').label('lost')).group_by(BookCopy.book_id).subquery()
         loan_totals = db.query(Transaction.book_id, func.count().label('count')).filter(outstanding(as_of)).group_by(Transaction.book_id).subquery()
         held, available, borrowed = [func.coalesce(copy_totals.c[key], 0) for key in ('held', 'available', 'borrowed')]
         loans = func.coalesce(loan_totals.c.count, 0)
         q = db.query(Book.id.label('id'), Book.title.label('title'), Book.category.label('category'), Book.copies_total.label('declared_copies'),
+            Book.author.label('author'), Book.year.label('publication_year'), Book.isbn.label('isbn'), Book.is_borrowable.label('borrowable'),
+            func.coalesce(copy_totals.c.damaged, 0).label('damaged_copies'), func.coalesce(copy_totals.c.lost, 0).label('lost_copies'),
             held.label('physical_copies'), Book.copies_available.label('declared_available'), available.label('available'),
             borrowed.label('borrowed_copies'), loans.label('outstanding_loans'),
             case((or_(held != Book.copies_total, available != Book.copies_available, borrowed != loans), 1), else_=0).label('discrepancy'))
@@ -285,18 +297,21 @@ def analyze(db, f, as_of, sub):
         start, end = boundaries(f, as_of)
         duration = (func.extract('epoch', c.returned - c.borrowed) / 86400 if db.bind.dialect.name == 'postgresql'
                     else func.julianday(c.returned) - func.julianday(c.borrowed))
-        returned = between(c.returned, start, end)
+        returned = and_(between(c.returned, start, end), or_(c.return_condition.is_(None), c.return_condition != 'lost'))
         valid = and_(returned, c.borrowed.isnot(None), c.returned >= c.borrowed)
         average_duration = db.query(func.avg(case((valid, duration)))).scalar()
         summary.update(borrows=db.query(amount(between(c.borrowed, start, end))).scalar(),
-            returns=db.query(amount(between(c.returned, start, end))).scalar(),
+            returns=db.query(amount(returned)).scalar(),
+            reported_lost=db.query(amount(and_(between(c.returned, start, end), c.return_condition == 'lost'))).scalar(),
+            damaged_returns=db.query(amount(and_(returned, c.return_condition == 'damaged'))).scalar(),
+            assessed_charges=db.query(func.coalesce(func.sum(c.assessed_charges), 0)).scalar(),
             on_time_returns=db.query(amount(and_(returned, c.returned <= c.due))).scalar(),
             late_returns=db.query(amount(and_(returned, c.returned > c.due))).scalar(),
             average_loan_days=round(float(average_duration), 2) if average_duration is not None else None,
             excluded_duration_rows=db.query(amount(and_(returned, or_(c.borrowed.is_(None), c.returned < c.borrowed)))).scalar(),
             unknown_due_date_returns=db.query(amount(and_(returned, c.due.is_(None)))).scalar())
         charts = [chart('borrows', 'Books borrowed', series(db, sub, c.borrowed, f, as_of=as_of), 'line'),
-                  chart('returns', 'Books returned', series(db, sub, c.returned, f, as_of=as_of), 'line'),
+                  chart('returns', 'Books returned', series(db, sub, case((c.return_condition == 'lost', None), else_=c.returned), f, as_of=as_of), 'line'),
                   chart('categories', 'Borrowing by current category', grouped(db, sub, c.category, amount(between(c.borrowed, start, end))), 'donut'),
                   chart('titles', 'Most borrowed titles', grouped(db, sub, c.title, amount(between(c.borrowed, start, end)))),
                   chart('authors', 'Most borrowed authors', grouped(db, sub, c.author, amount(between(c.borrowed, start, end))))]
@@ -390,7 +405,7 @@ def notes(f):
     text = ['Philippine time. Period start is inclusive; the following midnight is exclusive.',
             'Historical category/author breakdowns use current catalog metadata. Missing source data is not zero.']
     if f.category == 'visits': text += ['Visits are granted recorded sessions, not camera detections. First recorded does not establish first-ever attendance. Historical source errors cannot be reconstructed.', 'Comparison uses the preceding calendar period or matching elapsed portion. An unavailable percentage means no percentage baseline or unequal coverage; it is not zero.']
-    if f.category == 'circulation': text += ['Timeliness and mean duration describe valid returns in this period. Open loans are not completed durations; invalid return/borrow pairs are excluded and counted.']
+    if f.category == 'circulation': text += ['Timeliness and mean duration describe physical returns in this period. Reported-lost closures are counted separately. Charges are assessments, not proof of payment. Historical inspections were not backfilled.']
     if f.category == 'collection': text += ['Rows include catalog titles with no copy records; their copy fields are Not recorded. Copy record creation is not acquisition. Titles are catalog IDs; different editions may share a name. Retired copies are listed separately from current holdings.']
     if f.category == 'acquisitions': text += ['Coverage counts use the catalog filters across all copies, independently of acquisition-date/source filters. Unknown dates do not enter dated acquisition totals.']
     if f.loan_status in ('outstanding', 'overdue'): text += ['Outstanding/overdue is an as-of snapshot, not restricted by borrowing period.']

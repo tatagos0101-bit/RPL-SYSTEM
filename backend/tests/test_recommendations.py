@@ -159,7 +159,7 @@ def test_feedback_api_is_idempotent_private_and_validated(client, db_session):
     assert client.post("/api/user/book-views/999999", headers=auth).status_code == 404
     response = client.get("/api/recommendations", headers=auth)
     assert response.status_code == 200
-    assert set(response.json()[0]) == {"id", "title", "author", "category", "cover_url", "copies_available", "source", "reason"}
+    assert set(response.json()[0]) == {"id", "title", "author", "category", "cover_url", "copies_available", "source", "reason", "is_borrowable", "circulation_note"}
     assert client.get("/api/recommendations?limit=31", headers=auth).status_code == 422
 
 

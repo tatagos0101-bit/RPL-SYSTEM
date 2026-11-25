@@ -228,7 +228,8 @@ const PublicBrowse = ({ librarianPortal = false }) => {
                         </span>
                       </div>
 
-                      {!isAvailable && !isLibrarianView && (
+                      {selected.is_borrowable === false && <p className="mb-5 rounded-xl border border-line bg-info-soft p-4 text-sm text-link">Library use only. {selected.circulation_note || 'This title can be read at the library and cannot be borrowed or reserved.'}</p>}
+                      {!isAvailable && !isLibrarianView && selected.is_borrowable !== false && (
                         <p className="text-sm font-bold leading-relaxed text-warning bg-warning-soft border border-warning rounded-xl px-4 py-3 mb-6">
                           Currently not available. Reserve now to join the queue. You'll be notified when it's your turn.
                         </p>
@@ -237,7 +238,7 @@ const PublicBrowse = ({ librarianPortal = false }) => {
 
                     {/* CTA */}
                     <div className="space-y-3">
-                      {!isLibrarianView && <Link
+                      {!isLibrarianView && selected.is_borrowable !== false && <Link
                         to={isMember ? `/user/reservations?reserveBook=${selected.id}` : reserveLoginPath(selected.id)}
                         className="min-h-[44px] w-full flex items-center justify-center gap-2 py-4 bg-action hover:bg-action-hover text-white rounded-xl font-semibold text-sm tracking-normal transition-all"
                       >

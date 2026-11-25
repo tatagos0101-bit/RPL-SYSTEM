@@ -1,5 +1,5 @@
 """Additive schema upgrades compiled for the database's actual SQL dialect."""
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, false, true, inspect, text
+from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String, Text, false, true, inspect, text
 from sqlalchemy.schema import CreateColumn
 
 
@@ -29,7 +29,9 @@ ADDITIONS = {
         ("attempts", Integer, text("0")),
         ("delivered_at", DateTime(timezone=True), None),
     ],
-    "books": [("category_override", String(80), None), ("raw_api_label", String(1000), None), ("is_hidden", Boolean, true()), ("description", Text, None)],
+    "books": [("category_override", String(80), None), ("raw_api_label", String(1000), None), ("is_hidden", Boolean, true()), ("description", Text, None),
+              ("is_borrowable", Boolean, true()), ("circulation_note", String(500), None)],
+    "book_copies": [("condition", String(20), None)],
     "entry_logs": [
         ("time_out", DateTime(timezone=True), None),
         ("visitor_name", String(150), None),
@@ -38,6 +40,7 @@ ADDITIONS = {
     ],
     "notifications": [("user_id", Integer, None)],
     "users": [
+        ("is_blacklisted", Boolean, false()),
         ("last_activity_at", DateTime(timezone=True), None),
         ("deleted_at", DateTime(timezone=True), None),
         ("member_id", String(20), None),
@@ -57,7 +60,10 @@ ADDITIONS = {
         ("email_verified", Boolean, false()),
         ("phone_verified", Boolean, false()),
     ],
-    "transactions": [("copy_id", Integer, None)],
+    "transactions": [("copy_id", Integer, None), ("late_fee", Numeric(8, 2), None),
+        ("condition_fee", Numeric(8, 2), text("0")), ("return_condition", String(20), None),
+        ("inspection_reason", String(40), None), ("inspection_notes", String(1000), None),
+        ("inspected_by_id", Integer, None), ("inspected_at", DateTime(timezone=True), None)],
 }
 
 
@@ -69,7 +75,7 @@ def upgrade_schema(conn, metadata) -> None:
         existing = {c["name"] for c in inspect(conn).get_columns(table_name)}
         for name, column_type, default in columns:
             if name not in existing:
-                column = Column(name, column_type, nullable=name != "privacy_consent_pending", server_default=default)
+                column = Column(name, column_type, nullable=name not in {"privacy_consent_pending", "is_borrowable", "is_blacklisted", "condition_fee"}, server_default=default)
                 definition = str(CreateColumn(column).compile(dialect=conn.dialect))
                 table = conn.dialect.identifier_preparer.quote(table_name)
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {definition}"))
@@ -106,6 +112,8 @@ def upgrade_schema(conn, metadata) -> None:
     conn.execute(text('CREATE UNIQUE INDEX IF NOT EXISTS uq_users_normalized_email ON users (lower(trim(email))) WHERE email IS NOT NULL'))
     if conn.dialect.name != "postgresql":
         return
+    if not any(fk["constrained_columns"] == ["inspected_by_id"] for fk in inspect(conn).get_foreign_keys("transactions")):
+        conn.execute(text('ALTER TABLE transactions ADD CONSTRAINT transactions_inspected_by_id_fkey FOREIGN KEY (inspected_by_id) REFERENCES users(id)'))
     for name in ('message', 'member_name', 'book_title'):
         conn.execute(text(f'ALTER TABLE notifications ALTER COLUMN {name} TYPE TEXT'))
     # App users authenticate with FastAPI, not Supabase Auth. No browser/Data API
@@ -114,10 +122,34 @@ def upgrade_schema(conn, metadata) -> None:
     for table in metadata.sorted_tables:
         name = conn.dialect.identifier_preparer.quote(table.name)
         conn.execute(text(f"ALTER TABLE public.{name} ENABLE ROW LEVEL SECURITY"))
-        if table.name in ("account_deletion_notices", "auth_sessions", "password_reset_codes", "reservation_confirmations", "inventory_writes", "copy_acquisitions"):
+        if table.name in ("account_deletion_notices", "auth_sessions", "password_reset_codes", "reservation_confirmations", "inventory_writes", "copy_acquisitions", "member_account_actions", "member_applications"):
             conn.execute(text(f"REVOKE ALL ON TABLE public.{name} FROM PUBLIC"))
         for role in sorted(roles):
             conn.execute(text(f"REVOKE ALL ON TABLE public.{name} FROM {role}"))
 
     from services.reporting_migration import upgrade_reporting_schema
     upgrade_reporting_schema(conn)
+    upgrade_workflow_security(conn)
+
+
+def upgrade_workflow_security(conn):
+    """Only the trusted FastAPI runtime role may access workflow records."""
+    if conn.dialect.name != "postgresql":
+        return
+    roles = set(conn.execute(text("SELECT rolname FROM pg_roles WHERE rolname IN ('anon','authenticated','rpl_app_runtime')")).scalars())
+    for table in ("member_applications", "member_account_actions"):
+        conn.execute(text(f'ALTER TABLE public.{table} ENABLE ROW LEVEL SECURITY'))
+        conn.execute(text(f'REVOKE ALL ON TABLE public.{table} FROM PUBLIC'))
+        sequence = f"public.{table}_id_seq"
+        conn.execute(text(f'REVOKE ALL ON SEQUENCE {sequence} FROM PUBLIC'))
+        for role in sorted(roles & {"anon", "authenticated"}):
+            conn.execute(text(f'REVOKE ALL ON TABLE public.{table} FROM {role}'))
+            conn.execute(text(f'REVOKE ALL ON SEQUENCE {sequence} FROM {role}'))
+        if "rpl_app_runtime" in roles:
+            conn.execute(text(f'GRANT SELECT, INSERT, UPDATE, DELETE ON public.{table} TO rpl_app_runtime'))
+            conn.execute(text(f'GRANT USAGE, SELECT ON SEQUENCE {sequence} TO rpl_app_runtime'))
+            policy = conn.execute(text("SELECT roles, cmd, qual, with_check FROM pg_policies WHERE schemaname='public' AND tablename=:table AND policyname='rpl_workflow_runtime'"), {"table": table}).first()
+            if policy and (list(policy.roles) != ["rpl_app_runtime"] or policy.cmd != "ALL" or policy.qual != "true" or policy.with_check != "true"):
+                raise RuntimeError("Existing workflow runtime policy differs; review before upgrading.")
+            if not policy:
+                conn.execute(text(f'CREATE POLICY rpl_workflow_runtime ON public.{table} TO rpl_app_runtime USING (true) WITH CHECK (true)'))

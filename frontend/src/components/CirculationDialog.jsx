@@ -3,6 +3,8 @@ import { X } from 'lucide-react';
 import QrScanner from './QrScanner';
 import BorrowBookSelection from './BorrowBookSelection';
 import ReturnBookSelection from './ReturnBookSelection';
+import ReturnInspection from './ReturnInspection';
+import { inspectionError } from '../api/returnInspection';
 import CirculationMember from './CirculationMember';
 import BorrowingCapacity from './BorrowingCapacity';
 import FineContent from './FineContent';
@@ -16,7 +18,7 @@ import { parseApiDateTime } from '../api/dateTime';
 const formatTime = value => value ? parseApiDateTime(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila' }) : '—';
 const itemKey = row => row.transaction_id ? `loan-${row.transaction_id}` : `copy-${row.copy_id}`;
 const payloadFor = (row, mode, member) => ({ user_id: mode === 'borrow' ? member.user_id : row.user_id,
-  book_id: row.book_id, copy_id: row.copy_id, ...(mode === 'return' ? { transaction_id: row.transaction_id } : {}) });
+  book_id: row.book_id, copy_id: row.copy_id, ...(mode === 'return' ? { transaction_id: row.transaction_id, ...row.inspection } : {}) });
 
 export default function CirculationDialog({ onClose, onCommit, initialReturn = null, initialMode = null }) {
   const dialog = useRef(null);
@@ -84,6 +86,10 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
     submitting.current = true; setProcessing(true); setError('');
     try {
       assertAccount();
+      if (mode === 'return') {
+        const problem = rows.filter(row => !row.outcome).map(row => inspectionError(row.inspection)).find(Boolean);
+        if (problem) throw new Error(problem);
+      }
       if (readCirculation(actor).length) {
         refreshRecovery();
         throw new Error('An unresolved request exists. Check its outcome before submitting more items.');
@@ -178,18 +184,20 @@ export default function CirculationDialog({ onClose, onCommit, initialReturn = n
               <p className="font-semibold break-words">{row.title} · Copy {row.copy_number ?? 'legacy'}</p>
               {mode === 'borrow' && row.copy_qr && <p className="break-all font-mono text-sm text-muted">{row.copy_qr}</p>}
               {mode === 'return' && <p>{row.member_name} · {row.member_id} · Loan #{row.transaction_id}</p>}
+              {mode === 'return' && <ReturnInspection value={row.inspection} disabled={processing || !!row.outcome}
+                onChange={inspection => setRows(previous => previous.map(item => itemKey(item) === itemKey(row) ? { ...item, inspection } : item))} />}
               <p>Due (Philippine time): {formatTime(row.due_date)}</p>
               {mode === 'borrow' ? <p>Available when selected; rechecked at confirmation.</p>
                 : <FineContent><p>{row.estimated_fine !== undefined ? `Estimated fine: ₱${row.estimated_fine} — finalized by the server on return.` : 'The server calculates the final fine at confirmation.'}</p></FineContent>}
               {row.outcome ? <p role="status" className={row.outcome.status === 'confirmed' ? 'text-success' : 'text-danger'}>
-                {row.outcome.status === 'confirmed' ? `Confirmed · Transaction ${row.outcome.data.id}${mode === 'return' ? `${SHOW_FINES ? ` · Final fine ₱${row.outcome.data.fine_amount}` : ''} · Returned ${formatTime(row.outcome.data.return_date)}` : ` · Due ${formatTime(row.outcome.data.due_date)}`}` : row.outcome.error}
+                {row.outcome.status === 'confirmed' ? `Confirmed · Transaction ${row.outcome.data.id}${mode === 'return' ? `${SHOW_FINES ? ` · Assessed charges ₱${row.outcome.data.fine_amount}` : ''} · ${row.outcome.data.return_condition === 'lost' ? 'Reported lost' : 'Returned'} ${formatTime(row.outcome.data.return_date)}` : ` · Due ${formatTime(row.outcome.data.due_date)}`}` : row.outcome.error}
               </p> : <><p className="text-muted">Not submitted</p><button disabled={processing} onClick={() => setRows(previous => previous.filter(item => itemKey(item) !== itemKey(row)))} className="underline">Remove</button></>}
             </article>)}
           </section>
           <p className="text-sm text-muted">Items are recorded separately. Confirmed items stay confirmed if another fails. No offline processing.</p>
           <div className="flex flex-wrap gap-3">
             {review && !rows.some(row => row.outcome) && <button disabled={processing} onClick={() => setReview(false)} className="border border-line p-3 rounded-lg">Back to book selection</button>}
-            {!review ? <button disabled={!rows.length || busy || choices.length > 0} onClick={() => setReview(true)} className="bg-action text-white rounded-lg p-3 disabled:opacity-50">Review list</button>
+            {!review ? <button disabled={!rows.length || busy || choices.length > 0 || (mode === 'return' && rows.some(row => inspectionError(row.inspection)))} onClick={() => setReview(true)} className="bg-action text-white rounded-lg p-3 disabled:opacity-50">Review list</button>
               : <button disabled={processing || !recovery || recovery.length > 0 || !rows.some(row => !row.outcome)} onClick={confirm} className="bg-action text-white rounded-lg p-3 disabled:opacity-50">
                 {processing ? 'Processing…' : mode === 'borrow' ? 'Confirm Borrowing' : 'Confirm Returns'}
               </button>}

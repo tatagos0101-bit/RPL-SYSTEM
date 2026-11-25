@@ -11,6 +11,8 @@ import { LIBRARIAN_PUBLIC_CATALOG_PATH } from './api/librarianNavigation';
 import './index.css';
 
 const LandingPage = lazy(() => import('./pages/public/LandingPage'));
+const MemberRegistration = lazy(() => import('./pages/public/MemberRegistration'));
+const LibApplications = lazy(() => import('./pages/lib/LibApplications'));
 const PrivacyPolicy = lazy(() => import('./pages/public/PrivacyPolicy'));
 const PublicBrowse = lazy(() => import('./pages/public/PublicBrowse'));
 const LoginPage = lazy(() => import('./pages/public/LoginPage'));
@@ -70,6 +72,7 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/browse" element={<PublicBrowse />} />
+          <Route path="/register" element={<MemberRegistration />} />
           <Route path="/login" element={<Navigate to="/user/login" replace />} />
           <Route path="/user/login" element={<LoginPage expectedRole="member" />} />
           <Route path="/user/forgot-password" element={<ForgotPasswordPage />} />
@@ -100,6 +103,7 @@ const AppContent = () => {
               <Route path="/librarian/qr-bulk" element={<LibQRBulk />} />
               <Route path="/librarian/borrow-return" element={<LibBorrowReturn />} />
               <Route path="/librarian/users" element={<LibUsers />} />
+              <Route path="/librarian/applications" element={<LibApplications />} />
               <Route path="/librarian/due-books" element={<LibDueBooks />} />
               <Route path="/librarian/reservations" element={<LibReservations />} />
               <Route path="/librarian/reports" element={<LibReports />} />

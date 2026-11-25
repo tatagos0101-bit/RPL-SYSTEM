@@ -31,6 +31,13 @@ class BookBase(BaseModel):
     location_shelf:   Optional[str]   = None
     cover_url:        Optional[str]   = None
     description:      Optional[str]   = Field(default=None, max_length=2000)
+    is_borrowable:     bool = True
+    circulation_note: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("circulation_note")
+    @classmethod
+    def clean_circulation_note(cls, value):
+        return _description_value(value)
 
     @field_validator("description")
     @classmethod
@@ -128,6 +135,14 @@ class BookCreate(BookBase):
 
 
 class BookUpdate(BaseModel):
+    is_borrowable: Optional[bool] = None
+    circulation_note: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("circulation_note")
+    @classmethod
+    def clean_circulation_note(cls, value):
+        return _description_value(value)
+
     new_copy_acquisition: AcquisitionDetails | None = None
     title:            Optional[str]   = None
     author:           Optional[str]   = None
@@ -239,6 +254,8 @@ class BookUpdate(BaseModel):
 
 
 class BookOut(BaseModel):
+    is_borrowable: bool = True
+    circulation_note: Optional[str] = None
     id:               int
     title:            str
     author:           str
@@ -256,6 +273,8 @@ class BookOut(BaseModel):
     @computed_field
     @property
     def availability_status(self) -> str:
+        if not self.is_borrowable:
+            return "Library use only"
         if self.copies_available == 0:
             return "Not available"
         if self.copies_available < self.copies_total:
@@ -274,6 +293,7 @@ class BookListResponse(BaseModel):
 
 
 class BookCopyOut(BaseModel):
+    condition: Optional[str] = None
     id:          int
     book_id:     int
     copy_number: int

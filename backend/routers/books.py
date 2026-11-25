@@ -55,7 +55,7 @@ def list_books(
     if category:
         q = q.filter(Book.category.ilike(category))
     if available_only:
-        q = q.filter(Book.copies_available > 0)
+        q = q.filter(Book.copies_available > 0, Book.is_borrowable.is_(True))
 
     q = order_catalog(q, sort, favorites_only, now=now_ph())
     total = q.order_by(None).count()

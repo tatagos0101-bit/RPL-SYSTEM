@@ -60,7 +60,7 @@ def test_loans_and_reservations_share_quota_and_pickup_converts(client, db_sessi
     assert client.post('/api/transactions/borrow', headers=h[2], json={'user_id': member.id, 'book_id': books[3].id}).status_code == 201
     assert client.get('/api/user/borrowing-capacity', headers=h[0]).json()['remaining_slots'] == 0
     assert client.post('/api/transactions/borrow', headers=h[2], json={'user_id': member.id, 'book_id': books[5].id}).status_code == 409
-    assert client.post('/api/transactions/return', headers=h[2], json={'user_id': member.id, 'book_id': books[0].id}).status_code == 200
+    assert client.post('/api/transactions/return', headers=h[2], json={'user_id': member.id, 'book_id': books[0].id, 'inspection_confirmed': True, 'return_condition': 'good', 'inspection_reason': 'no_issues'}).status_code == 200
     assert client.get('/api/user/borrowing-capacity', headers=h[0]).json()['remaining_slots'] == 1
 
 
@@ -109,7 +109,7 @@ def test_five_loans_and_existing_overlimit_records_block_only_new_commitments(cl
     db_session.add(extra); db_session.commit()
     assert confirm(client, h[0], books[6:7]).status_code == 409
     assert client.delete(f'/api/reservations/{extra.id}', headers=h[0]).status_code == 204
-    assert client.post('/api/transactions/return', headers=h[2], json={'user_id': member.id, 'book_id': books[0].id}).status_code == 200
+    assert client.post('/api/transactions/return', headers=h[2], json={'user_id': member.id, 'book_id': books[0].id, 'inspection_confirmed': True, 'return_condition': 'good', 'inspection_reason': 'no_issues'}).status_code == 200
 
 
 def test_inventory_resize_protects_holds_and_fills_all_fifo_slots(client, db_session, data):

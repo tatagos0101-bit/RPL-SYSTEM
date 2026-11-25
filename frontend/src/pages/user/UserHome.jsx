@@ -323,9 +323,9 @@ const UserHome = () => {
         <FineContent>
         <StatusCard
           icon={Wallet}
-          label="Fine to Pay"
+          label="Estimated Late Fees"
           value={formatMoney(overview.totalFine)}
-          detail="Current overdue fees"
+          detail="Active overdue loans only"
           tone={overview.totalFine > 0 ? 'rose' : 'emerald'}
           urgent={overview.totalFine > 0}
         />

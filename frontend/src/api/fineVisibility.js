@@ -1,2 +1,2 @@
-// Presentation only: retain fine calculations and stored records for compatibility.
-export const SHOW_FINES = false;
+// Assessed charges are visible; the system does not record payment collection.
+export const SHOW_FINES = true;

@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from models.transaction import Transaction
+from models.user import User
 from timezone_utils import now_ph
 
 OVERDUE_BORROW_BLOCK_MESSAGE = "Member has overdue books. Return overdue books before borrowing new ones."
@@ -40,5 +41,13 @@ def member_has_overdue(db: Session, user_id: int, *, commit: bool = True) -> boo
 
 
 def assert_can_borrow(db: Session, user_id: int, *, commit: bool = True) -> None:
+    member = db.get(User, user_id)
+    if not member or member.deleted_at is not None or member.status != "active" or member.is_blacklisted:
+        raise HTTPException(403, "This account is restricted. Contact the library desk.")
     if member_has_overdue(db, user_id, commit=commit):
         raise HTTPException(status_code=409, detail=OVERDUE_BORROW_BLOCK_MESSAGE)
+
+
+def assert_book_circulates(book) -> None:
+    if not book.is_borrowable:
+        raise HTTPException(409, "This title is for library use only and cannot be borrowed or reserved.")

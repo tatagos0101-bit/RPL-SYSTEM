@@ -105,7 +105,7 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
     if not user or user.deleted_at is not None or not _verify(body.password, user.password_hash):
         security_logger.warning("LOGIN_FAILED ip=%s", ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email/Member ID or password")
-    if user.status == "suspended":
+    if user.status == "suspended" or user.is_blacklisted:
         security_logger.warning("LOGIN_SUSPENDED ip=%s user_id=%d", ip, user.id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended. Contact librarian.")
     if body.expected_role is not None and body.expected_role != user.role:
@@ -134,6 +134,8 @@ def login(request: Request, response: Response, body: LoginRequest, db: Session 
 @limiter.limit("5/minute")
 def signup(request: Request, response: Response, body: SignupRequest, db: Session = Depends(get_db)):
     ip = _client_ip(request)
+    if body.role == "member":
+        raise HTTPException(403, "Submit a membership application at /register. A librarian must approve it before an account is issued.")
     if body.role == "librarian":
         if not LIBRARIAN_AUTH_CODE or not secrets.compare_digest((body.auth_code or "").encode(), LIBRARIAN_AUTH_CODE.encode()):
             security_logger.warning("SIGNUP_BAD_LIBCODE ip=%s", ip)
@@ -382,7 +384,7 @@ def _legacy_process_entry_face(
     enrolled_users = db.query(User).filter(User.face_encoding.isnot(None)).all()
     matched_user = find_match(live_encoding, enrolled_users)
 
-    if matched_user is None or matched_user.status == "suspended":
+    if matched_user is None or matched_user.status == "suspended" or matched_user.is_blacklisted:
         security_logger.info("FACE_UNRECOGNIZED entry_gate")
         unknown_cutoff = now - timedelta(minutes=1)
         existing = (
@@ -574,7 +576,7 @@ def process_entry_face(
         match = face_engine_service.revalidate_match_for_face(
             db, face, match, purpose="login" if issue_token else "gate")
 
-        if match is None or match.user.status == "suspended":
+        if match is None or match.user.status == "suspended" or match.user.is_blacklisted:
             log_unknown_face_once()
             faces.append({
                 "matched": False,

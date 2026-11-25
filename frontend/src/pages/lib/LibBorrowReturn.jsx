@@ -152,12 +152,12 @@ export default function LibBorrowReturn() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-sm font-semibold tracking-normal inline-block ${TYPE_STYLE[t.type] || 'bg-subtle text-muted'}`}>
-                          {t.type}
+                          {t.return_condition === 'lost' ? 'reported lost' : t.type}
                         </span>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2.5 py-1 rounded-full text-sm font-semibold tracking-normal inline-block ${STATUS_STYLE[t.status] || 'bg-subtle text-muted'}`}>
-                          {t.status}
+                          {t.return_condition === 'lost' ? 'closed — lost' : t.return_condition ? `${t.status} · ${t.return_condition}` : t.status}
                         </span>
                       </td>
                       <td className="px-6 py-4">

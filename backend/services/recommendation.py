@@ -98,5 +98,6 @@ def get_recommendations(user_id: int, db: Session, limit: int = 10) -> list[dict
     return [dict(
         id=book.id, title=book.title, author=book.author, category=book.category,
         cover_url=book.cover_url, copies_available=book.copies_available,
+        is_borrowable=book.is_borrowable, circulation_note=book.circulation_note,
         source=explanations[kind][0], reason=explanations[kind][1],
     ) for book, kind in rows]

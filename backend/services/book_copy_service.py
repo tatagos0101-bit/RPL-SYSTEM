@@ -170,7 +170,9 @@ def resolve_scan(db: Session, raw_code: str) -> tuple[str, Book, BookCopy | None
     copy = db.query(BookCopy).filter(BookCopy.qr_code == code).first()
     if copy:
         book = copy.book
-        can_borrow = copy.status == "available" and book.copies_available > 0
+        can_borrow = bool(book.is_borrowable and copy.status == "available" and book.copies_available > 0)
+        if not book.is_borrowable:
+            return "copy", book, copy, False, "This title is for library use only."
         if copy.status == "available":
             message = "Copy is available for borrowing." if can_borrow else "Book has no available copies."
         else:
@@ -181,8 +183,8 @@ def resolve_scan(db: Session, raw_code: str) -> tuple[str, Book, BookCopy | None
     if book:
         ensure_book_copies(db, book_id=book.id)
         has_available_copy = select_available_copy(db, book.id) is not None
-        can_borrow = book.copies_available > 0 and has_available_copy
-        message = "Legacy book QR recognized." if can_borrow else "No available physical copy for this book."
+        can_borrow = bool(book.is_borrowable and book.copies_available > 0 and has_available_copy)
+        message = "This title is for library use only." if not book.is_borrowable else "Legacy book QR recognized." if can_borrow else "No available physical copy for this book."
         return "book", book, None, can_borrow, message
 
     raise HTTPException(status_code=404, detail="Book not found for this QR code")

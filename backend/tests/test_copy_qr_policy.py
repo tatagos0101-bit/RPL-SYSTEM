@@ -173,7 +173,7 @@ def test_borrow_and_return_by_copy_id_updates_only_that_copy(client, db_session)
 
     return_response = client.post(
         "/api/transactions/return",
-        json={"user_id": member.id, "book_id": book.id, "copy_id": copy_one.id},
+        json={"user_id": member.id, "book_id": book.id, "copy_id": copy_one.id, "inspection_confirmed": True, "return_condition": "good", "inspection_reason": "no_issues"},
         headers=headers,
     )
 

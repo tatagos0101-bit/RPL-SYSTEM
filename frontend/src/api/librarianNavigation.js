@@ -14,6 +14,7 @@ export const STAFF_LIBRARIAN_NAV_LINKS = [
   { key: 'due-books', to: '/librarian/due-books', label: 'Due Books' },
   { key: 'reports', to: '/librarian/reports', label: 'Reports' },
   { key: 'users', to: '/librarian/users', label: 'Users' },
+  { key: 'applications', to: '/librarian/applications', label: 'Membership Applications' },
   { key: 'staff', to: '/librarian/staff', label: 'Librarian Accounts', managerOnly: true },
   { key: 'add-book', to: '/librarian/add-book', label: 'Add Book' },
   { key: 'qr-bulk', to: '/librarian/qr-bulk', label: 'Print QR' },

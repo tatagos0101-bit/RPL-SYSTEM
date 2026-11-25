@@ -5,7 +5,7 @@ from routers.auth import _hash, _make_token
 
 
 def test_mixed_case_signup_and_legacy_email_login(client, db_session):
-    response = client.post("/api/auth/signup", json={"name": "Fixture", "email": "MixedCase@example.com", "password": "Password1"})
+    response = client.post("/api/auth/signup", json={"name": "Fixture", "email": "MixedCase@example.com", "password": "Password1", "role": "librarian", "auth_code": "test-librarian-code"})
     assert response.status_code == 201
     user = db_session.get(User, response.json()["user_id"])
     assert user.email == "mixedcase@example.com"
@@ -19,7 +19,7 @@ def test_case_collision_never_selects_an_identity(client, db_session):
         db_session.add(User(name="Fixture", email=email, role="member", password_hash=_hash("Password1")))
     db_session.commit()
     assert client.post("/api/auth/login", json={"email": "case@example.com", "password": "Password1"}).status_code == 401
-    assert client.post("/api/auth/signup", json={"name": "Fixture", "email": "CASE@example.com", "password": "Password1"}).status_code == 400
+    assert client.post("/api/auth/signup", json={"name": "Fixture", "email": "CASE@example.com", "password": "Password1", "role": "librarian", "auth_code": "test-librarian-code"}).status_code == 400
 
 
 def test_new_hash_uses_all_password_bytes():

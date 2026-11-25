@@ -313,6 +313,12 @@ def list_members(
         User.id.in_(member_ids), User.face_encoding.isnot(None), User.face_encoding != '').all())
 
     result = []
+    issue_counts = dict(db.query(Transaction.user_id, func.count(Transaction.id)).filter(
+        Transaction.user_id.in_(member_ids), or_(
+            and_(Transaction.status.in_(["active", "overdue"]), Transaction.due_date <= _now()),
+            Transaction.return_date > Transaction.due_date,
+            Transaction.return_condition.in_(["damaged", "lost"]), Transaction.fine_amount > 0)
+    ).group_by(Transaction.user_id).all())
     for m in members:
         count = counts.get(m.id)
         location_is_generated = bool(m.generated_location and not (m.location or "").strip())
@@ -327,6 +333,8 @@ def list_members(
             location     = m.generated_location if location_is_generated else m.location,
             location_is_generated = location_is_generated,
             status       = m.status,
+            is_blacklisted = bool(m.is_blacklisted),
+            accountability_count = issue_counts.get(m.id, 0),
             face_enrolled = m.id in enrolled_ids,
             face_enrollment_display_only = bool(m.face_enrollment_display_only),
             active_loans = count.active if count else 0,
@@ -520,9 +528,15 @@ def update_member_status(
     if not member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    member.status = body.status
-    if body.status == "suspended":
-        revoke_user_sessions(db, member.id)
+    from schemas.library_workflows import AccountActionRequest
+    from services.member_accountability import apply_account_action
+    from pydantic import ValidationError
+    try:
+        action = AccountActionRequest(action="suspend" if body.status == "suspended" else "reactivate",
+            reason=body.reason, notes=body.notes)
+    except ValidationError:
+        raise HTTPException(422, "Choose a valid account action reason.") from None
+    apply_account_action(db, member, _, action)
     db.commit()
 
     return {
@@ -530,6 +544,7 @@ def update_member_status(
         "member_id": member.member_id or f"RPL-{member.id:05d}",
         "name": member.name,
         "status": member.status,
+        "is_blacklisted": member.is_blacklisted,
     }
 
 

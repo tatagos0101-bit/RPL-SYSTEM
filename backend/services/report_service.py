@@ -20,7 +20,7 @@ from reportlab.platypus import (
 
 
 # Presentation only: retain fine calculations and source report fields.
-SHOW_FINES = False
+SHOW_FINES = True
 
 
 # ── Colour palette ─────────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ def build_transcript(user, transactions: list) -> bytes:
                 (tx.book.title[:40] + "…") if tx.book and len(tx.book.title) > 40 else (tx.book.title if tx.book else "—"),
                 as_ph(tx.borrow_date).strftime("%b %d, %Y") if tx.borrow_date else "—",
                 as_ph(tx.due_date).strftime("%b %d, %Y")    if tx.due_date    else "—",
-                as_ph(tx.return_date).strftime("%b %d, %Y") if tx.return_date else "Active",
+                "Reported lost" if tx.return_condition == "lost" else as_ph(tx.return_date).strftime("%b %d, %Y") if tx.return_date else "Active",
                 f"₱{float(tx.fine_amount):.2f}"      if tx.fine_amount else "₱0.00",
             ])
 

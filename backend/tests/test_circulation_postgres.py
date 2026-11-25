@@ -64,7 +64,7 @@ def test_postgres_circulation_receipts_and_competing_loans():
         with Session(engine) as db:
             assert db.query(Transaction).count() == db.query(InventoryWrite).count() == 1
             assert db.get(Book, 1).copies_available == 0
-        returning = ReturnRequest(user_id=3, book_id=1, copy_id=copy_id, transaction_id=loan['id'])
+        returning = ReturnRequest(user_id=3, book_id=1, copy_id=copy_id, transaction_id=loan['id'], inspection_confirmed=True, return_condition='good', inspection_reason='no_issues')
         return_key = uuid4()
         outcomes = race([(return_book, returning, 1, return_key)] * 2)
         assert outcomes[0] == outcomes[1] and outcomes[0]['status'] == 'returned'
@@ -78,7 +78,7 @@ def test_postgres_circulation_receipts_and_competing_loans():
         # A delayed request for the original loan cannot close this newer loan.
         assert race([(return_book, returning, 1, uuid4())]) == [404]
         assert race([(return_book, returning, 1, return_key)])[0]['id'] == loan['id']
-        exact = ReturnRequest(user_id=winner['user_id'], book_id=1, copy_id=copy_id, transaction_id=winner['id'])
+        exact = ReturnRequest(user_id=winner['user_id'], book_id=1, copy_id=copy_id, transaction_id=winner['id'], inspection_confirmed=True, return_condition='good', inspection_reason='no_issues')
         outcomes = race([(return_book, exact, 1, uuid4()), (return_book, exact, 2, uuid4())])
         assert sum(isinstance(outcome, dict) for outcome in outcomes) == 1 and 404 in outcomes
         with Session(engine) as db:

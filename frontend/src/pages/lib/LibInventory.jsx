@@ -6,10 +6,12 @@ import { Search, Plus, Package, CheckCircle, Clock, BookOpen, Trash2, RefreshCw,
 import BookCover from '../../components/BookCover';
 import BookEditDialog from '../../components/BookEditDialog';
 import BookDetailsDialog from '../../components/BookDetailsDialog';
+import BookCopyManagement from '../../components/BookCopyManagement';
 import { getCategories } from '../../api/books';
 import { getInventoryStats, deleteBook, uploadBookCover } from '../../api/librarian';
 
 const getStatus = (status) => {
+  if (status === 'Library use only') return { label: status, color: 'bg-info-soft text-link' };
   if (status === 'Not available') return { label: 'Not available', color: 'bg-danger-soft bg-danger-soft text-danger text-danger' };
   if (status === 'Limited') return { label: 'Limited', color: 'bg-warning-soft bg-warning-soft text-warning text-warning' };
   return { label: 'Available', color: 'bg-success-soft bg-success-soft text-success text-success' };
@@ -24,6 +26,7 @@ const LibInventory = () => {
   const [uploadingId, setUploadingId] = useState(null);
   const [editingBook, setEditingBook] = useState(null);
   const [viewingBook, setViewingBook] = useState(null);
+  const [copiesBook, setCopiesBook] = useState(null);
   const [success, setSuccess] = useState('');
   const fileInputRef = useRef(null);
   const uploadTargetId = useRef(null);
@@ -76,6 +79,7 @@ const LibInventory = () => {
   return (
     <div className="rpl-page min-h-screen w-full min-w-0 bg-transparent pt-8 px-4 sm:px-6 lg:px-8 pb-20 font-sans text-ink transition-colors duration-300">
       {viewingBook && <BookDetailsDialog book={viewingBook} onClose={() => setViewingBook(null)} />}
+      {copiesBook && <BookCopyManagement book={copiesBook} onClose={() => setCopiesBook(null)} onSaved={fetchData} />}
       {editingBook && <BookEditDialog key={editingBook.id} book={editingBook} categories={categories}
         onClose={() => setEditingBook(null)} onSaved={handleSaved} />}
       {/* Hidden file input for cover upload */}
@@ -187,6 +191,7 @@ const LibInventory = () => {
                         <td className="px-8 py-4 text-sm font-sans text-muted">{book.location_shelf || '—'}</td>
                         <td className="px-8 py-4 text-right">
                           <div className="inventory-actions flex items-center justify-end gap-2">
+                            <button type="button" onClick={() => setCopiesBook(book)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-link hover:bg-info-soft">Copies & sources</button>
                             <button type="button" onClick={() => setViewingBook(book)} aria-label={`View details for ${book.title}`} style={{ minHeight: 44 }}
                               className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-link hover:bg-info-soft">
                               <Eye size={14} aria-hidden="true" /> View details

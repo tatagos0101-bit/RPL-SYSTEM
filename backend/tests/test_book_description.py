@@ -98,7 +98,7 @@ def test_preupgrade_create_receipt_replays_without_description_hash_change(clien
     assert response.status_code == 201
     saved = db_session.get(InventoryWrite, (actor.id, key))
     # Receipt created before description existed: all prior defaults remain hashed.
-    legacy_body = BookCreate(**body).model_dump(mode='json', exclude={'acquisition', 'description'})
+    legacy_body = BookCreate(**body).model_dump(mode='json', exclude={'acquisition', 'description', 'is_borrowable', 'circulation_note'})
     saved.fingerprint = fingerprint(legacy_body)
     db_session.commit()
     retry = client.post('/api/inventory/books', headers=headers, json=body)

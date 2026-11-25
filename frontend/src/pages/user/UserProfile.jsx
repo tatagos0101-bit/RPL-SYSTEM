@@ -1,4 +1,5 @@
 import { isValidNewPassword, passwordPolicyMessage } from '../../api/passwordPolicy';
+import { AccountabilityDisclosure } from '../../components/MemberAccountability';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -328,6 +329,7 @@ export default function UserProfile() {
     <div className="rpl-page rpl-profile min-h-screen bg-canvas text-ink pb-24 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 md:px-8 pt-8 space-y-5">
         <AccountNotice />
+        <AccountabilityDisclosure />
 
         {/* Page title */}
         <div>

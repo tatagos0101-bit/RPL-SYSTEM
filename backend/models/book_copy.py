@@ -14,6 +14,7 @@ class BookCopy(Base):
     id          = Column(Integer, primary_key=True, index=True)
     book_id     = Column(Integer, ForeignKey("books.id"), nullable=False, index=True)
     copy_number = Column(Integer, nullable=False)
+    condition   = Column(String(20), nullable=True)
     qr_code     = Column(String(40), unique=True, nullable=False, index=True)
     status      = Column(
         Enum("available", "borrowed", "damaged", "lost", "retired", name="book_copy_status", native_enum=False, create_constraint=True),

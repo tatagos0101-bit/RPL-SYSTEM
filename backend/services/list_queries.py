@@ -33,7 +33,7 @@ def transaction_query(db, search='', type='', status=''):
         query = query.filter(Transaction.status == status)
     if search:
         like = f'%{search}%'
-        query = query.join(User).join(Book).filter(or_(User.name.ilike(like), User.member_id.ilike(like), Book.title.ilike(like)))
+        query = query.join(User, User.id == Transaction.user_id).join(Book, Book.id == Transaction.book_id).filter(or_(User.name.ilike(like), User.member_id.ilike(like), Book.title.ilike(like)))
     return query
 
 

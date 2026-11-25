@@ -316,7 +316,9 @@ grant access.
 Only `member` and `librarian` are persisted roles. Public catalog access is anonymous.
 Resource ownership is enforced by individual routes; not every user route uses the
 strict `require_member` dependency. Librarian signup requires a private authorization
-code; the librarian registration flow issues temporary member passwords.
+code; the librarian registration flow issues temporary member passwords. Remote
+member applications at `/register` require librarian approval and issue a pending
+receipt rather than an account. See [circulation and membership workflows](LIBRARY_WORKFLOWS.md).
 
 Staff creation has a separate [Librarian Accounts page](../frontend/src/pages/lib/LibStaffAccounts.jsx)
 at `/librarian/staff`, under Library management in the staff menu. Its
@@ -574,9 +576,10 @@ Books have an optional nullable plain-text `description`. Create/update requests
 accept at most 2000 characters; blank values clear it and omitted update values
 preserve it. Public/member book details display it as text. Add Book offers an
 editable manual description and an explicit online-summary choice when ISBN
-metadata contains one; workbook `Description` is optional. Acquisition entry
-fields were removed from the Add Book UI, while existing acquisition records,
-imports and inventory actions remain. Existing installations need the additive
+metadata contains one; workbook `Description` is optional. Acquisition entry is
+available in Add Book, additional-copy editing and Browse Books → Copies & sources.
+The same per-copy records support donated/purchased acquisition reports.
+Existing installations need the additive
 `books.description` upgrade before this backend starts; the applied initial SQL
 was not regenerated.
 
@@ -616,8 +619,11 @@ for the locally implemented October 31, 2026 changes, recovery and acceptance li
 Borrowing rejects suspended members, overdue loans, unavailable/mismatched copies,
 and another active/overdue loan for the same member/title. It creates a loan,
 updates availability, and fulfills an applicable reservation. Returning closes
-that row, preserves its borrow date, calculates a fine, restores availability,
-and attempts promotion of the next queued reservation. Default loan/fine settings
+that row after a mandatory librarian inspection, preserves its borrow date and
+copy identity, and records condition, structured remarks and assessed charges.
+Only good/normally worn copies restore availability and queue promotion; damaged
+and reported-lost copies remain unavailable. Lost closures are identified separately
+from physical returns in reports. Default loan/fine settings
 come from configuration; fine storage does not record payment collection.
 
 [Reservations](../backend/routers/reservations.py) use a five-book combined quota:

@@ -17,6 +17,10 @@ The 12 confirmed `fixing-the-issue` repairs were released on October 21; see the
 [implementation status](docs/IMPLEMENTATION_STATUS.md) distinguishes completed
 releases from remaining security and feature work.
 
+Current [borrowing, inspections and remote-membership workflows](docs/LIBRARY_WORKFLOWS.md)
+describe the latest UI, fee assessments and schema prerequisites. Previously exported
+manuals predate these changes.
+
 ## User manuals
 
 Guides for the November 16 updated build cover public browsing, member accounts,

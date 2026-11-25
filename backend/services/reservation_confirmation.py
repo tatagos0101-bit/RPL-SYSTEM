@@ -10,6 +10,7 @@ from services.borrowing_capacity import lock_member, lock_books, assert_slots, f
 from services.reservation_policy import sync_expired_reservations, renumber_pending_queue
 from timezone_utils import now_ph
 from config import PICKUP_WINDOW_HOURS
+from services.loan_policy import assert_book_circulates, assert_can_borrow
 
 
 def confirm_reservations(db, user_id, selections, request_id):
@@ -24,10 +25,12 @@ def confirm_reservations(db, user_id, selections, request_id):
             raise HTTPException(409, dict(code='confirmation_id_conflict', message='This confirmation ID was used for different selections.'))
         rows = {r.id: r for r in db.query(Reservation).filter(Reservation.id.in_(previous.reservation_ids)).all()}
         return [rows[rid] for rid in previous.reservation_ids]
+    assert_can_borrow(db, user_id, commit=False)
     books = lock_books(db, [item.book_id for item in ordered])
     if len(books) != len(ordered):
         raise HTTPException(404, 'A selected book no longer exists')
     for book_id in books:
+        assert_book_circulates(books[book_id])
         sync_expired_reservations(db, book_id=book_id, commit=False)
     assert_slots(db, user_id, len(ordered))
     ids = list(books)

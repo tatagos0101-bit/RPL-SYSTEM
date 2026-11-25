@@ -26,6 +26,7 @@ from services.acquisitions import record_new_copies
 from models.user import User
 from models.transaction import Transaction
 from models.reservation import Reservation
+from models.notification import Notification
 from services.reservation_policy import sync_expired_reservations, promote_next_pending_reservation
 from schemas.book import BookCreate, BookUpdate, BookOut, BookCopyLabelOut, BulkUploadResponse, InventoryStats
 from services.category_service import assign_category, category_write_lock, reconcile_categories, MASTER_KEYWORDS, mapped_parent
@@ -114,7 +115,7 @@ def book_acquisitions(book_id: int, skip: int = Query(0, ge=0), limit: int = Que
     query = db.query(BookCopy).filter(BookCopy.book_id == book_id)
     copies = query.options(joinedload(BookCopy.acquisition)).order_by(BookCopy.copy_number, BookCopy.id).offset(skip).limit(limit).all()
     return {"total": query.count(), "skip": skip, "limit": limit, "items": [
-        {"id": copy.id, "copy_number": copy.copy_number, "qr_code": copy.qr_code, "status": copy.status,
+        {"id": copy.id, "copy_number": copy.copy_number, "qr_code": copy.qr_code, "status": copy.status, "condition": copy.condition,
          "source": copy.acquisition.source if copy.acquisition else None} for copy in copies]}
 
 
@@ -129,6 +130,9 @@ def add_book(
 ):
     category_write_lock(db)
     excluded = {"acquisition"} if body.acquisition is None else set()
+    for optional in ("is_borrowable", "circulation_note"):
+        if optional not in body.model_fields_set:
+            excluded.add(optional)
     # Preserve hashes for requests saved before optional descriptions existed.
     if body.description is None:
         excluded.add("description")
@@ -185,6 +189,17 @@ def update_book(
 
     changes = body.model_dump(exclude_unset=True)
     acquisition = changes.pop("new_copy_acquisition", None)
+    if changes.get("is_borrowable") is None and "is_borrowable" in changes:
+        raise HTTPException(422, "Borrowing eligibility must be true or false.")
+    if changes.get("is_borrowable") is False and book.is_borrowable:
+        for reservation in db.query(Reservation).filter(Reservation.book_id == book.id,
+                Reservation.status.in_(["pending", "ready"])).all():
+            reservation.status = "cancelled"
+            reservation.queue_position = None
+            db.add(Notification(user_id=reservation.user_id, type="reservation_cancelled", book_title=book.title,
+                message=f'Your reservation for "{book.title}" was cancelled because the title is now for library use only. Please contact the library desk for help.'))
+        book.is_borrowable = False
+        db.flush()
     previous_cover = book.cover_url
     sync_expired_reservations(db, book_id=book_id, commit=False)
     for required in ("title", "author", "category", "copies_total"):

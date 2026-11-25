@@ -22,6 +22,7 @@ const NAV_ICONS = {
   'due-books': <AlertTriangle size={18} />,
   reports: <FileText size={18} />,
   users: <Users size={18} />,
+  applications: <Users size={18} />,
   staff: <ShieldCheck size={18} />,
   'add-book': <PlusSquare size={18} />,
   'qr-bulk': <QrCode size={18} />,

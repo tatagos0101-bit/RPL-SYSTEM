@@ -91,6 +91,8 @@ class ManualVisitorSearch(BaseModel):
 
 
 class LibMemberOut(BaseModel):
+    is_blacklisted: bool = False
+    accountability_count: int = 0
     id:           int
     member_id:    str
     name:         str
@@ -110,6 +112,8 @@ class LibMemberOut(BaseModel):
 
 class MemberStatusUpdate(BaseModel):
     status: str   # "active" | "suspended"
+    reason: str = Field("librarian_review", max_length=40)
+    notes: Optional[str] = Field(None, max_length=1000)
 
 
 class LibMemberStats(BaseModel):

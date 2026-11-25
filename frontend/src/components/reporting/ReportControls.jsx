@@ -27,6 +27,7 @@ export default function ReportControls({ value, onChange, metadata, onApply, onR
     </div>
     <details className="mt-4"><summary className="cursor-pointer font-medium text-link">Filters for {categories[c].toLowerCase()}</summary><div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {!compact && input('query', 'Search matching records')}
+      {c === 'circulation' && select('return_condition', 'Inspected condition / loss', [['', 'All conditions'], ['good', 'Good'], ['worn', 'Normal wear'], ['damaged', 'Damaged'], ['lost', 'Reported lost'], ['unrecorded', 'Not recorded']])}
       {book && <>{select('book_category', 'Catalog category', [['', 'All categories'], ...(metadata?.book_categories || []).filter(Boolean).map(v => [v, v])])}{input('author', 'Author contains')}{input('year_from', 'Publication year from', 'number')}{input('year_to', 'Publication year through', 'number')}{input('isbn', 'ISBN contains')}{input('shelf', 'Shelf contains')}{input('qr', 'Exact QR code')}</>}
       {['visits', 'patrons', 'circulation'].includes(c) && input('member_id', 'Exact member ID')}
       {c === 'circulation' && <>{select('date_basis', 'Date basis', [['activity', 'Borrowing or return activity'], ['borrowed', 'Borrow date'], ['returned', 'Return date'], ['due', 'Due date']])}{select('loan_status', 'Loan status', [['', 'All matching loans'], ['outstanding', 'Currently outstanding (snapshot)'], ['overdue', 'Currently overdue (snapshot)'], ['returned', 'Returned'], ['on-time', 'On-time return'], ['late', 'Late return']])}</>}

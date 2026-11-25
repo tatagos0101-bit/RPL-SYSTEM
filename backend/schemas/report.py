@@ -36,6 +36,8 @@ class GoalOut(BaseModel):
 
 
 class RecommendedBook(BaseModel):
+    is_borrowable: bool = True
+    circulation_note: Optional[str] = None
     id:               int
     title:            str
     author:           str

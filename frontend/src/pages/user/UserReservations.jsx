@@ -66,6 +66,7 @@ export default function UserReservations() {
     getBook(bookId)
       .then((res) => {
         if (cancelled) return;
+        if (res.data.is_borrowable === false) throw new Error('This title is for library use only.');
         setCart((prev) => {
           if (prev.length >= allowance.capacity.remaining_slots) return prev;
           const { items } = addReservationCartItem(prev, res.data);

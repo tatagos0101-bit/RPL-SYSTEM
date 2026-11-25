@@ -47,7 +47,15 @@ test('bookToReservationCartItem maps API book data to My Selection item shape', 
     cover: '/covers/noli.jpg',
     copies_available: 0,
     availability_status: 'Unavailable',
+    is_borrowable: true,
   });
+});
+
+test('a library-use-only title cannot enter a reservation selection', () => {
+  const current = [{ id: 1 }];
+  const result = addReservationCartItem(current, { id: 2, is_borrowable: false });
+  assert.equal(result.added, false);
+  assert.deepEqual(result.items, current);
 });
 
 test('addReservationCartItem appends a new book once and reports duplicates', () => {

@@ -1,4 +1,4 @@
-export const categories = { visits: 'Library usage', patrons: 'Patrons', circulation: 'Circulation', collection: 'Collection', acquisitions: 'Acquisitions', inventory: 'Inventory checks' };
+export const categories = { visits: 'Library visits logbook', patrons: 'Patrons', circulation: 'Circulation & inspections', collection: 'Collection & borrower counts', acquisitions: 'Book acquisitions', inventory: 'Inventory accountability' };
 export const periodNames = { today: 'Today', yesterday: 'Yesterday', week: 'This week', 'last-week': 'Last week', month: 'This month', 'last-month': 'Last month', quarter: 'This quarter', year: 'This year', 'last-year': 'Last year', custom: 'Custom dates' };
 const iso = date => date.toISOString().slice(0, 10);
 export function periodDates(period = 'month', now = new Date()) {
@@ -22,6 +22,7 @@ export function defaultFilters(category = 'circulation') {
   return { category, ...periodDates(), date_scope: ['collection', 'patrons'].includes(category) ? 'all' : 'period', sort: 'id', direction: 'desc' };
 }
 const keys = new Set(['category', 'start', 'end', 'period', 'group', 'query', 'date_basis', 'book_category', 'author', 'isbn', 'qr', 'shelf', 'year_from', 'year_to', 'member_id', 'account_status', 'participation', 'loan_status', 'copy_status', 'holdings', 'source', 'date_scope', 'party', 'recorded_by', 'sort', 'direction']);
+keys.add('return_condition');
 export function filtersFromSearch(search) {
   const params = new URLSearchParams(search);
   const category = Object.hasOwn(categories, params.get('category')) ? params.get('category') : 'circulation';

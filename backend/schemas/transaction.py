@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import Literal, Optional
 from datetime import datetime
 from decimal import Decimal
 
@@ -11,13 +11,47 @@ class BorrowRequest(BaseModel):
 
 
 class ReturnRequest(BaseModel):
+    inspection_confirmed: Literal[True]
+    return_condition: Literal["good", "worn", "damaged", "lost"]
+    inspection_reason: Literal["no_issues", "wear_and_tear", "water_damage", "torn_pages", "missing_pages", "binding_damage", "marked_pages", "reported_lost", "other"]
+    inspection_notes: Optional[str] = Field(default=None, max_length=1000)
+    condition_fee: Decimal = Field(default=Decimal("0"), ge=0, max_digits=8, decimal_places=2)
     transaction_id: Optional[int] = None
     user_id: int
     book_id: int
     copy_id: Optional[int] = None
 
+    @field_validator("inspection_notes")
+    @classmethod
+    def clean_notes(cls, value):
+        if value is not None and "\x00" in value:
+            raise ValueError("Notes cannot contain null characters.")
+        return value.strip() or None if value is not None else None
+
+    @model_validator(mode="after")
+    def validate_inspection(self):
+        valid_reasons = {
+            "good": {"no_issues"}, "worn": {"wear_and_tear"},
+            "damaged": {"water_damage", "torn_pages", "missing_pages", "binding_damage", "marked_pages", "other"},
+            "lost": {"reported_lost"},
+        }
+        if self.inspection_reason not in valid_reasons[self.return_condition]:
+            raise ValueError("Choose a remark that matches the inspected condition.")
+        if self.return_condition in ("good", "worn") and self.condition_fee:
+            raise ValueError("Damage/loss charges apply only to damaged or lost copies.")
+        if self.inspection_reason == "other" and not (self.inspection_notes or "").strip():
+            raise ValueError("Describe the damage when choosing Other.")
+        return self
+
 
 class TransactionOut(BaseModel):
+    late_fee: Optional[Decimal] = None
+    condition_fee: Decimal = Decimal("0")
+    return_condition: Optional[str] = None
+    inspection_reason: Optional[str] = None
+    inspection_notes: Optional[str] = None
+    inspected_by_id: Optional[int] = None
+    inspected_at: Optional[datetime] = None
     id:          int
     user_id:     int
     book_id:     int

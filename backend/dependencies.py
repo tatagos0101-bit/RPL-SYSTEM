@@ -30,7 +30,7 @@ def get_session_user(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_error
-    if user.status == "suspended" or user.deleted_at is not None:
+    if user.status == "suspended" or user.is_blacklisted or user.deleted_at is not None:
         raise credentials_error
     if not session_is_current(db.get(AuthSession, sid), user):
         raise credentials_error

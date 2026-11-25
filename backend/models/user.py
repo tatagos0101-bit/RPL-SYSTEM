@@ -31,6 +31,7 @@ class User(Base):
     location       = Column(String(120), nullable=True)
     generated_location = Column(String(120), nullable=True)
     status         = Column(Enum("active", "suspended", name="user_status", native_enum=False, create_constraint=True), nullable=False, default="active")
+    is_blacklisted = Column(Boolean, nullable=False, default=False, server_default=false())
 
     # JSON in server memory; encrypted TEXT at rest when encryption is enabled.
     face_encoding  = deferred(Column(BiometricText("users.face_encoding"), nullable=True))
@@ -52,7 +53,7 @@ class User(Base):
         return self.role == "member" and bool(self.privacy_consent_pending)
 
     # Relationships
-    transactions   = relationship("Transaction",  back_populates="user")
+    transactions   = relationship("Transaction", back_populates="user", foreign_keys="Transaction.user_id")
     reservations   = relationship("Reservation",  back_populates="user")
     entry_logs     = relationship("EntryLog",     back_populates="user")
     reading_goals  = relationship("ReadingGoal",  back_populates="user")

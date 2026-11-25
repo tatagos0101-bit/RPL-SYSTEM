@@ -21,7 +21,7 @@ def returned_loan(client, db_session):
     member_headers = {"Authorization": "Bearer " + _make_token(member.id)}
     body = {"user_id": member.id, "book_id": borrowed.id}
     assert client.post("/api/transactions/borrow", json=body, headers=staff_headers).status_code == 201
-    assert client.post("/api/transactions/return", json=body, headers=staff_headers).status_code == 200
+    assert client.post("/api/transactions/return", json={**body, "inspection_confirmed": True, "return_condition": "good", "inspection_reason": "no_issues"}, headers=staff_headers).status_code == 200
     return member, borrowed, unread, member_headers, staff_headers
 
 

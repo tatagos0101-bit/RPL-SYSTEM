@@ -4,6 +4,8 @@ import ModalFrame from './ModalFrame';
 
 export default function BookDetailsDialog({ book, onClose }) {
   const fields = [
+    ['Borrowing rule', book.is_borrowable === false ? 'Library use only' : 'Can be borrowed'],
+    ['Circulation note', book.circulation_note],
     ['Category', book.category],
     ['Published', book.year],
     ['ISBN', book.isbn],

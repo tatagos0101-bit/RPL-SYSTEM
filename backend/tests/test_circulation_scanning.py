@@ -28,6 +28,8 @@ def setup(db):
 
 
 def post(client, operation, headers, payload, key=None):
+    if operation == 'return':
+        payload = dict(inspection_confirmed=True, return_condition='good', inspection_reason='no_issues', **payload)
     return client.post('/api/transactions/' + operation,
                        headers={**headers, 'Idempotency-Key': key or str(uuid4())}, json=payload)
 

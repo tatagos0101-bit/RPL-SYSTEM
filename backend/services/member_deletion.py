@@ -18,6 +18,8 @@ from models.reservation import Reservation, ReservationConfirmation
 from models.security_alert import SecurityAlert
 from models.transaction import Transaction
 from models.user import User
+from models.member_application import MemberApplication
+from models.member_account_action import MemberAccountAction
 from services import storage_service
 from services.borrowing_capacity import lock_member, lock_books
 from services.reservation_policy import sync_expired_reservations
@@ -155,6 +157,11 @@ def delete_account(db, member):
     db.query(EntryLog).filter(EntryLog.user_id == member.id).update(
         {EntryLog.note: None}, synchronize_session=False)
     member.name = "Deleted member"
+    db.query(MemberApplication).filter_by(member_user_id=member.id).update({
+        MemberApplication.name: "Deleted applicant", MemberApplication.email: None,
+        MemberApplication.location: "Removed", MemberApplication.review_notes: None}, synchronize_session=False)
+    db.query(MemberAccountAction).filter_by(user_id=member.id).update({MemberAccountAction.notes: None}, synchronize_session=False)
+    db.query(Transaction).filter_by(user_id=member.id).update({Transaction.inspection_notes: None}, synchronize_session=False)
     member.member_id = None
     member.email = member.phone = member.location = None
     member.generated_location = None

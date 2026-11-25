@@ -41,7 +41,7 @@ def borrowing_capacity(db, user_id):
     if overdue:
         restrictions.append('Return overdue books before borrowing.')
     if member and member.status == 'suspended':
-        restrictions.append('Account is suspended.')
+        restrictions.append('Account is blacklisted. Contact the library desk.' if member.is_blacklisted else 'Account is suspended.')
     remaining = max(0, COMMITMENT_LIMIT - loan_count - pending - ready)
     if not remaining:
         restrictions.append('All five slots are in use. Return or cancel a book to free a slot.')

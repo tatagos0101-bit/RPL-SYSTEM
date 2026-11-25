@@ -23,6 +23,7 @@ def init_db():
     """Create/upgrade tables explicitly (production deploys run migrate.py first)."""
     # Import all models so Base knows about them before create_all
     from models import account_deletion_notice, copy_acquisition, user, auth_session, face_embedding, book, book_copy, book_interaction, transaction, reservation, inventory_write, entry_log, reading_goal, library_settings, notification, password_reset, security_alert  # noqa: F401
+    from models import member_account_action, member_application  # noqa: F401
     from services.schema_migrations import upgrade_schema, repair_preflight
 
     with engine.begin() as conn:

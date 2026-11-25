@@ -69,6 +69,7 @@ export default function UserBrowseBooks() {
   const isDark = document.documentElement.classList.contains('dark');
 
   const addToCart = (book) => {
+    if (book.is_borrowable === false) return toast.info('This title is for library use only.');
     if (loadPendingConfirmation()) return toast.info('Resolve your pending confirmation in My Reservations first.');
     if (!allowance.capacity || cart.length >= allowance.capacity.remaining_slots) {
       allowance.refreshCapacity();
@@ -340,7 +341,8 @@ export default function UserBrowseBooks() {
                     {selected.description && <section className="mb-5"><h3 className="mb-2 font-semibold text-ink">About this book</h3><p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{selected.description}</p></section>}
                     <div className="mb-4"><FavoriteButton {...favoriteProps(selected)} showLabel /></div>
                     {detailLoading && <p role="status" className="mb-3 text-sm">Loading book details…</p>}
-                    {!isAvailable && (
+                    {selected.is_borrowable === false && <p className="mb-4 rounded-xl border border-line bg-info-soft p-4 text-sm text-link">Library use only. {selected.circulation_note || 'Read this title at the library; it cannot be borrowed or reserved.'}</p>}
+                    {!isAvailable && selected.is_borrowable !== false && (
                       <p className="text-sm font-bold leading-relaxed text-warning bg-warning-soft border border-warning rounded-xl px-4 py-3 mb-5">
                         Currently not available. Reserve now to join the queue. You'll be notified when it's your turn.
                       </p>
@@ -356,13 +358,13 @@ export default function UserBrowseBooks() {
                     ) : (
                       <button
                         onClick={() => { addToCart(selected); setSelected(null); }}
-                        disabled={isInCart || detailLoading}
+                        disabled={isInCart || detailLoading || selected.is_borrowable === false}
                         className={`w-full py-4 rounded-lg font-semibold text-sm tracking-normal transition-all  flex items-center justify-center gap-3 text-white ${
                           isInCart ? 'bg-emerald-700 cursor-default' : 'bg-action hover:bg-action-hover disabled:opacity-40 disabled:cursor-not-allowed'
                         }`}
                       >
                         <Bookmark size={16} />
-                        {detailLoading ? 'Loading…' : isInCart ? 'Already In Selection' : isAvailable ? 'Reserve This Book' : 'Join Reservation Queue'}
+                        {selected.is_borrowable === false ? 'Library use only' : detailLoading ? 'Loading…' : isInCart ? 'Already In Selection' : isAvailable ? 'Reserve This Book' : 'Join Reservation Queue'}
                       </button>
                     )}
                   </div>

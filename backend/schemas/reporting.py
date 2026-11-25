@@ -25,6 +25,7 @@ class ReportFilters(BaseModel):
     account_status: Literal['', 'active', 'suspended'] = ''
     participation: Literal['', 'borrowed', 'visited', 'neither'] = ''
     loan_status: Literal['', 'outstanding', 'overdue', 'returned', 'on-time', 'late'] = ''
+    return_condition: Literal['', 'good', 'worn', 'damaged', 'lost', 'unrecorded'] = ''
     holdings: Literal['all', 'current'] = 'all'
     copy_status: Literal['', 'available', 'borrowed', 'damaged', 'lost', 'retired'] = ''
     source: Literal['', 'unknown', 'purchased', 'donated', 'other'] = ''
@@ -58,12 +59,12 @@ class ReportFilters(BaseModel):
         allowed = {
             'visits': ['member_id'],
             'patrons': ['member_id', 'account_status', 'participation', 'date_scope'],
-            'circulation': book_fields + ['member_id', 'loan_status'],
+            'circulation': book_fields + ['member_id', 'loan_status', 'return_condition'],
             'collection': book_fields + ['copy_status', 'date_scope'],
             'acquisitions': book_fields + ['source', 'date_scope', 'party', 'recorded_by'],
             'inventory': book_fields,
         }[self.category]
-        for field in book_fields + ['member_id', 'account_status', 'participation', 'loan_status', 'copy_status', 'source', 'party', 'recorded_by']:
+        for field in book_fields + ['member_id', 'account_status', 'participation', 'loan_status', 'return_condition', 'copy_status', 'source', 'party', 'recorded_by']:
             if getattr(self, field) not in ('', None) and field not in allowed:
                 raise ValueError(f'{field} is not a filter for {self.category}.')
         if self.category not in ('collection', 'patrons', 'acquisitions') and self.date_scope != 'period':

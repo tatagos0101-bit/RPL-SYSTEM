@@ -31,7 +31,7 @@ def renumber_pending_queue(db: Session, book_id: int) -> None:
 
 def promote_next_pending_reservation(db: Session, book_id: int) -> Reservation | None:
     book = db.query(Book).filter(Book.id == book_id).first()
-    if not book or book.copies_available < 1:
+    if not book or not book.is_borrowable or book.copies_available < 1:
         renumber_pending_queue(db, book_id)
         return None
 

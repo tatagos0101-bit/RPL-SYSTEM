@@ -120,7 +120,7 @@ def test_borrow_blocks_member_with_overdue_and_return_accepts_overdue_loan(clien
     returned = client.post(
         "/api/transactions/return",
         headers={"Authorization": f"Bearer {token}"},
-        json={"user_id": member.id, "book_id": overdue_book.id},
+        json={"user_id": member.id, "book_id": overdue_book.id, "inspection_confirmed": True, "return_condition": "good", "inspection_reason": "no_issues"},
     )
     assert returned.status_code == 200
     body = returned.json()

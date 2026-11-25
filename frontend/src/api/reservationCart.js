@@ -24,10 +24,12 @@ export const bookToReservationCartItem = (book) => ({
   cover: book.cover_url ?? book.cover ?? null,
   copies_available: book.copies_available,
   availability_status: book.availability_status,
+  is_borrowable: book.is_borrowable !== false,
 });
 
 export const addReservationCartItem = (items, book) => {
   const current = Array.isArray(items) ? items : [];
+  if (book.is_borrowable === false) return { items: current, added: false };
   if (current.some((item) => item.id === book.id)) {
     return { items: current, added: false };
   }

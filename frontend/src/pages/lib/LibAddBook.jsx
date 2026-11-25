@@ -1,4 +1,7 @@
 import BookDescriptionField from '../../components/BookDescriptionField';
+import AcquisitionFields from '../../components/AcquisitionFields';
+import CirculationEligibilityField from '../../components/CirculationEligibilityField';
+import { emptyAcquisition, acquisitionPayload } from '../../api/acquisitions';
 import { fetchBookByISBN, MAX_BOOK_DESCRIPTION_LENGTH } from '../../api/bookMetadata';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -25,6 +28,8 @@ export default function LibAddBook() {
     isbn: '', copies: '', location: '', cover_url: '', description: '',
   });
   const [onlineDescription, setOnlineDescription] = useState('');
+  const [acquisition, setAcquisition] = useState(emptyAcquisition);
+  const [eligibility, setEligibility] = useState({ is_borrowable: true, circulation_note: '' });
   const [submitting, setSubmitting]   = useState(false);
   const [submitted, setSubmitted]     = useState(false);
   const [formError, setFormError]     = useState('');
@@ -155,6 +160,8 @@ export default function LibAddBook() {
         catch { setCoverRetry({ id: res.data.id, file: coverFile }); }
       }
       setSubmitted(true);
+      setAcquisition(emptyAcquisition());
+      setEligibility({ is_borrowable: true, circulation_note: '' });
       setOnlineDescription('');
       setForm({ title: '', author: '', category: '', year: '', isbn: '', copies: '', location: '', cover_url: '', description: '' });
       setIsbnInput(''); setLookupSuccess(false); setLookupError(''); setUseCustomCategory(false);
@@ -207,6 +214,8 @@ export default function LibAddBook() {
       return setFormError('Book description must be at most 2,000 characters.');
 
     submitManual({
+      ...eligibility,
+      acquisition: acquisitionPayload(acquisition),
       description: form.description?.trim() || null,
       title:          t,
       author:         a,
@@ -673,6 +682,8 @@ export default function LibAddBook() {
                 </div>
 
                 <BookDescriptionField value={form.description} onChange={description => setForm(previous => ({ ...previous, description }))} onlineDescription={onlineDescription} lookedUp={lookupSuccess || !!lookupError} disabled={submitting || !!pendingManual} />
+                <CirculationEligibilityField value={eligibility} onChange={setEligibility} disabled={submitting || !!pendingManual} />
+                <AcquisitionFields value={acquisition} onChange={setAcquisition} disabled={submitting || !!pendingManual} />
                 <button type="submit" disabled={submitting || !!pendingManual || !!recoveryError}
                   className="w-full py-4 bg-action hover:bg-action-hover disabled:opacity-60 text-white rounded-lg font-semibold text-sm tracking-normal transition-all shadow-sm flex items-center justify-center gap-2 mt-2">
                   {submitting ? <RefreshCw size={15} className="animate-spin" /> : <PlusSquare size={15} />}

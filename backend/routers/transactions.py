@@ -34,7 +34,7 @@ from models.transaction import Transaction
 from models.reservation import Reservation
 from models.user import User
 from models.notification import Notification
-from services.loan_policy import assert_can_borrow, sync_overdue_loans
+from services.loan_policy import assert_book_circulates, assert_can_borrow, sync_overdue_loans
 from services.book_copy_service import (
     assert_copy_can_borrow,
     ensure_book_copies,
@@ -79,7 +79,7 @@ def _days_left(due_date: datetime) -> int:
 
 def _enrich(tx: Transaction) -> TransactionOut:
     out = TransactionOut.model_validate(tx)
-    for field in ("borrow_date", "due_date", "return_date"):
+    for field in ("borrow_date", "due_date", "return_date", "inspected_at"):
         value = getattr(out, field)
         if value is not None:
             setattr(out, field, as_ph(value))
@@ -110,7 +110,7 @@ def borrow_book(
     _:    User    = Depends(require_librarian),
     request_id: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
-    digest = fingerprint(body.model_dump())
+    digest = fingerprint(body.model_dump(mode="json"))
     saved = find_write(db, _.id, request_id, "borrow", digest) if request_id else None
     if saved:
         return saved.result
@@ -128,6 +128,7 @@ def borrow_book(
             .populate_existing().with_for_update().first())
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
+    assert_book_circulates(book)
     assert_can_borrow(db, body.user_id, commit=False)
     sync_expired_reservations(db, book_id=book.id, commit=False)
     reservation = db.query(Reservation).filter(Reservation.user_id == member.id,
@@ -212,7 +213,7 @@ def return_book(
 ):
     if request_id and body.transaction_id is None:
         raise HTTPException(422, "An exact transaction_id is required for a retry-safe return.")
-    digest = fingerprint(body.model_dump())
+    digest = fingerprint(body.model_dump(mode="json"))
     saved = find_write(db, _.id, request_id, "return", digest) if request_id else None
     if saved:
         return saved.result
@@ -222,6 +223,7 @@ def return_book(
     sync_expired_reservations(db, book_id=body.book_id, commit=False)
     sync_overdue_loans(db, user_id=body.user_id, commit=False)
     ensure_book_copies(db, body.book_id, commit=False)
+    db.flush()  # Keep legacy copy assignments before populate_existing reloads the loan.
     tx = (
         db.query(Transaction)
         .filter(
@@ -240,18 +242,41 @@ def return_book(
             detail="No active borrow record found for this member and book",
         )
 
+    if not tx.copy or tx.copy.book_id != body.book_id or tx.copy.status == "retired":
+        raise HTTPException(409, "Review this loan's physical-copy association in inventory before accepting it.")
+    if db.query(Transaction.id).filter(Transaction.copy_id == tx.copy_id, Transaction.id != tx.id,
+        Transaction.status.in_(["active", "overdue"])).first():
+        raise HTTPException(409, "This copy is linked to another outstanding loan. Ask the library to reconcile its records.")
+
     now            = _now()
-    fine           = _calc_fine(tx.due_date, now)
+    fine           = _calc_fine(tx.due_date, now) if tx.due_date else Decimal("0")
+    if fine + body.condition_fee > Decimal("999999.99"):
+        raise HTTPException(422, "Combined assessed charges exceed the supported amount. Review the assessment with the library.")
     tx.return_date = now
-    tx.fine_amount = fine
+    tx.late_fee = fine
+    tx.condition_fee = body.condition_fee
+    tx.fine_amount = fine + body.condition_fee
+    tx.return_condition = body.return_condition
+    tx.inspection_reason = body.inspection_reason
+    tx.inspection_notes = (body.inspection_notes or "").strip() or None
+    tx.inspected_by_id = _.id
+    tx.inspected_at = now
     tx.status      = "returned"
     tx.type        = "return"
 
-    if book:
-        book.copies_available = min(book.copies_available + 1, book.copies_total)
-        _notify_next_reservation(book.id, db)
     if tx.copy:
-        tx.copy.status = "available"
+        tx.copy.condition = body.return_condition
+        tx.copy.status = body.return_condition if body.return_condition in ("damaged", "lost") else "available"
+    else:
+        raise HTTPException(409, "Resolve this legacy loan's physical copy before recording its inspection.")
+    db.flush()
+    book.copies_available = db.query(BookCopy).filter(BookCopy.book_id == book.id, BookCopy.status == "available").count()
+    _notify_next_reservation(book.id, db)
+    if body.return_condition in ("damaged", "lost") or fine:
+        db.add(Notification(message=f'Loan #{tx.id} needs accountability review: {body.return_condition}; assessed charges PHP {tx.fine_amount:.2f}.',
+            type="loan_review", member_name=tx.user.name, book_title=book.title))
+    db.add(Notification(user_id=tx.user_id, type="loan_inspection", book_title=book.title,
+        message=f'The library recorded your {"reported lost book" if body.return_condition == "lost" else "book return"}: "{book.title}". Condition: {body.return_condition}. Assessed charges: PHP {tx.fine_amount:.2f}. Please contact the library desk with any questions.'))
 
     db.flush()
     result = _enrich(tx).model_dump(mode="json")
@@ -291,8 +316,8 @@ def circulation_scan(code: str = Query(..., min_length=1, max_length=60),
         for physical in copies:
             candidates.append(dict(book_id=book.id, title=book.title, copy_id=physical.id,
                 copy_number=physical.copy_number, copy_qr=physical.qr_code,
-                available=physical.status == "available" and physical.id not in active_copy_ids,
-                copy_status=physical.status, due_date=(_now() + timedelta(days=LOAN_DAYS)).isoformat()))
+                available=bool(book.is_borrowable and physical.status == "available" and physical.id not in active_copy_ids),
+                copy_status=physical.status if book.is_borrowable else "library use only", due_date=(_now() + timedelta(days=LOAN_DAYS)).isoformat()))
         if not candidates:
             raise HTTPException(409, "This title needs physical-copy setup in inventory before scanning.")
     return dict(qr_type="copy" if copy else "book", candidates=candidates)
@@ -332,8 +357,8 @@ def transaction_counts(search: str = Query('', max_length=200), type: str = Quer
     sync_overdue_loans(db)
     return dict(total=transaction_query(db, search, type, status).count(),
                 on_time=transaction_query(db, status='active').filter(Transaction.due_date > now_ph() + timedelta(days=3)).count(),
-                borrowed=transaction_query(db, type='borrow').count(),
-                returned=transaction_query(db, type='return').count(),
+                borrowed=db.query(Transaction).filter(Transaction.borrow_date.isnot(None)).count(),
+                returned=transaction_query(db, type='return').filter((Transaction.return_condition.is_(None)) | (Transaction.return_condition != 'lost')).count(),
                 overdue=transaction_query(db, status='overdue').count())
 
 # ── Member: active loans ──────────────────────────────────────────────────────

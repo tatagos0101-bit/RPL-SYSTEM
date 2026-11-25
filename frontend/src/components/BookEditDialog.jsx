@@ -1,4 +1,5 @@
 import AcquisitionFields from './AcquisitionFields';
+import CirculationEligibilityField from './CirculationEligibilityField';
 import { emptyAcquisition, acquisitionPayload } from '../api/acquisitions';
 import { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Pencil, RefreshCw, X } from 'lucide-react';
@@ -20,6 +21,7 @@ export default function BookEditDialog({ book, categories, onClose, onSaved }) {
   const pending = useRef(false);
   const [form, setForm] = useState(() => Object.fromEntries(fields.map(({ name }) => [name, book[name] ?? ''])));
   const [acquisition, setAcquisition] = useState(emptyAcquisition);
+  const [eligibility, setEligibility] = useState({ is_borrowable: book.is_borrowable !== false, circulation_note: book.circulation_note || '' });
   const addingCopies = Number(form.copies_total) > Number(book.copies_total);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -45,6 +47,7 @@ export default function BookEditDialog({ book, categories, onClose, onSaved }) {
     setSaving(true);
     setError('');
     try {
+      Object.assign(payload, eligibility);
       if (addingCopies && acquisitionPayload(acquisition)) payload.new_copy_acquisition = acquisitionPayload(acquisition);
       const { data } = await updateBook(book.id, payload);
       onSaved(data);
@@ -85,6 +88,7 @@ export default function BookEditDialog({ book, categories, onClose, onSaved }) {
             </label>
           ))}
         </div>
+        <CirculationEligibilityField value={eligibility} onChange={setEligibility} disabled={saving} />
         {addingCopies && <AcquisitionFields value={acquisition} onChange={setAcquisition} disabled={saving} description="Applies only to the additional copies. Existing and retired copies retain their recorded sources." />}
         <datalist id="edit-book-categories">{categories.filter((category) => category !== 'All').map((category) => <option key={category} value={category} />)}</datalist>
         <p className="mt-4 text-sm leading-5 text-muted">

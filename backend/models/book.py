@@ -21,6 +21,8 @@ class Book(Base):
     location_shelf    = Column(String(80), nullable=True)
     cover_url         = Column(String(500), nullable=True)
     description       = Column(Text, nullable=True)
+    is_borrowable     = Column(Boolean, nullable=False, default=True, server_default=true())
+    circulation_note  = Column(String(500), nullable=True)
 
     # Unique QR string e.g. "RPL-00001"
     qr_code           = Column(String(30), unique=True, nullable=True, index=True)

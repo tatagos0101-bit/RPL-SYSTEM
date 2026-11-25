@@ -1,4 +1,6 @@
 import ModalFrame from '../../components/ModalFrame';
+import { Link } from 'react-router-dom';
+import MemberAccountability from '../../components/MemberAccountability';
 import RegistrationDelivery from '../../components/RegistrationDelivery';
 import { buildMemberRegistrationForm, registrationErrorMessage } from '../../api/memberRegistration';
 import useServerPage from '../../api/useServerPage';
@@ -15,7 +17,6 @@ import AccountActivityReview, { AccountNoticeQueue } from '../../components/Acco
 import FloatingActions from '../../components/FloatingActions';
 import {
   getMemberStats,
-  updateMemberStatus,
   registerMember,
   resetMemberPassword,
   fillMissingMemberAddresses,
@@ -401,6 +402,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
 // Main Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function LibUsers() {
+  const [accountabilityTarget, setAccountabilityTarget] = useState(null);
   const [stats,        setStats]        = useState({ total:0, active:0, suspended:0 });
   const [search,       setSearch]       = useState('');
   const [actionMenu,   setActionMenu]   = useState(null);
@@ -425,8 +427,8 @@ export default function LibUsers() {
   }, [reload]);
   useEffect(() => { const timer = setTimeout(fetchMembers, 0); return () => clearTimeout(timer); }, [fetchMembers]);
 
-  const toggleStatus = (id, cur) => {
-    updateMemberStatus(id, cur==='active'?'suspended':'active').then(fetchMembers).catch(() => setOperationError('Status update could not be confirmed. Refresh before retrying.'));
+  const toggleStatus = (id) => {
+    setAccountabilityTarget(users.find(user => user.id === id));
     setActionMenu(null);
   };
 
@@ -453,6 +455,7 @@ export default function LibUsers() {
             </h1>
           </div>
           <div className="flex flex-wrap gap-3">
+            <Link to="/librarian/applications" className="flex items-center rounded-lg border border-line bg-panel px-4 py-3.5 text-sm font-semibold hover:bg-subtle">Membership applications</Link>
             <button type="button"
               onClick={() => { setAddressNotice(''); setShowFillAddresses(true); }}
               className="flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-3.5 text-sm font-semibold text-ink hover:bg-subtle">
@@ -545,7 +548,8 @@ export default function LibUsers() {
                       <td role="cell" className="px-6 py-4">
                         <span className="staff-member-label" aria-hidden="true">Status</span>
                         <span className={`staff-member-badge px-2.5 py-1 rounded-full text-sm font-semibold tracking-normal inline-block ${u.status==='active'?'bg-success-soft bg-success-soft text-success text-success':'bg-danger-soft bg-danger-soft text-danger text-danger'}`}>
-                          {u.status}
+                          {u.is_blacklisted ? 'blacklisted' : u.status}
+                          {u.accountability_count > 0 && <span className="ml-2 text-warning">· {u.accountability_count} for review</span>}
                         </span>
                       </td>
                       <td role="cell" className="staff-member-actions px-6 py-4 relative">
@@ -559,6 +563,7 @@ export default function LibUsers() {
                         </button>
                         {actionMenu===u.id && (
                           <FloatingActions anchor={actionAnchor} onClose={closeActionMenu}>
+                            <button onClick={() => { setActionMenu(null); setAccountabilityTarget(u); }} className="w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-link hover:bg-info-soft">Borrowing record & restrictions</button>
                             {(
                               <button onClick={() => { setActionMenu(null); setEnrollTarget(u); }}
                                 className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold tracking-normal text-link hover:bg-info-soft flex items-center gap-2 transition-all">
@@ -620,6 +625,7 @@ export default function LibUsers() {
         onChanged={() => { fetchMembers(); setNoticeRevision(value => value + 1); }}
         onDeleteNow={user => { setAccountReview(null); setDeleteTarget({ user, kind: 'account' }); }}
         onApprove={(user, noticeId) => { setAccountReview(null); setDeleteTarget({ user, kind: 'account', noticeId }); }} />}
+      {accountabilityTarget && <MemberAccountability user={accountabilityTarget} onClose={() => setAccountabilityTarget(null)} onChanged={fetchMembers} />}
       {resetTarget && (
         <PasswordResetModal
           user={resetTarget}
