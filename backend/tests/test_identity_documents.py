@@ -200,6 +200,34 @@ def test_successful_remote_enrollment_keeps_template_not_comparison_files(client
     assert db_session.query(SecurityAlert).count() == 0
 
 
+@pytest.mark.parametrize("matches", [False, True])
+def test_remote_sface_comparison_still_enforces_matches_and_keeps_original_template(client, db_session, monkeypatch, matches):
+    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+    mock_document(monkeypatch); mock_live(monkeypatch)
+    calls = []
+    def compare(frame, detected, **kwargs):
+        assert kwargs["engine_name"] == "sface"
+        calls.append(kwargs["label"])
+        values = [0.0] * 128
+        values[1 if kwargs["label"] == "live camera" and not matches else 0] = 1.0
+        return {"engine": "sface", "encoding": values}
+    monkeypatch.setattr(ids, "comparison_face", compare)
+    result = client.post("/api/auth/enroll-face", json=enrollment(content))
+    assert result.status_code == (200 if matches else 422)
+    assert calls == ["uploaded ID", "saved library ID", "live camera"]
+    db_session.refresh(member)
+    assert member.face_encoding == (json.dumps([0.0] * 128) if matches else None)
+    assert bool(member.face_id_verified_at) == matches
+
+
+def test_live_pad_failure_cannot_reach_the_new_comparator(client, db_session, monkeypatch):
+    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+    mock_document(monkeypatch); mock_live(monkeypatch, "spoof")
+    def forbidden(*args, **kwargs): pytest.fail("A failed live check cannot run identity comparison")
+    monkeypatch.setattr(ids, "comparison_face", forbidden)
+    assert client.post("/api/auth/enroll-face", json=enrollment(content)).status_code == 422
+
+
 def test_private_id_reader_rejects_arbitrary_paths_and_categories():
     from services.storage_service import read_private_upload
     for path in ("https://example.test/id.png", "/uploads/ids/../secret", "/uploads/avatars/photo.png", "supabase://other-bucket/id.png"):

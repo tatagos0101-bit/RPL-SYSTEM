@@ -3,6 +3,6 @@
   "framework": "fastapi",
   "regions": ["sin1"],
   "functions": {
-    "main.py": { "maxDuration": 60, "includeFiles": "assets/id_ocr/**" }
+    "main.py": { "maxDuration": 60, "includeFiles": "assets/**" }
   }
 }

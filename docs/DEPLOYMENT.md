@@ -39,6 +39,15 @@ The supervised text-reading fallback uses the existing ID-type field with a
 and API together; restart a running local API to load the updated verification
 routes. A librarian password, original-ID attestation and usable portrait remain
 required for manual review, and live enrollment retains all face/PAD checks.
+Online ID comparison additionally requires the checksummed SFace/YuNet assets in
+`backend/assets/identity_face`. The Vercel function explicitly includes `assets/**`;
+the existing Docker copy includes them too. They total about 9.7 MiB and use the
+existing OpenCV CPU runtime, with no new dependency or schema migration. See
+[model provenance and acceptance limits](../backend/assets/identity_face/README.md).
+After deployment, `/health` reports `id_face_comparison.engine` and
+`id_face_comparison.model_assets_valid` so the bundled verifier can be checked
+without opening an account or uploading an ID. Asset integrity is not a live-face
+accuracy test; follow the consenting operational acceptance checks as well.
 
 ## Inactive member notices prerequisite
 

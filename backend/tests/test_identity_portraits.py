@@ -175,15 +175,19 @@ def test_three_matching_comparisons_use_one_engine_and_leave_live_template_uncha
     monkeypatch.setattr(ids, "comparison_face", compare)
     ids.verify_remote_identity(member, content, live, "synthetic-live")
     assert [call["label"] for call in calls] == ["uploaded ID", "saved library ID", "live camera"]
-    assert {call["engine_name"] for call in calls} == {"dlib"}
+    assert {call["engine_name"] for call in calls} == {"sface"}
     assert live["encoding"] == [.2] * 128
 
 
-def test_mixed_engine_without_a_common_representation_is_not_a_match(monkeypatch):
+def test_different_source_detectors_use_the_same_dedicated_verifier(monkeypatch):
     member, content = setup_comparison(monkeypatch)
-    with pytest.raises(HTTPException) as failure:
-        ids.verify_remote_identity(member, content, face(selected="insightface"), "synthetic-live")
-    assert failure.value.status_code == 422 and "consistently" in failure.value.detail
+    calls = []
+    def compare(frame, detected, **kw):
+        calls.append(kw["engine_name"])
+        return face()
+    monkeypatch.setattr(ids, "comparison_face", compare)
+    ids.verify_remote_identity(member, content, face(selected="insightface"), "synthetic-live")
+    assert calls == ["sface"] * 3
 
 
 def test_mixed_engines_with_dlib_support_all_use_the_same_comparison_encoder(monkeypatch):
@@ -194,7 +198,7 @@ def test_mixed_engines_with_dlib_support_all_use_the_same_comparison_encoder(mon
         return face()
     monkeypatch.setattr(ids, "comparison_face", compare)
     ids.verify_remote_identity(member, content, face(selected="insightface", fallback=True), "synthetic-live")
-    assert calls == ["dlib"] * 3
+    assert calls == ["sface"] * 3
 
 
 def test_matching_threshold_is_not_relaxed_for_id_comparisons():

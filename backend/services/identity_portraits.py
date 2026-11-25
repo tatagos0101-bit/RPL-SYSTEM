@@ -44,7 +44,11 @@ def comparison_face(frame: str, detected: dict, *, engine_name: str, label: str)
     try:
         rgb = decode_rgb(frame)
         crop, location = _portrait_crop(rgb, detected.get("face_box"), label)
-        if engine_name == "dlib":
+        if engine_name == "sface":
+            from services.id_face_verifier import encode_portrait
+            vector = encode_portrait(crop, location, label)
+            dimension = 128
+        elif engine_name == "dlib":
             from services import face_service
             if not face_service.FACE_LIB_AVAILABLE:
                 raise RuntimeError("Portrait encoder unavailable")

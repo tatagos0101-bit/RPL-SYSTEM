@@ -54,23 +54,32 @@ live face and confirm enrollment.
 The server requires an active authenticated account, the current consent version
 and a librarian-verified ID. It enforces the existing liveness/PAD checks and
 enrollment deduplication. It compares the uploaded ID portrait, saved verified ID
-portrait and live face using the existing engine and strict login threshold.
+portrait and live face using one local SFace verifier. Existing dlib/optional
+InsightFace detection, live PAD and stored sign-in templates remain unchanged.
 Small original uploads (at most 1600px on the longest edge and 1.1 MB) are sent
 without another JPEG conversion. Larger photos are bounded to 1600px and the
 request limit. The server makes its ID working frame lossless in memory.
 Online camera capture requests 1280 by 960 pixels when supported; it keeps the
 live image unmirrored while mirroring only its preview.
 
-Comparison uses bounded, padded crops of the already-detected portraits, one
-common engine, and consistent color input/alignment. Dlib uses the existing
-five-point/128D model with three resamples per portrait; optional InsightFace uses
-OpenCV BGR input. Portraits below 64 pixels on either face-box edge are rejected
+Comparison uses bounded, padded crops of the already-detected portraits and
+consistent BGR input. The bundled YuNet detector supplies five landmarks and must
+find exactly one face bound to the original detection. SFace aligns and encodes
+all three portraits with the same model. Portraits below 64 pixels on either
+face-box edge are rejected
 with a quality message rather than treated as a different identity. These extra
 descriptors are request-local comparison data only. Successful enrollment still
 stores the original live-camera descriptor for existing sign-in compatibility.
+The new verifier is separate from dlib: its 128D descriptors are never treated as
+legacy dlib encodings or persisted as sign-in templates. It applies the existing
+cosine login distance policy, capped at OpenCV's published reference limit; with
+the default policy, similarity must be greater than 0.55. No configured login
+threshold is reduced. See the [model provenance, safeguards and acceptance
+limits](../backend/assets/identity_face/README.md). Missing/corrupt verifier models
+or uncertain detections cannot silently fall back to a pass.
 The extra comparison work does not change entrance/login processing or apply
 image enhancement to PAD. PAD checks the original live capture before comparison.
-There is no threshold reduction or manual success fallback. Missing, mismatched,
+There is no manual success fallback. Missing, mismatched,
 uncertain or unavailable checks cannot enroll a face. The member cannot replace
 their verified identity with a new upload.
 

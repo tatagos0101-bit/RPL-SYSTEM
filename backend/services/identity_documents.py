@@ -302,6 +302,19 @@ def _same_face(first: dict, second: dict) -> bool:
     from services import face_engine_service as engine
     selected = first.get("engine", "dlib")
     left, right = first.get("encoding"), second.get("encoding")
+    if "sface" in {selected, second.get("engine", "dlib")}:
+        from services.id_face_verifier import REFERENCE_MAX_DISTANCE
+        if selected != "sface" or second.get("engine") != "sface":
+            return False  # A 128D SFace descriptor is not a 128D dlib descriptor.
+        try:
+            vectors = np.asarray([left, right], dtype=float)
+            if vectors.shape != (2, 128) or not np.isfinite(vectors).all() or (np.linalg.norm(vectors, axis=1) == 0).any():
+                return False
+            score = engine._cosine_distance(left, right)
+            maximum = min(REFERENCE_MAX_DISTANCE, engine._purpose_threshold("login", "insightface"))
+            return bool(np.isfinite(score) and score < maximum)
+        except (TypeError, ValueError):
+            return False
     if selected != second.get("engine", "dlib"):
         selected = "dlib"
         left = first.get("encoding") if first.get("engine") == "dlib" else first.get("dlib_encoding")
@@ -334,14 +347,9 @@ def verify_remote_identity(member, id_image: str, live_face: dict, live_image: s
     _, baseline_frame = document_image(baseline)
     original_face = document_face(baseline_frame)
     _, uploaded_frame = document_image(content)
-    faces = [uploaded.face, original_face, live_face]
-    engines = {face.get("engine", "dlib") for face in faces}
-    if len(engines) == 1 and engines <= {"dlib", "insightface"}:
-        selected_engine = next(iter(engines))
-    elif all(face.get("engine", "dlib") == "dlib" or face.get("dlib_encoding") for face in faces):
-        selected_engine = "dlib"
-    else:
-        raise HTTPException(422, "The ID and camera face readings could not be compared consistently. Retake clear photos, or ask the librarian for assisted face enrollment.")
+    # ID photos and live captures use one dedicated verifier. The original
+    # detector's descriptors remain unchanged for legacy sign-in and deduplication.
+    selected_engine = "sface"
     uploaded_portrait = comparison_face(uploaded_frame, uploaded.face,
         engine_name=selected_engine, label="uploaded ID")
     saved_portrait = comparison_face(baseline_frame, original_face,

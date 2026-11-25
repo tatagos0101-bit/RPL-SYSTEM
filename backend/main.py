@@ -133,4 +133,6 @@ def health():
     except Exception:
         raise HTTPException(503, "Database unavailable.") from None
     from services.face_service import FACE_LIB_AVAILABLE
-    return {"status": "ok", "database": "connected", "storage": STORAGE_BACKEND, "dlib_available": FACE_LIB_AVAILABLE}
+    from services.id_face_verifier import model_assets_valid
+    return {"status": "ok", "database": "connected", "storage": STORAGE_BACKEND, "dlib_available": FACE_LIB_AVAILABLE,
+        "id_face_comparison": {"engine": "sface", "model_assets_valid": model_assets_valid()}}
