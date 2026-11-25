@@ -24,13 +24,16 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
   const [image, setImage] = useState(null);
   const [error, setError] = useState('');
   const [supportDetails, setSupportDetails] = useState(''), [copyStatus, setCopyStatus] = useState('');
+  const [verifiedExisting, setVerifiedExisting] = useState(false);
   const [idImage, setIdImage] = useState(null);
   const [preparingId, setPreparingId] = useState(false);
   const idAttempt = useRef(0);
   useEffect(() => () => { idAttempt.current += 1; }, []);
   const busy = step === 'loading';
   const resetting = useRef(Boolean(user.face_enrolled)).current;
-  const title = resetting ? 'Reset Face Data' : 'Face Registration';
+  const verifyingRegistered = selfService && user.remote_face_verification_method === 'registered_face';
+  const captureMirrored = !selfService || (verifyingRegistered && user.remote_face_capture_mirrored === true);
+  const title = verifyingRegistered ? 'Verify Registered Face' : resetting ? 'Reset Face Data' : 'Face Registration';
   const close = () => { if (!submitting.current) onClose(); };
 
   useEffect(() => {
@@ -82,7 +85,10 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
     setSupportDetails(''); setCopyStatus('');
     setStep('loading');
     try {
-      if (selfService) await enrollFace(image, consented, idImage);
+      if (selfService) {
+        const response = await enrollFace(image, consented, idImage);
+        setVerifiedExisting(response.data?.operation === 'verified_existing');
+      }
       else await enrollMemberFace(user.id, image, consented);
       setImage(null);
       setIdImage(null);
@@ -108,8 +114,8 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
         <p className="mb-4 text-sm text-muted">{user.name}</p>
         {step === 'consent' && (
           <div className="space-y-4 text-sm leading-6 text-muted">
-            <p className="font-semibold text-ink">{selfService ? 'Enroll from home using your ID and a live camera capture.' : 'Ask the member to review this notice and make their own choice before starting the camera.'}</p>
-            <p>The library uses a live camera image to create a facial template. It uses the template for library identification during borrowing and returns, face sign-in, and entrance attendance. {selfService ? 'For online enrollment, it compares your live face and uploaded ID portrait with the original ID verified by the librarian. Comparison images are discarded after checking; the encrypted facial template and verification result are kept. The original ID remains in the private library record.' : 'The system may retain a camera image when it detects a possible spoof for security review.'}</p>
+            <p className="font-semibold text-ink">{verifyingRegistered ? 'Your face is already registered. Verify it online with your ID and a fresh camera capture.' : selfService ? 'Enroll from home using your ID and a live camera capture.' : 'Ask the member to review this notice and make their own choice before starting the camera.'}</p>
+            {verifyingRegistered ? <p>The library will check your uploaded ID against the original verified ID, then compare your live face with the face already verified for your account. Liveness checks still apply. Comparison images are discarded; your registered face reference is preserved. Ask a librarian if that reference needs replacing.</p> : <p>The library uses a live camera image to create a facial template. It uses the template for library identification during borrowing and returns, face sign-in, and entrance attendance. {selfService ? 'For online enrollment, it compares your live face and uploaded ID portrait with the original ID verified by the librarian. Comparison images are discarded after checking; the encrypted facial template and verification result are kept. The original ID remains in the private library record.' : 'The system may retain a camera image when it detects a possible spoof for security review.'}</p>}
             <p>Face enrollment is optional. You can sign in with your password, and library staff can help with identification for transactions and visits. Ask staff if you later want to remove your enrolled face data.</p>
             {selfService && <div className="space-y-3 rounded-xl border border-line bg-subtle p-3"><label className="block font-semibold text-ink">Photo ID (required)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={preparingId} className="mt-2 block w-full min-w-0 text-sm" onChange={async event => {
               const file = event.target.files?.[0], attempt = ++idAttempt.current;
@@ -122,17 +128,17 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
             <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="inline-block text-link underline underline-offset-4">Read the library privacy notice (opens in a new tab)</a>
             <label className="flex items-start gap-3 rounded-lg border border-line bg-subtle p-3 text-ink">
               <input type="checkbox" checked={consented} onChange={event => setConsented(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-action" />
-              <span>I agree to have my face enrolled and used for the library purposes described above.</span>
+              <span>{verifyingRegistered ? 'I agree to verify my registered face for the library purposes described above.' : 'I agree to have my face enrolled and used for the library purposes described above.'}</span>
             </label>
           </div>
         )}
-        {resetting && (step === 'preview' || step === 'captured') && <p className="mb-4 text-sm text-muted">Capture a new live photo to replace the saved face data when enrollment succeeds.</p>}
+        {resetting && !verifyingRegistered && (step === 'preview' || step === 'captured') && <p className="mb-4 text-sm text-muted">Capture a new live photo to replace the saved face data when enrollment succeeds.</p>}
         {step === 'preview' && (
           <>
             <div className="aspect-[4/3] overflow-hidden rounded-xl bg-subtle">
-              <Webcam key={cameraAttempt} ref={webcam} audio={false} mirrored={!selfService}
+              <Webcam key={cameraAttempt} ref={webcam} audio={false} mirrored={captureMirrored}
                 screenshotFormat="image/jpeg" screenshotQuality={0.9} forceScreenshotSourceSize
-                videoConstraints={selfService ? ONLINE_VIDEO_CONSTRAINTS : VIDEO_CONSTRAINTS} className={`h-full w-full object-cover ${selfService ? '-scale-x-100' : ''}`}
+                videoConstraints={selfService ? ONLINE_VIDEO_CONSTRAINTS : VIDEO_CONSTRAINTS} className={`h-full w-full object-cover ${selfService && !captureMirrored ? '-scale-x-100' : ''}`}
                 onCanPlay={() => { setReady(true); setError(''); }}
                 onEmptied={() => setReady(false)}
                 onUserMediaError={() => {
@@ -157,8 +163,8 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
           {copyStatus && <p role="status" className="text-muted">{copyStatus}</p>}
           <details><summary className="cursor-pointer text-link">View text-only report</summary><pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap break-all text-xs text-muted">{supportDetails}</pre></details>
         </section>}
-        {busy && <p role="status" className="my-4 flex items-center gap-2"><RefreshCw className="animate-spin" size={18}/> Enrolling face…</p>}
-        {step === 'success' && <div role="status" className="my-6 space-y-2 font-semibold text-success"><p>{resetting ? 'Face data reset successfully.' : 'Face enrolled successfully.'}</p>{selfService && <p className="text-sm">Verified for {user.name}. Comparison images were discarded.</p>}</div>}
+        {busy && <p role="status" className="my-4 flex items-center gap-2"><RefreshCw className="animate-spin" size={18}/> {verifyingRegistered ? 'Verifying registered face…' : 'Enrolling face…'}</p>}
+        {step === 'success' && <div role="status" className="my-6 space-y-2 font-semibold text-success"><p>{verifiedExisting ? 'Your registered face was verified successfully.' : resetting ? 'Face data reset successfully.' : 'Face enrolled successfully.'}</p>{selfService && <p className="text-sm">Verified for {user.name}. Comparison images were discarded.</p>}{verifiedExisting && <p className="text-sm">Your existing face reference was preserved.</p>}</div>}
         <div className="mt-4 flex flex-wrap gap-3">
           {step === 'consent' && <>
             <button onClick={close} className="rounded-lg border border-line px-4 py-3 text-sm">Cancel</button>
@@ -170,7 +176,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
           </>}
           {step === 'captured' && <>
             <button onClick={restart} className="rounded-lg border border-line px-4 py-3">Retake</button>
-            <button onClick={enroll} className="flex items-center gap-2 rounded-lg bg-action px-4 py-3 text-white"><ScanFace size={16}/> {resetting ? 'Reset Face Data' : 'Enroll'}</button>
+            <button onClick={enroll} className="flex items-center gap-2 rounded-lg bg-action px-4 py-3 text-white"><ScanFace size={16}/> {verifyingRegistered ? 'Verify registered face' : resetting ? 'Reset Face Data' : 'Enroll'}</button>
           </>}
           {step === 'success' && <button onClick={close} className="rounded-lg bg-action px-4 py-3 text-white">Done</button>}
         </div>

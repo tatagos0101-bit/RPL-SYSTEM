@@ -47,7 +47,7 @@ replace a verified baseline.
 ## Member enrollment from home
 
 After completing first-login password setup, an eligible member opens **Profile
-→ Enroll face online** (or **Update face online**). They supply a photo ID, read
+→ Enroll face online** (or **Update face online** for an older unverified enrollment). They supply a photo ID, read
 and accept the separate face-recognition notice, open the camera, capture one
 live face and confirm enrollment.
 
@@ -92,6 +92,38 @@ image enhancement to PAD. PAD checks the original live capture before comparison
 There is no manual success fallback. Missing, mismatched,
 uncertain or unavailable checks cannot enroll a face. The member cannot replace
 their verified identity with a new upload.
+
+### Verify an existing registered face
+
+Members with a real, trusted enrollment see **Profile → Verify face online**.
+The server selects this operation from current records before first-enrollment
+live/ID comparisons. It requires a current-version librarian-assisted enrollment
+recorded after the original ID verification, or an enrollment that already passed
+the online ID checks. Both need an actual current template; display-only badges,
+old self-enrollment metadata and removed references do not qualify. The profile
+method is a UI hint, never permission supplied by the browser.
+
+The member still supplies the same verified ID, accepts the notice and captures
+one live face. The original-ID digest, uploaded-to-saved-ID comparison, PAD,
+active authenticated account, existing login matching threshold/margin and
+duplicate-face checks all remain required. The live face must match this exact
+account's registered face, including model compatibility and legacy support.
+Another person's match returns a generic error without their identity.
+The profile also provides a capture-orientation hint. The existing staff camera
+stores mirrored screenshots, so verification of a staff-enrolled reference uses
+that orientation too. A first online ID-checked reference uses unmirrored pixels;
+its subsequent verification keeps that orientation. These hints cannot authorize
+a face match or override the server-selected operation.
+
+Success explicitly returns `operation=verified_existing` and
+`enrollment_changed=false`. No facial reference, consent provenance or verification
+timestamp is changed, no new enrollment is claimed, and no login credentials are
+issued. Preserving the reference avoids incremental replacement through repeated
+online attempts. Staff can replace it using the existing supervised flow.
+Comparison uploads are discarded as before. Verification cannot turn a failed
+first-time live/ID comparison into success; first-time enrollment retains all
+three SFace comparisons and the unchanged 0.45 policy. This distinction does not
+establish first-time printed-ID accuracy.
 
 Errors distinguish an uploaded-to-saved-ID mismatch, live-to-saved-ID mismatch
 and live-to-uploaded-ID mismatch, with advice for the failing capture. Responses

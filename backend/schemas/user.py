@@ -21,6 +21,8 @@ class UserProfile(BaseModel):
     avatar_url:   Optional[str] = None
     identity_verified: bool = False
     remote_face_enrollment_allowed: bool = False
+    remote_face_verification_method: Literal["id_portrait", "registered_face"] = "id_portrait"
+    remote_face_capture_mirrored: bool = False
 
     class Config:
         from_attributes = True

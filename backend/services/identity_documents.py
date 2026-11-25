@@ -21,7 +21,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from config import JWT_ALGORITHM, JWT_SECRET_KEY
 from services.id_face_verifier import PortraitDetectionError
 from services.identity_portraits import COMPARISON_PREPROCESSING, comparison_face, portrait_quality
-from timezone_utils import now_ph
+from timezone_utils import as_ph, now_ph
 
 ID_CHECK_VERSION = "2026-11-25"
 MAX_ID_BYTES = 10 * 1024 * 1024
@@ -305,6 +305,36 @@ def has_verified_identity(member) -> bool:
     return bool(member.id_image_url and member.id_document_digest and member.id_verified_at and member.id_verified_by_id)
 
 
+def can_verify_registered_face(db, member) -> bool:
+    """Only an intact, verified enrollment may serve as an existing reference."""
+    from models.face_embedding import FaceEmbedding
+    from models.user import User
+    from services.face_enrollment_consent import FACE_CONSENT_VERSION
+    if (member.role != "member" or member.deleted_at is not None or member.status != "active"
+            or member.face_enrollment_display_only or not has_verified_identity(member)
+            or member.face_consent_version != FACE_CONSENT_VERSION or not member.face_consent_at):
+        return False
+    try:
+        if as_ph(member.face_consent_at) < as_ph(member.id_verified_at):
+            return False
+        if member.face_consent_method == "librarian_assisted":
+            trusted = bool(member.face_consent_recorded_by_id and member.face_consent_recorded_by_id != member.id)
+        elif member.face_consent_method == "self_id_checked":
+            trusted = bool(member.face_consent_recorded_by_id == member.id and member.face_id_verified_at
+                and as_ph(member.face_id_verified_at) >= as_ph(member.id_verified_at))
+        else:
+            trusted = False
+    except (TypeError, ValueError):
+        return False
+    if not trusted:
+        return False
+    # Existence only: no encrypted template or private ID is sent to the browser.
+    return bool(db.query(User.id).filter(User.id == member.id, User.face_encoding.isnot(None)).first()
+        or db.query(FaceEmbedding.id).filter(FaceEmbedding.user_id == member.id,
+            FaceEmbedding.engine == "insightface", FaceEmbedding.dimension == 512,
+            FaceEmbedding.is_active.is_(True)).first())
+
+
 def _sface_maximum_distance():
     from config import ID_FACE_MAX_DISTANCE
     from services import face_engine_service as engine
@@ -369,7 +399,7 @@ def _comparison_diagnostic(stage, pairs, inputs):
         "quality": {name: portrait_quality(frame, face) for name, (frame, face) in inputs.items()}}
 
 
-def verify_remote_identity(member, id_image: str, live_face: dict, live_image: str) -> None:
+def _checked_id_pair(member, id_image: str):
     from services.storage_service import read_private_upload
     if not has_verified_identity(member):
         raise HTTPException(403, "A librarian must first verify your original photo ID in person. Existing face sign-in and password access are unchanged.")
@@ -403,6 +433,12 @@ def verify_remote_identity(member, id_image: str, live_face: dict, live_image: s
     if not _same_face(uploaded_portrait, saved_portrait):
         # Detailed diagnostics require a matching original ID, not just a session.
         raise HTTPException(422, "The uploaded ID portrait did not match the ID verified by the librarian. Upload the same ID photo, with the full card in focus and no glare. If it is already the same photo, ask the librarian to review the saved ID.")
+    return uploaded_portrait, saved_portrait, pairs, inputs
+
+
+def verify_remote_identity(member, id_image: str, live_face: dict, live_image: str) -> None:
+    uploaded_portrait, saved_portrait, pairs, inputs = _checked_id_pair(member, id_image)
+    selected_engine = "sface"
     inputs["live"] = (live_image, live_face)
     try:
         live_portrait = comparison_face(live_image, live_face,
@@ -420,7 +456,7 @@ def verify_remote_identity(member, id_image: str, live_face: dict, live_image: s
             _comparison_diagnostic("live_to_id", pairs, inputs))
 
 
-def enroll_remote_face(db, member, body) -> None:
+def enroll_remote_face(db, member, body) -> dict:
     from services import face_engine_service as engine
     from services.face_enrollment_consent import record_enrollment_consent
     from services.liveness_service import require_live_enrollment
@@ -436,6 +472,32 @@ def enroll_remote_face(db, member, body) -> None:
         raise HTTPException(422, "Capture one live face in good lighting before continuing.")
     # Do not run PAD on a printed ID portrait. Only the live camera must pass it.
     require_live_enrollment(body.image, faces)
+    if can_verify_registered_face(db, member):
+        # A separate, server-selected operation before first-enrollment matching;
+        # never switch to it after a failed live/ID comparison.
+        _checked_id_pair(member, body.id_image)
+        try:
+            margin = float(engine.FACE_MATCH_MARGIN)
+            limits = [engine._purpose_threshold("login", name) for name in ("dlib", "insightface")]
+            valid_policy = np.isfinite(margin) and margin >= 0 and all(np.isfinite(value) and 0 < value <= 2 for value in limits)
+        except (TypeError, ValueError):
+            valid_policy = False
+        if not valid_policy:
+            raise HTTPException(503, "Registered-face verification is temporarily unavailable. Ask the librarian for assistance.")
+        # The account row is already locked. Read-only matching keeps the existing
+        # login limit/margin and cannot auto-upgrade or replace its reference.
+        match = engine.find_match_for_face(db, faces[0], purpose="login", lock_match=False)
+        valid_match = bool(match is not None and match.user.id == member.id
+            and match.engine in {"dlib", "insightface"} and np.isfinite(match.score)
+            and 0 <= match.score <= engine._purpose_threshold("login", match.engine))
+        if not valid_match:
+            raise HTTPException(422, "Your live face could not be matched to the registered face for this account. Retake a clear camera capture or ask the librarian to review your face enrollment.")
+        if engine.find_duplicate_for_enrollment(db, faces[0], member.id) is not None:
+            raise HTTPException(409, "This face is already registered to another account. Ask the librarian for assistance.")
+        # No template/consent mutation: preserve the verified baseline and avoid
+        # treating successive, slightly different captures as identity changes.
+        return {"operation": "verified_existing", "enrollment_changed": False,
+            "verification_method": "registered_face"}
     verify_remote_identity(member, body.id_image, faces[0], body.image)
     if engine.find_duplicate_for_enrollment(db, faces[0], member.id) is not None:
         raise HTTPException(409, "This face is already registered to another account. Ask the librarian for assistance.")
@@ -443,3 +505,4 @@ def enroll_remote_face(db, member, body) -> None:
     record_enrollment_consent(member)
     member.face_consent_method = "self_id_checked"
     member.face_id_verified_at = now_ph()
+    return {"operation": "enrolled", "enrollment_changed": True, "verification_method": "id_portrait"}

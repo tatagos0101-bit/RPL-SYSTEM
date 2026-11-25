@@ -378,6 +378,13 @@ sign-in, entrance or duplicate-enrollment thresholds; invalid settings fail clos
 SFace vectors never share the dlib
 descriptor space. Comparison descriptors remain ephemeral; successful enrollment
 stores the original live descriptor. Matching thresholds and PAD remain unchanged.
+Already registered members with trusted enrollment provenance have a separate
+read-only online verification operation. It matches their uploaded ID to the
+verified original and their PAD-checked live face to their own registered face
+using the existing login threshold/margin. Server-side provenance and real-template
+checks select the operation before first-time matching. It never replaces the
+reference or records a new enrollment; first-time online registration retains the
+three ID/live comparisons. The profile exposes only a method hint, not a template.
 Registration creates a random 10-character
 password with forced first-login change, commits the member, then attempts email
 when supplied. Without email, credentials are shown to the librarian. The registration-only

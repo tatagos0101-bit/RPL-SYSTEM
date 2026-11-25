@@ -57,6 +57,13 @@ be finite and within `(0, 0.637]`; invalid values fail closed. A larger value is
 less strict. Do not copy a different model's threshold or treat OpenCV's published
 benchmark threshold as validated library-ID accuracy. Changing this server-only
 setting does not change login, entrance, PAD or duplicate-enrollment thresholds.
+The existing-enrollment verification operation adds no columns or dependencies.
+Deploy frontend/API together and restart local Python processes. The profile's
+`remote_face_verification_method` distinguishes first-time ID checking from
+read-only registered-face verification; the server independently rechecks it
+under the account lock. No old/self/display-only record is backfilled as trusted,
+and successful verification preserves the existing encrypted template and consent
+provenance. See [the operation and its limits](REMOTE_FACE_ENROLLMENT.md#verify-an-existing-registered-face).
 
 ## Inactive member notices prerequisite
 

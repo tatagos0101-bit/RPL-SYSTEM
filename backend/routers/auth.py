@@ -760,14 +760,17 @@ def enroll_face(
     if current_user.role == "member":
         from services.identity_documents import IdentityComparisonError, enroll_remote_face
         try:
-            enroll_remote_face(db, current_user, body)
+            outcome = enroll_remote_face(db, current_user, body)
         except IdentityComparisonError as error:
             # Reached only after this account's ID and live-PAD checks. No image,
             # embedding, identity field, file reference or diagnostic log is sent.
             return JSONResponse(status_code=422, content={"detail": error.detail,
                 "comparison_diagnostic": error.diagnostic}, headers={"Cache-Control": "no-store"})
         db.commit()
-        return {"success": True, "message": "Face enrolled after ID comparison. Comparison images were not retained."}
+        verified_existing = outcome["operation"] == "verified_existing"
+        return {"success": True, **outcome, "message": (
+            "Your registered face was verified. Its saved reference was not replaced."
+            if verified_existing else "Face enrolled after ID comparison. Comparison images were not retained.")}
     import services.face_engine_service as face_engine_service
     from services.liveness_service import check_liveness
     from models.security_alert import SecurityAlert
