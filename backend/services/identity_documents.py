@@ -19,6 +19,7 @@ import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from config import JWT_ALGORITHM, JWT_SECRET_KEY
+from services.id_face_verifier import PortraitDetectionError
 from services.identity_portraits import comparison_face, portrait_quality
 from timezone_utils import now_ph
 
@@ -392,10 +393,15 @@ def verify_remote_identity(member, id_image: str, live_face: dict, live_image: s
     if not _same_face(uploaded_portrait, saved_portrait):
         # Detailed diagnostics require a matching original ID, not just a session.
         raise HTTPException(422, "The uploaded ID portrait did not match the ID verified by the librarian. Upload the same ID photo, with the full card in focus and no glare. If it is already the same photo, ask the librarian to review the saved ID.")
-    live_portrait = comparison_face(live_image, live_face,
-        engine_name=selected_engine, label="live camera")
-    pairs.update({"live_to_saved": (live_portrait, saved_portrait), "live_to_id": (live_portrait, uploaded_portrait)})
     inputs["live"] = (live_image, live_face)
+    try:
+        live_portrait = comparison_face(live_image, live_face,
+            engine_name=selected_engine, label="live camera")
+    except PortraitDetectionError as error:
+        diagnostic = _comparison_diagnostic("live_alignment", pairs, inputs)
+        diagnostic["detector_issue"] = error.reason
+        raise IdentityComparisonError(error.detail, diagnostic) from None
+    pairs.update({"live_to_saved": (live_portrait, saved_portrait), "live_to_id": (live_portrait, uploaded_portrait)})
     if not _same_face(live_portrait, saved_portrait):
         raise IdentityComparisonError("Your live face could not be matched to the saved library ID portrait. Face the camera straight on in even light, remove glare or anything covering your face, and retake the capture. If the ID photo is old or unclear, ask the librarian for assisted enrollment.",
             _comparison_diagnostic("live_to_saved", pairs, inputs))

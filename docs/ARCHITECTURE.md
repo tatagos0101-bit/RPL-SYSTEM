@@ -367,8 +367,11 @@ backfilled as verified. See
 [the identity workflow and authenticity limits](REMOTE_FACE_ENROLLMENT.md).
 Online ID comparisons preserve small original uploads and use lossless ID working
 frames, bounded portrait alignment, a checksummed local SFace/YuNet comparison
-engine and specific mismatch messages. The existing cosine policy is retained;
-SFace vectors never share the dlib descriptor space. Comparison descriptors remain ephemeral; successful enrollment
+engine and specific mismatch messages. Large close-up faces are normalized for landmark detection, then mapped back
+for alignment on the original pixels. Private text diagnostics also cover live
+alignment failures after a matching-original-ID and live PAD check.
+The existing cosine policy is retained; SFace vectors never share the dlib
+descriptor space. Comparison descriptors remain ephemeral; successful enrollment
 stores the original live descriptor. Matching thresholds and PAD remain unchanged.
 Registration creates a random 10-character
 password with forced first-login change, commits the member, then attempts email

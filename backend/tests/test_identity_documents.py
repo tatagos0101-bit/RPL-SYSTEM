@@ -235,6 +235,30 @@ def test_live_pad_failure_cannot_reach_the_new_comparator(client, db_session, mo
     assert client.post("/api/auth/enroll-face", json=enrollment(content)).status_code == 422
 
 
+@pytest.mark.parametrize("reason", ["not_found", "multiple_faces", "different_face", "invalid_landmarks"])
+def test_live_alignment_failure_has_safe_support_details_after_id_and_pad_checks(client, db_session, monkeypatch, reason):
+    from services.id_face_verifier import PortraitDetectionError
+    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+    mock_document(monkeypatch); mock_live(monkeypatch)
+    def compare(frame, detected, **kwargs):
+        if kwargs["label"] == "live camera":
+            raise PortraitDetectionError(reason, "The live camera portrait needs one clear face for comparison.")
+        return {"engine": "sface", "encoding": [1.0] + [0.0] * 127}
+    monkeypatch.setattr(ids, "comparison_face", compare)
+    result = client.post("/api/auth/enroll-face", json=enrollment(content))
+    assert result.status_code == 422 and result.headers["cache-control"] == "no-store"
+    report = result.json()["comparison_diagnostic"]
+    assert report["stage"] == "live_alignment" and report["detector_issue"] == reason
+    assert report["distances"] == {"id_to_saved": 0.0}
+    assert "live" in report["quality"]
+    for private in ("synthetic-live-camera", member.name, member.id_image_url, member.id_document_digest):
+        assert private not in result.text
+    db_session.refresh(member)
+    assert member.face_encoding is None and member.face_id_verified_at is None
+    assert member.face_consent_method is None
+    assert db_session.query(SecurityAlert).count() == 0
+
+
 def test_support_diagnostics_require_a_matching_original_id(client, db_session, monkeypatch):
     member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
     mock_document(monkeypatch); mock_live(monkeypatch)

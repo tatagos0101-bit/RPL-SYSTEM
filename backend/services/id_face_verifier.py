@@ -23,6 +23,13 @@ SFACE_RAW_SHA256 = "2b0e941e6f16cc048c20aee0c8e31f569118f65d702914540f7bfdc14048
 # OpenCV's published SFace baseline. The existing cosine policy can be stricter.
 REFERENCE_MAX_DISTANCE = 1.0 - .363
 _CONTEXT_KEY = ("id_portrait_encoder", "sface_2021dec_int8")
+_DETECTOR_FACE_EDGE = 200
+
+
+class PortraitDetectionError(HTTPException):
+    def __init__(self, reason, message):
+        super().__init__(422, message)
+        self.reason = reason
 
 
 def model_assets_valid():
@@ -35,15 +42,20 @@ def model_assets_valid():
 
 
 def _checked_detection(rows, location, image_shape, label):
-    if rows is None or np.asarray(rows).shape != (1, 15):
-        raise HTTPException(422, f"The {label} portrait needs one clear face for comparison. Retake the photo without glare or face coverings.")
+    if rows is None or np.asarray(rows).size == 0:
+        raise PortraitDetectionError("not_found", f"The {label} portrait could not be detected clearly for comparison. Retake a straight-on photo in even light.")
+    if np.asarray(rows).shape != (1, 15):
+        multiple = np.asarray(rows).ndim == 2 and np.asarray(rows).shape[0] > 1
+        raise PortraitDetectionError("multiple_faces" if multiple else "invalid_detection",
+            f"The {label} portrait needs exactly one clear face for comparison. Keep other faces out of the photo.")
     row = np.asarray(rows[0], dtype=np.float32)
     top, right, bottom, left = location
     height, width = image_shape[:2]
     x, y, w, h = [float(value) for value in row[:4]]
-    if (not np.isfinite(row).all() or row[14] < .9 or min(w, h) <= 0
-            or not left <= x + w / 2 <= right or not top <= y + h / 2 <= bottom):
-        raise HTTPException(422, f"The {label} portrait could not be read clearly. Retake a sharp, straight-on photo.")
+    if not np.isfinite(row).all() or row[14] < .9 or min(w, h) <= 0:
+        raise PortraitDetectionError("invalid_detection", f"The {label} portrait could not be read clearly. Retake a sharp, straight-on photo.")
+    if not left <= x + w / 2 <= right or not top <= y + h / 2 <= bottom:
+        raise PortraitDetectionError("different_face", f"The {label} portrait could not be aligned with the detected face. Retake the photo.")
     intersection = max(0, min(right, x + w) - max(left, x)) * max(0, min(bottom, y + h) - max(top, y))
     union = (right - left) * (bottom - top) + w * h - intersection
     points = row[4:14].reshape(5, 2)
@@ -51,8 +63,24 @@ def _checked_detection(rows, location, image_shape, label):
             or (points[:, 0] < 0).any() or (points[:, 0] >= width).any()
             or (points[:, 1] < 0).any() or (points[:, 1] >= height).any()
             or np.linalg.norm(points[0] - points[1]) < 4):
-        raise HTTPException(422, f"The {label} portrait could not be aligned with the detected face. Retake the photo.")
+        raise PortraitDetectionError("invalid_landmarks", f"The {label} portrait could not be aligned with the detected face. Retake the photo.")
     return row
+
+
+def _detector_frame(bgr, location):
+    import cv2
+    top, right, bottom, left = location
+    height, width = bgr.shape[:2]
+    # YuNet's training covers faces up to about 300px. A close 1280x960
+    # camera capture can exceed that even after the bounded portrait crop.
+    scale = min(1.0, _DETECTOR_FACE_EDGE / max(right - left, bottom - top))
+    resized_width, resized_height = max(1, round(width * scale)), max(1, round(height * scale))
+    image = (cv2.resize(bgr, (resized_width, resized_height), interpolation=cv2.INTER_AREA)
+        if scale < 1 else bgr)
+    # Keep aspect ratio; bottom/right padding avoids partial stride cells.
+    image = cv2.copyMakeBorder(image, 0, (-resized_height) % 32, 0, (-resized_width) % 32,
+        cv2.BORDER_CONSTANT, value=(0, 0, 0))
+    return image, resized_width / width, resized_height / height
 
 
 class _PortraitEncoder:
@@ -82,9 +110,16 @@ class _PortraitEncoder:
     def encode(self, rgb, location, label):
         # OpenCV's native alignment/recognition API expects BGR input.
         bgr = np.ascontiguousarray(rgb[:, :, ::-1])
+        detection_image, scale_x, scale_y = _detector_frame(bgr, location)
         with self.lock:
-            self.detector.setInputSize((bgr.shape[1], bgr.shape[0]))
-            _, rows = self.detector.detect(bgr)
+            self.detector.setInputSize((detection_image.shape[1], detection_image.shape[0]))
+            _, rows = self.detector.detect(detection_image)
+            if rows is not None and np.asarray(rows).shape == (1, 15):
+                rows = np.asarray(rows, dtype=np.float32).copy()
+                rows[:, [0, 2, 4, 6, 8, 10, 12]] /= scale_x
+                rows[:, [1, 3, 5, 7, 9, 11, 13]] /= scale_y
+            # Check original bounds, not the padded detector image. Use the
+            # original pixels for SFace alignment so resizing loses no detail.
             row = _checked_detection(rows, location, bgr.shape, label)
             aligned = self.recognizer.alignCrop(bgr, row)
             # Native output buffers can be reused by the next inference.

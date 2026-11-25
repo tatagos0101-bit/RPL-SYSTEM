@@ -84,6 +84,69 @@ def test_bgr_alignment_and_native_feature_buffer_are_copied():
     assert calls == [(320, 320), [50, 100, 170]]
 
 
+def test_close_camera_face_is_normalized_for_detection_but_aligned_at_source_resolution():
+    from threading import Lock
+    rgb = np.full((907, 733, 3), [170, 100, 50], np.uint8)
+    original = np.array([[50, 120, 600, 700, 200, 300, 500, 300, 350, 480, 240, 650, 460, 650, .99]], dtype=np.float32)
+    calls = []
+    def detect(bgr):
+        calls.append(bgr.shape)
+        assert bgr.shape[:2] == (288, 224)  # Aspect-preserving resize, then stride padding.
+        assert bgr[0, 0].tolist() == [50, 100, 170]
+        assert not bgr[259:, :].any() and not bgr[:, 209:].any()
+        row = original.copy()
+        row[:, [0, 2, 4, 6, 8, 10, 12]] *= 209 / 733
+        row[:, [1, 3, 5, 7, 9, 11, 13]] *= 259 / 907
+        assert max(row[0, 2:4]) <= 201
+        return 1, row
+    def align(bgr, row):
+        assert bgr.shape == rgb.shape
+        np.testing.assert_allclose(row, original[0], rtol=0, atol=.0001)
+        calls.append("aligned-original")
+        return np.zeros((112, 112, 3), np.uint8)
+    encoder = object.__new__(verifier._PortraitEncoder)
+    encoder.lock = Lock()
+    encoder.detector = SimpleNamespace(setInputSize=lambda size: calls.append(size), detect=detect)
+    encoder.recognizer = SimpleNamespace(alignCrop=align, feature=lambda _: np.ones((1, 128)))
+    before = rgb.copy()
+    assert encoder.encode(rgb, (120, 650, 820, 50), "live camera").shape == (128,)
+    assert calls == [(224, 288), (288, 224, 3), "aligned-original"]
+    assert np.array_equal(rgb, before)
+
+
+@pytest.mark.parametrize("change,reason", [("none", "not_found"), ("multiple", "multiple_faces"),
+    ("different", "different_face"), ("outside", "invalid_landmarks")])
+def test_normalized_detection_still_rejects_ambiguous_or_unbound_faces(change, reason):
+    from threading import Lock
+    row = detection()
+    if change == "none": row = None
+    elif change == "multiple": row = np.concatenate([row, row])
+    elif change == "different": row[0, :2] = [260, 260]
+    else: row[0, 4] = 321
+    encoder = object.__new__(verifier._PortraitEncoder)
+    encoder.lock = Lock()
+    encoder.detector = SimpleNamespace(setInputSize=lambda _: None, detect=lambda _: (1, row))
+    def forbidden(*args): pytest.fail("An uncertain face cannot reach the recognizer")
+    encoder.recognizer = SimpleNamespace(alignCrop=forbidden, feature=forbidden)
+    with pytest.raises(verifier.PortraitDetectionError) as failure:
+        encoder.encode(np.zeros((320, 320, 3), np.uint8), (50, 250, 250, 50), "live camera")
+    assert failure.value.status_code == 422 and failure.value.reason == reason
+
+
+def test_stride_padding_cannot_make_an_outside_landmark_valid():
+    from threading import Lock
+    row = detection(); row[0, 4] = 300  # In the padded image, outside the original 289px width.
+    encoder = object.__new__(verifier._PortraitEncoder)
+    encoder.lock = Lock()
+    def detect(bgr):
+        assert bgr.shape == (320, 320, 3)
+        return 1, row
+    encoder.detector = SimpleNamespace(setInputSize=lambda _: None, detect=detect)
+    with pytest.raises(verifier.PortraitDetectionError) as failure:
+        encoder.encode(np.zeros((317, 289, 3), np.uint8), (50, 250, 250, 50), "ID")
+    assert failure.value.reason == "invalid_landmarks"
+
+
 @pytest.mark.parametrize("values", [np.zeros((1, 128)), np.ones((1, 127)), np.full((1, 128), float("nan"))])
 def test_invalid_features_fail_closed(values):
     encoder = object.__new__(verifier._PortraitEncoder)

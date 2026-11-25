@@ -65,7 +65,10 @@ live image unmirrored while mirroring only its preview.
 Comparison uses bounded, padded crops of the already-detected portraits and
 consistent BGR input. The bundled YuNet detector supplies five landmarks and must
 find exactly one face bound to the original detection. SFace aligns and encodes
-all three portraits with the same model. Portraits below 64 pixels on either
+all three portraits with the same model. Close-up portraits are downscaled only
+for landmark detection to fit YuNet's supported face-size range, with stride
+padding and landmarks mapped back for alignment on the original crop pixels.
+Portraits below 64 pixels on either
 face-box edge are rejected
 with a quality message rather than treated as a different identity. These extra
 descriptors are request-local comparison data only. Successful enrollment still
@@ -87,7 +90,10 @@ Errors distinguish an uploaded-to-saved-ID mismatch, live-to-saved-ID mismatch
 and live-to-uploaded-ID mismatch, with advice for the failing capture. Responses
 never return descriptors or saved-ID images. Only after authenticated, live-PAD
 and matching-original-ID checks can a failed live comparison return a text-only diagnostic with rounded
-cosine distances, the applied limit and numeric crop-quality measurements. The
+cosine distances, the applied limit and numeric crop-quality measurements.
+Live landmark-detection failures also include a fixed issue code (no face,
+multiple faces or unusable alignment) after the same original-ID/PAD gates;
+no uncomputed live comparison score is invented. The
 member can explicitly copy its allowlisted fields using **Copy support details**.
 The report excludes identity/contact fields, ID references/digests, images and
 templates; it is not logged, persisted or automatically sent to support. It is

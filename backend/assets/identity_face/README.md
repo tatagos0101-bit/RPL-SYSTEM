@@ -32,7 +32,12 @@ after loading, including on failure. No ID/camera images or descriptors are
 written to that file or any other local artifact.
 
 YuNet uses confidence >= 0.90 and requires exactly one face in the bounded
-portrait crop. Its face must overlap and have its center inside the face already
+portrait crop. Detection downsizes face boxes larger than 200px on their longest
+edge, preserving aspect ratio, to stay inside YuNet's documented approximately
+10--300px training range. Bottom/right padding fills complete 32px stride cells.
+Detected landmarks map back to the original crop; alignment/recognition still
+use its original pixels. Padding cannot make an out-of-image landmark valid.
+Its face must overlap and have its center inside the face already
 detected by enrollment; the five landmarks must be finite, nondegenerate and
 within the crop. SFace aligns that portrait and returns a finite, nonzero 128D
 descriptor. Missing/corrupt models, uncertain faces and inference errors fail

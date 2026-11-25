@@ -31,3 +31,14 @@ test('malformed or unrelated API errors cannot become a support report', () => {
   const report = faceEnrollmentSupportDetails(value);
   assert.ok(!report.includes('Infinity') && !report.includes('<img>') && !report.includes('live.height_px'));
 });
+
+test('live alignment reports allow only known detector issue codes', () => {
+  const value = { ...diagnostic(), stage: 'live_alignment', detector_issue: 'not_found', distances: { id_to_saved: 0 } };
+  const report = faceEnrollmentSupportDetails(value);
+  assert.match(report, /stage=live_alignment/);
+  assert.match(report, /detector_issue=not_found/);
+  assert.match(report, /id_to_saved=0\.0000/);
+  assert.ok(!report.includes('live_to_saved='));
+  value.detector_issue = 'private-or-arbitrary-text';
+  assert.ok(!faceEnrollmentSupportDetails(value).includes(value.detector_issue));
+});
