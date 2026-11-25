@@ -11,6 +11,9 @@ same required-ID form used by **Registered Users → Register Member**.
 2. Upload its front as JPG, PNG or WEBP (up to 10 MB and 16 megapixels).
 3. Select **Check ID and read details**. Local OCR checks readable identifying
    text and a supported document type; face detection checks the portrait.
+   If text reading fails, **Review original ID manually** lets a librarian select
+   the government ID type and confirm their password. **Check portrait for manual
+   review** still requires one usable portrait; it does not approve enrollment.
 4. Review/correct the suggested name and address. Check the original document's
    expiry and security features and visually compare the person with its portrait.
 5. Confirm that inspection and create the account. The ID is required on the
@@ -22,6 +25,16 @@ its digest, detected type, verification time and librarian ID. An identical ID
 upload cannot be linked to two accounts; this is file deduplication, not an
 issuer-level identity-number check. No ID number or date of birth is copied into
 separate member fields. Entered contact details remain unverified.
+
+Manual text review is a supervised alternative, not an automated authenticity
+pass. Staff enter/review the name and address themselves and must still attest to
+inspecting the original with the applicant present. The saved type uses a
+`manual_` prefix (for example, `manual_tin_id`) to preserve review provenance
+alongside the verifying librarian and time. The signed check remains bound to
+that librarian and exact upload and expires after 15 minutes. Readable invalid or
+specimen markings, expired dates and recognized tax documents cannot be
+overridden. Unusable/multiple portraits and unavailable portrait detection still
+block verification. An OCR outage alone can use the same supervised path.
 
 An existing member without verification metadata needs **Registered Users →
 Actions → Verify ID for online enrollment**. This requires the member's presence,
@@ -45,6 +58,14 @@ portrait and live face using the existing engine and strict login threshold.
 There is no threshold reduction or manual success fallback. Missing, mismatched,
 uncertain or unavailable checks cannot enroll a face. The member cannot replace
 their verified identity with a new upload.
+
+For an original ID that a librarian manually verified, unreadable comparison text
+can use that stored review provenance. This exception comes only from the saved
+account record; members cannot enable it with a request flag. Detected invalid or
+expired evidence still blocks it. A usable uploaded portrait, the unchanged
+verified-original digest, all three face comparisons, live PAD and enrollment
+deduplication remain mandatory. A manually reviewed ID never bypasses a failed,
+uncertain or unavailable face/PAD check.
 
 Remote comparison images are processed in memory and discarded after each check,
 including unsuccessful checks. They are not uploaded to Storage, attached to
@@ -71,8 +92,9 @@ package; it does not change the face or liveness engines.
 
 Supported text checks cover Philippine National ID, physical/digital BIR TIN photo ID, driver's license, passport,
 UMID, PRC, Postal, SSS, GSIS, voter, senior-citizen and PWD photo IDs. Poor text,
-unsupported layouts, unusable portraits and ambiguous multi-portrait documents
-require desk assistance. Explicit specimen/invalid markings and readable expired
+unsupported layouts require supervised original-ID review or a clearer photo.
+Unusable portraits and ambiguous multi-portrait documents require desk assistance.
+Explicit specimen/invalid markings and readable expired
 ISO/month-name dates are rejected. Staff still inspect the actual document.
 
 TIN recognition checks the BIR issuer, a TIN-card heading and a readable printed

@@ -27,6 +27,12 @@ _ocr = None
 _ocr_lock = Lock()
 _MODEL_HASHES = {"eng.traineddata": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"}
 _MODEL_ROOT = Path(__file__).resolve().parents[1] / "assets" / "id_ocr"
+DOCUMENT_KINDS = frozenset({"national_id", "tin_id", "drivers_license", "passport", "umid", "prc",
+    "postal_id", "sss", "gsis", "voters_id", "senior_citizen", "pwd"})
+
+
+class DocumentReadabilityError(HTTPException):
+    """Text could not be checked; only supervised staff may review the original."""
 
 
 @dataclass
@@ -107,7 +113,7 @@ def read_id_text(rgb: np.ndarray) -> list[str]:
                 _ocr.Clear()
     except Exception:
         # Do not return native errors, recognized text or private paths.
-        raise HTTPException(503, "ID text checking is temporarily unavailable. Try again or ask the library desk for help.") from None
+        raise DocumentReadabilityError(503, "ID text checking is temporarily unavailable. Try again or ask the library desk for help.") from None
 
 
 def _tin_name_candidates(lines: list[str]) -> list[str]:
@@ -148,7 +154,7 @@ def _is_tin_card(text: str) -> bool:
         raise HTTPException(422, "Upload the photo side of the TIN ID, not a BIR tax form, receipt or registration certificate.")
     # Format recognition only; never store/return the tax number or claim BIR authentication.
     if not re.search(r"(?<![A-Z0-9])\d{3}(?: ?\d{3}){2}(?: ?\d{3})?(?![A-Z0-9])", text):
-        raise HTTPException(422, "The TIN ID heading was detected, but its printed number is not readable. Upload a clearer photo of the complete front, including the name and portrait.")
+        raise DocumentReadabilityError(422, "The TIN ID heading was detected, but its printed number is not readable. Upload a clearer photo of the complete front, including the name and portrait.")
     return True
 
 
@@ -156,6 +162,13 @@ def classify_document(lines: list[str]) -> str:
     text = " ".join(_normalize(line) for line in lines)
     if re.search(r"\b(SPECIMEN|NOT VALID|FAKE ID|SAMPLE ONLY)\b", text):
         raise HTTPException(422, "This image is marked as a sample or invalid document. Present an original valid photo ID.")
+    # Readable evidence that this is a tax document must also block manual review,
+    # even if the TIN-card heading was not recognized.
+    forms = re.findall(r"\bBIR\s*FORM(?:\s*NO)?\s*(\d{4})\b", text)
+    if any(number != "1931" for number in forms) or re.search(
+        r"\b(?:CERTIFICATE OF REGISTRATION|CERTIFICATION OF REGISTRATION|OFFICIAL RECEIPT|SALES INVOICE|TAX RETURN|TAX CLEARANCE|APPLICATION FOR REGISTRATION)\b", text
+    ):
+        raise HTTPException(422, "Upload the photo side of the TIN ID, not a BIR tax form, receipt or registration certificate.")
     for index, line in enumerate(lines):
         if not re.search(r"expir|valid\s*(?:until|thru)", line, re.I):
             continue
@@ -172,10 +185,10 @@ def classify_document(lines: list[str]) -> str:
     has_name = re.search(r"\b(NAME|APELYIDO|PANGALAN|SURNAME|HOLDER)\b", text)
     if is_tin:
         if not (has_name or _tin_name_candidates(lines)):
-            raise HTTPException(422, "The TIN ID was detected, but the holder's name is not readable. Upload a clearer photo of the complete front, with the name and portrait visible.")
+            raise DocumentReadabilityError(422, "The TIN ID was detected, but the holder's name is not readable. Upload a clearer photo of the complete front, with the name and portrait visible.")
         return "tin_id"
     if len(text) < 65 or not has_name:
-        raise HTTPException(422, "This does not look like a readable photo ID. Include the complete ID with its name, issuer and portrait.")
+        raise DocumentReadabilityError(422, "The ID text could not be read clearly enough. Include the complete ID with its name, issuer and portrait, or have a librarian review the original in person.")
     kinds = (
         ("national_id", r"PHILIPPINE IDENTIFICATION|PAMBANSANG (?:PAGKAKAKILANLAN|PAGKAKAKILAN|PAGKILALA)|PHILSYS"),
         ("drivers_license", r"LAND TRANSPORTATION OFFICE|DRIVER.?S? LICENSE|LISENSYA NG PAGMAMANEHO"),
@@ -192,7 +205,7 @@ def classify_document(lines: list[str]) -> str:
     for kind, pattern in kinds:
         if re.search(pattern, text):
             return kind
-    raise HTTPException(422, "The ID type could not be identified. Use a supported Philippine government photo ID, or ask the library desk for help.")
+    raise DocumentReadabilityError(422, "The ID type could not be identified. Use a supported Philippine government photo ID, or ask the library desk for help.")
 
 
 def suggested_fields(lines: list[str], *, document_type: str | None = None) -> tuple[str | None, str | None]:
@@ -233,10 +246,20 @@ def document_face(frame: str) -> dict:
     return faces[0]
 
 
-def inspect_document(content: bytes) -> DocumentCheck:
+def inspect_document(content: bytes, *, manual_kind: str | None = None) -> DocumentCheck:
+    if manual_kind is not None and manual_kind not in DOCUMENT_KINDS:
+        raise HTTPException(422, "Choose the government photo ID type being inspected in person.")
     rgb, frame = document_image(content)
-    lines = read_id_text(rgb)
-    kind = classify_document(lines)
+    try:
+        lines = read_id_text(rgb)
+        kind = classify_document(lines)
+    except DocumentReadabilityError:
+        if manual_kind is None:
+            raise
+        # The caller must authorize this from a librarian's password-confirmed
+        # review, or an already verified manual baseline. Never from member input.
+        return DocumentCheck(hashlib.sha256(content).hexdigest(), "manual_" + manual_kind,
+            None, None, document_face(frame))
     name, location = suggested_fields(lines, document_type=kind)
     return DocumentCheck(hashlib.sha256(content).hexdigest(), kind, name, location, document_face(frame))
 
@@ -253,6 +276,7 @@ def verify_review_token(token: str | None, content: bytes, librarian_id: int) ->
             options={"require": ["exp", "sub", "scope", "version", "digest", "kind"]})
         if (claims["sub"] != str(librarian_id) or claims["scope"] != "id_review"
                 or claims["version"] != ID_CHECK_VERSION
+                or claims["kind"] not in DOCUMENT_KINDS | {"manual_" + kind for kind in DOCUMENT_KINDS}
                 or claims["digest"] != hashlib.sha256(content).hexdigest()):
             raise ValueError("Review does not match")
         return claims
@@ -295,7 +319,13 @@ def verify_remote_identity(member, id_image: str, live_face: dict) -> None:
         content = base64.b64decode(raw, validate=True)
     except (ValueError, TypeError):
         raise HTTPException(422, "Upload a readable photo of your ID.") from None
-    uploaded = inspect_document(content)
+    # Staff-reviewed text is not reclassified as machine-verified text. This
+    # exception is bound to the saved baseline, not a flag a member can submit.
+    manual_kind = (member.id_document_type or "").removeprefix("manual_")
+    if member.id_document_type == "manual_" + manual_kind and manual_kind in DOCUMENT_KINDS:
+        uploaded = inspect_document(content, manual_kind=manual_kind)
+    else:
+        uploaded = inspect_document(content)
     baseline = read_private_upload(member.id_image_url, folder="ids", max_bytes=MAX_ID_BYTES)
     if hashlib.sha256(baseline).hexdigest() != member.id_document_digest:
         raise HTTPException(409, "Your saved ID needs librarian review before online face enrollment can continue.")

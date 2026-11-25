@@ -5,13 +5,14 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Resp
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
+from starlette.responses import JSONResponse
 
 from database import get_db
 from dependencies import require_librarian
 from limiter import limiter
 from models.user import User
 from services.cloud_uploads import read_upload
-from services.identity_documents import (checked_id_upload, inspect_document, issue_review_token,
+from services.identity_documents import (DocumentReadabilityError, checked_id_upload, inspect_document, issue_review_token,
     mark_identity_verified)
 from services.member_deletion import lock_existing_member
 from services.passwords import verify_password
@@ -24,15 +25,32 @@ router = APIRouter(prefix="/api/librarian", tags=["Identity verification"])
 @router.post("/identity/inspect")
 @limiter.limit("10/minute")
 async def inspect_id(request: Request, response: Response, id_image: UploadFile | None = File(None),
-    upload_ticket: str | None = Form(None), actor: User = Depends(require_librarian)):
+    upload_ticket: str | None = Form(None), manual_review: bool = Form(False),
+    document_type: str | None = Form(None, max_length=40), current_password: str | None = Form(None, max_length=512),
+    actor: User = Depends(require_librarian)):
+    if manual_review and (not current_password or not verify_password(current_password, actor.password_hash)):
+        raise HTTPException(403, "Confirm your librarian password to review the original ID manually.")
+    if manual_review and not document_type:
+        raise HTTPException(422, "Choose the government photo ID type being inspected in person.")
     content, filename, _reference = await read_upload(folder="ids", user_id=actor.id, file=id_image, ticket=upload_ticket)
     validate_upload_bytes(content=content, filename=filename, allowed_exts=IMAGE_EXTS,
         max_bytes=10 * 1024 * 1024, human_label="Photo ID")
-    check = await run_in_threadpool(inspect_document, content)
+    try:
+        if manual_review:
+            check = await run_in_threadpool(inspect_document, content, manual_kind=document_type)
+        else:
+            check = await run_in_threadpool(inspect_document, content)
+    except DocumentReadabilityError as error:
+        return JSONResponse(status_code=error.status_code,
+            content={"detail": error.detail, "manual_review_allowed": True},
+            headers={"Cache-Control": "no-store"})
+    is_manual = check.kind.startswith("manual_")
     response.headers["Cache-Control"] = "no-store"
     return {"review_token": issue_review_token(check, actor.id), "document_type": check.kind,
+        "review_method": "librarian_manual" if is_manual else "automated",
         "suggested_name": check.suggested_name, "suggested_location": check.suggested_location,
-        "message": "Readable photo ID detected. Check the original ID, expiry and security features, and compare the portrait with the person present. This automated check does not authenticate the issuer."}
+        "message": ("Portrait detected. Text was not verified automatically. Inspect the original ID, its name, issuer, expiry and security features with the member present, and confirm the in-person inspection below."
+            if is_manual else "Readable photo ID detected. Check the original ID, expiry and security features, and compare the portrait with the person present. This automated check does not authenticate the issuer.")}
 
 
 @router.post("/users/{user_id}/verify-identity")

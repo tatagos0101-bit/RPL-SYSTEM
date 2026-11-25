@@ -356,9 +356,14 @@ when a member supplies their own address. The assignment uses barangays in
 
 Librarian registration requires an in-person government photo ID check, local OCR
 suggestions, a portrait check and explicit staff attestation. Original IDs retain
-private-upload validation and storage. Verified members can enroll online with a
+private-upload validation and storage. When OCR cannot read the text, a librarian
+can password-confirm a supervised original-ID review; the saved `manual_` ID type
+records that provenance. This does not override detected invalid/expired evidence
+or a failed portrait check. Verified members can enroll online with a
 live PAD-checked face and an ID-to-face-to-saved-ID comparison; remote comparison
-images are discarded. Legacy uploads are not backfilled as verified. See
+images are discarded. A saved manual review can cover unreadable comparison text,
+but never replaces face matching, PAD or deduplication. Legacy uploads are not
+backfilled as verified. See
 [the identity workflow and authenticity limits](REMOTE_FACE_ENROLLMENT.md).
 Registration creates a random 10-character
 password with forced first-login change, commits the member, then attempts email

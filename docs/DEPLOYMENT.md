@@ -34,6 +34,11 @@ OCR dependencies in both runtime targets and verify bundled model checksums.
 Remote enrollment requires a librarian-verified original ID; comparison uploads
 are discarded. Account issuance now requires an in-person ID check, including
 applicants who started remotely. See [workflow and acceptance limits](REMOTE_FACE_ENROLLMENT.md).
+The supervised text-reading fallback uses the existing ID-type field with a
+`manual_` prefix and needs no additional migration or dependency. Deploy frontend
+and API together; restart a running local API to load the updated verification
+routes. A librarian password, original-ID attestation and usable portrait remain
+required for manual review, and live enrollment retains all face/PAD checks.
 
 ## Inactive member notices prerequisite
 
