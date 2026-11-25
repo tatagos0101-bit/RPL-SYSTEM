@@ -51,6 +51,12 @@ After deployment, `/health` reports `id_face_comparison.engine` and
 `id_face_comparison.model_assets_valid` so the bundled verifier can be checked
 without opening an account or uploading an ID. Asset integrity is not a live-face
 accuracy test; follow the consenting operational acceptance checks as well.
+`ID_FACE_MAX_DISTANCE` optionally sets a separate SFace ID-comparison policy.
+Leave it blank to preserve the existing cutoff. A reviewed explicit value must
+be finite and within `(0, 0.637]`; invalid values fail closed. A larger value is
+less strict. Do not copy a different model's threshold or treat OpenCV's published
+benchmark threshold as validated library-ID accuracy. Changing this server-only
+setting does not change login, entrance, PAD or duplicate-enrollment thresholds.
 
 ## Inactive member notices prerequisite
 

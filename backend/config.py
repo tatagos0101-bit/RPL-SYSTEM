@@ -36,6 +36,9 @@ FACE_ENGINE             = os.getenv("FACE_ENGINE", "auto").strip().lower()  # au
 INSIGHTFACE_MODEL_PACK  = os.getenv("INSIGHTFACE_MODEL_PACK", "buffalo_l")
 FACE_MATCH_THRESHOLD_LOGIN = float(os.getenv("FACE_MATCH_THRESHOLD_LOGIN", "0.45"))
 FACE_MATCH_THRESHOLD_GATE  = float(os.getenv("FACE_MATCH_THRESHOLD_GATE", "0.40"))
+# Server-only SFace ID comparison policy. Blank preserves the prior cutoff;
+# explicit settings never change login, entrance or duplicate-enrollment rules.
+ID_FACE_MAX_DISTANCE    = os.getenv("ID_FACE_MAX_DISTANCE", "").strip()
 FACE_MATCH_MARGIN       = float(os.getenv("FACE_MATCH_MARGIN", "0.08"))
 FACE_AUTO_UPGRADE_EMBEDDINGS = os.getenv("FACE_AUTO_UPGRADE_EMBEDDINGS", "true").lower() == "true"
 FACE_ENROLL_DEDUP_THRESHOLD = float(os.getenv("FACE_ENROLL_DEDUP_THRESHOLD", "0.40"))  # stricter to avoid false positives

@@ -235,6 +235,24 @@ def test_live_pad_failure_cannot_reach_the_new_comparator(client, db_session, mo
     assert client.post("/api/auth/enroll-face", json=enrollment(content)).status_code == 422
 
 
+def test_member_cannot_supply_a_less_strict_id_policy_in_the_enrollment_request(client, db_session, monkeypatch):
+    import config
+    monkeypatch.setattr(config, "ID_FACE_MAX_DISTANCE", "0.2")
+    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+    mock_document(monkeypatch); mock_live(monkeypatch)
+    def compare(frame, detected, **kwargs):
+        values = [0.0] * 128
+        values[:2] = [.6, .8] if kwargs["label"] == "live camera" else [1.0, 0.0]
+        return {"engine": "sface", "encoding": values}
+    monkeypatch.setattr(ids, "comparison_face", compare)
+    body = {**enrollment(content), "id_face_max_distance": .6, "ID_FACE_MAX_DISTANCE": .6}
+    result = client.post("/api/auth/enroll-face", json=body)
+    assert result.status_code == 422
+    assert result.json()["comparison_diagnostic"]["maximum_distance"] == .2
+    db_session.refresh(member)
+    assert member.face_encoding is None and member.face_id_verified_at is None
+
+
 @pytest.mark.parametrize("reason", ["not_found", "multiple_faces", "different_face", "invalid_landmarks"])
 def test_live_alignment_failure_has_safe_support_details_after_id_and_pad_checks(client, db_session, monkeypatch, reason):
     from services.id_face_verifier import PortraitDetectionError

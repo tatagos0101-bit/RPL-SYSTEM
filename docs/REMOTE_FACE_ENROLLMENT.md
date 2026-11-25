@@ -75,8 +75,12 @@ descriptors are request-local comparison data only. Successful enrollment still
 stores the original live-camera descriptor for existing sign-in compatibility.
 The new verifier is separate from dlib: its 128D descriptors are never treated as
 legacy dlib encodings or persisted as sign-in templates. It applies the existing
-cosine login distance policy, capped at OpenCV's published reference limit; with
-the default policy, similarity must be greater than 0.55. No configured login
+cosine login distance policy by default, capped at OpenCV's published reference limit; with
+the unchanged default policy, similarity must be greater than 0.55. A separately
+reviewed server-only `ID_FACE_MAX_DISTANCE` can override ID comparisons without
+changing sign-in, entrance or duplicate-enrollment policy; it is not taken from
+member requests. Larger limits broaden accepted matches and require evaluation.
+No configured login
 threshold is reduced. See the [model provenance, safeguards and acceptance
 limits](../backend/assets/identity_face/README.md). Missing/corrupt verifier models
 or uncertain detections cannot silently fall back to a pass.
@@ -172,3 +176,5 @@ and consent rules. Test with synthetic documents/vectors only in automated tests
 Before operational acceptance, staff must trial actual supported ID formats and
 consenting live captures under library lighting. Automated tests do not establish
 issuer authenticity, PostgreSQL concurrency or real-camera recognition accuracy.
+The operator retained the existing 0.45 limit pending evaluation. See the
+[validation evidence requirements and read-only score analyzer](ID_FACE_VALIDATION.md).

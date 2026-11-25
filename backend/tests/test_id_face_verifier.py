@@ -47,6 +47,39 @@ def test_invalid_policy_cannot_authorize_a_face_match(monkeypatch, value):
     assert not ids._same_face(descriptor(), descriptor())
 
 
+def test_explicit_id_policy_is_model_specific_and_cannot_change_login_or_gate(monkeypatch):
+    import config
+    login, gate, duplicate = engine.FACE_MATCH_THRESHOLD_LOGIN, engine.FACE_MATCH_THRESHOLD_GATE, engine.FACE_ENROLL_DEDUP_THRESHOLD
+    monkeypatch.setattr(config, "ID_FACE_MAX_DISTANCE", "0.35")
+    assert ids._sface_maximum_distance() == .35
+    assert not ids._same_face(descriptor(), descriptor(np.arccos(.6)))
+    monkeypatch.setattr(config, "ID_FACE_MAX_DISTANCE", "0.55")
+    assert ids._sface_maximum_distance() == .55
+    assert ids._same_face(descriptor(), descriptor(np.arccos(.6)))
+    assert engine.FACE_MATCH_THRESHOLD_LOGIN == login
+    assert engine.FACE_MATCH_THRESHOLD_GATE == gate
+    assert engine.FACE_ENROLL_DEDUP_THRESHOLD == duplicate
+
+
+@pytest.mark.parametrize("value", ["invalid", "nan", "inf", "0", "-0.1", "0.638", "2"])
+def test_invalid_explicit_id_policy_fails_closed_instead_of_using_legacy_fallback(monkeypatch, value):
+    import config
+    monkeypatch.setattr(config, "ID_FACE_MAX_DISTANCE", value)
+    assert ids._sface_maximum_distance() is None
+    assert not ids._same_face(descriptor(), descriptor())
+
+
+def test_blank_id_policy_retains_existing_operator_cutoff_and_reference_cap(monkeypatch):
+    import config
+    monkeypatch.setattr(config, "ID_FACE_MAX_DISTANCE", "")
+    monkeypatch.setattr(engine, "_purpose_threshold", lambda *args: .25)
+    assert ids._sface_maximum_distance() == .25
+    monkeypatch.setattr(engine, "_purpose_threshold", lambda *args: .9)
+    assert ids._sface_maximum_distance() == verifier.REFERENCE_MAX_DISTANCE
+    monkeypatch.setattr(config, "ID_FACE_MAX_DISTANCE", str(verifier.REFERENCE_MAX_DISTANCE))
+    assert ids._sface_maximum_distance() == verifier.REFERENCE_MAX_DISTANCE
+
+
 @pytest.mark.parametrize("change", ["none", "multiple", "nonfinite", "low_confidence", "other_person", "outside", "collapsed_eyes"])
 def test_uncertain_or_different_detected_face_cannot_be_substituted(change):
     row = detection()

@@ -43,10 +43,17 @@ within the crop. SFace aligns that portrait and returns a finite, nonzero 128D
 descriptor. Missing/corrupt models, uncertain faces and inference errors fail
 closed; there is no silent switch to another verifier after a failure.
 
-All three portrait comparisons use SFace. The cosine-distance limit is the
-stricter of the existing cosine login policy and OpenCV's published SFace baseline
-(`1 - 0.363`). With the current default policy, distance must be < 0.45, equivalent
-to similarity > 0.55. This does not change a configured login threshold or reuse a
+All three portrait comparisons use SFace. `ID_FACE_MAX_DISTANCE` can set its own
+server-side maximum cosine distance, independently of login, entrance and duplicate
+enrollment. A blank/unset value preserves the earlier behavior: the stricter of
+the existing cosine login policy and OpenCV's published SFace baseline
+(`1 - 0.363`). With the unchanged default policy, distance must be < 0.45, equivalent
+to similarity > 0.55. Explicit settings must be finite, greater than zero and at
+most 0.637; invalid settings reject comparisons instead of silently falling back.
+Larger limits accept more matches and require an approved, evaluated policy.
+The published reference is not a measured false-acceptance rate for printed
+library IDs. No less strict setting is enabled by adding this configuration.
+This does not change a configured login threshold or reuse a
 dlib Euclidean descriptor as an SFace vector. Similarity is not a calibrated
 identity probability. Live PAD, ID binding/digest checks, duplicate enrollment,
 account authorization and the original stored sign-in template remain unchanged.

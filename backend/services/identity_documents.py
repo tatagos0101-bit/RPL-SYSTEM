@@ -306,8 +306,17 @@ def has_verified_identity(member) -> bool:
 
 
 def _sface_maximum_distance():
+    from config import ID_FACE_MAX_DISTANCE
     from services import face_engine_service as engine
     from services.id_face_verifier import REFERENCE_MAX_DISTANCE
+    if ID_FACE_MAX_DISTANCE:
+        try:
+            value = float(ID_FACE_MAX_DISTANCE)
+        except (TypeError, ValueError):
+            return None
+        return value if np.isfinite(value) and 0 < value <= REFERENCE_MAX_DISTANCE else None
+    # Compatibility only until a separately reviewed SFace policy is supplied.
+    # Scores from different recognition models are not interchangeable calibration.
     value = engine._purpose_threshold("login", "insightface")
     return min(REFERENCE_MAX_DISTANCE, value) if np.isfinite(value) and 0 < value <= 2 else None
 
