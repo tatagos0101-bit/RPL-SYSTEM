@@ -89,3 +89,45 @@ def db_session():
 @pytest.fixture()
 def client():
     return TestClient(app)
+
+
+@pytest.fixture()
+def checked_photo_id(monkeypatch):
+    """Real image/token validation with synthetic OCR/portrait results."""
+    import io
+    from PIL import Image
+    from services import identity_documents as identity
+    monkeypatch.setattr(identity, "read_id_text", lambda rgb: [
+        "REPUBLIC OF THE PHILIPPINES", "PHILIPPINE IDENTIFICATION CARD",
+        "FULL NAME: SYNTHETIC MEMBER", "ADDRESS: SYNTHETIC TEST LOCATION"])
+    monkeypatch.setattr(identity, "document_face", lambda frame: {
+        "engine": "dlib", "encoding": [0.0] * 128})
+    sequence = 0
+
+    def prepare(client):
+        nonlocal sequence
+        sequence += 1
+        output = io.BytesIO()
+        Image.new("RGB", (900, 600), (sequence % 255, 230, 220)).save(output, "PNG")
+        files = {"id_image": ("synthetic.png", output.getvalue(), "image/png")}
+        result = client.post("/api/librarian/identity/inspect", files=files)
+        assert result.status_code == 200, result.text
+        return {"identity_checked": "true", "id_review_token": result.json()["review_token"]}, files
+    return prepare
+
+
+@pytest.fixture()
+def remote_identity_ready(monkeypatch):
+    """Isolate existing PAD/engine tests; identity comparison has its own suite."""
+    from services import identity_documents as identity
+    from timezone_utils import now_ph
+    monkeypatch.setattr(identity, "verify_remote_identity", lambda *args: None)
+
+    def prepare(member, db):
+        member.id_image_url = "/uploads/ids/synthetic.png"
+        member.id_document_digest = f"{member.id:064x}"
+        member.id_verified_at = now_ph()
+        member.id_verified_by_id = 99
+        db.commit()
+        return {"id_image": "synthetic-id"}
+    return prepare

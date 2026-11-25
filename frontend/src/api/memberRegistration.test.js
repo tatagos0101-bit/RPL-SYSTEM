@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildMemberRegistrationForm, registrationDeliveryNotice, registrationErrorMessage } from './memberRegistration.js';
 
-test('optional ID is omitted while name/address and supplied contacts are trimmed', () => {
+test('base registration fields are trimmed before the required ID review is appended', () => {
   const body = buildMemberRegistrationForm({ name: ' Synthetic Member ', location: ' Test Library ', email: ' reader@example.com ', phone: '09123456789' }, null);
   assert.equal(body.get('name'), 'Synthetic Member');
   assert.equal(body.get('location'), 'Test Library');
@@ -11,8 +11,8 @@ test('optional ID is omitted while name/address and supplied contacts are trimme
   assert.equal(body.has('id_image'), false);
 });
 
-test('optional attachment is retained as a File for the existing private upload path', () => {
-  const file = new File(['synthetic fixture'], 'sample.pdf', { type: 'application/pdf' });
+test('photo attachment is retained as a File for the private upload path', () => {
+  const file = new File(['synthetic fixture'], 'sample.jpg', { type: 'image/jpeg' });
   const body = buildMemberRegistrationForm({ name: 'Synthetic', location: 'Test Library' }, file);
   assert.equal(body.get('id_image'), file);
 });

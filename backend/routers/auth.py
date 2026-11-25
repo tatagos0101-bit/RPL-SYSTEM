@@ -756,6 +756,11 @@ def enroll_face(
     from services.member_deletion import lock_active_account
     current_user = lock_active_account(db, current_user.id)
     require_enrollment_consent(body.accept_face_recognition, body.face_consent_version)
+    if current_user.role == "member":
+        from services.identity_documents import enroll_remote_face
+        enroll_remote_face(db, current_user, body)
+        db.commit()
+        return {"success": True, "message": "Face enrolled after ID comparison. Comparison images were not retained."}
     import services.face_engine_service as face_engine_service
     from services.liveness_service import check_liveness
     from models.security_alert import SecurityAlert

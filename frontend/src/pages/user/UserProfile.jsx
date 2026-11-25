@@ -1,6 +1,6 @@
 import { isValidNewPassword, passwordPolicyMessage } from '../../api/passwordPolicy';
 import { AccountabilityDisclosure } from '../../components/MemberAccountability';
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BadgeCheck, MapPin, Shield, BookOpen,
@@ -14,6 +14,7 @@ import UserAvatar from '../../components/UserAvatar';
 import EmailContact from '../../components/EmailContact';
 import AccountNotice from '../../components/AccountNotice';
 import { avatarFileError, publishProfileUpdate, PROFILE_UPDATED, PROFILE_REVISION_KEY } from '../../api/profileUpdates';
+const FaceEnrollModal = lazy(() => import('../../components/FaceEnrollModal'));
 
 // Apply only confirmed photo changes; failures keep the previous photo.
 function AvatarUpload({ currentUrl, name, onUploaded }) {
@@ -243,6 +244,7 @@ function PasswordChangeForm() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function UserProfile() {
+  const [showFaceEnrollment, setShowFaceEnrollment] = useState(false);
   const [profile, setProfile] = useState(null);
   const [biometric, setBiometric] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -329,6 +331,7 @@ export default function UserProfile() {
     <div className="rpl-page rpl-profile min-h-screen bg-canvas text-ink pb-24 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 md:px-8 pt-8 space-y-5">
         <AccountNotice />
+        {showFaceEnrollment && <Suspense fallback={<p role="status">Opening face enrollment…</p>}><FaceEnrollModal selfService user={profile} onClose={() => setShowFaceEnrollment(false)} onSuccess={() => { setProfile(previous => ({ ...previous, face_enrolled: true })); setBiometric(previous => ({ ...previous, enrolled: true })); }} /></Suspense>}
         <AccountabilityDisclosure />
 
         {/* Page title */}
@@ -510,7 +513,7 @@ export default function UserProfile() {
                   <p className="text-sm font-semibold tracking-normal text-muted">Biometric ID</p>
                   <div className="flex items-center gap-1 px-2 py-1 bg-subtle rounded-lg border border-line">
                     <Lock size={8} className="text-muted" />
-                    <span className="text-sm font-semibold tracking-normal text-muted">Read Only</span>
+                    <span className="text-sm font-semibold tracking-normal text-muted">{profile.identity_verified ? 'ID verified' : 'ID review needed'}</span>
                   </div>
                 </div>
 
@@ -526,15 +529,16 @@ export default function UserProfile() {
                       </p>
                     </div>
                     <p className="text-sm text-muted leading-relaxed">
-                      {biometric?.enrolled ? 'Registered for entry kiosk.' : 'Visit the library to enroll.'}
+                      {biometric?.enrolled ? 'Registered for library face identification.' : profile.remote_face_enrollment_allowed ? 'Enroll online using your ID and a live face capture.' : 'Ask a librarian to verify your original photo ID in person first.'}
                     </p>
                   </div>
                 </div>
 
                 <div className="pt-3.5 border-t border-line">
                   <p className="text-sm text-muted leading-relaxed">
-                    Managed by library staff. Bring a valid ID to enroll or update your biometric data.
+                    {profile.remote_face_enrollment_allowed ? 'Online enrollment compares your live face with your uploaded ID and the ID verified by the library. It cannot change your verified name.' : 'Once your identity has been verified in the library, you can enroll your face from home. Password access remains available.'}
                   </p>
+                  {profile.remote_face_enrollment_allowed && <button type="button" onClick={() => setShowFaceEnrollment(true)} className="mt-4 flex min-h-11 items-center gap-2 rounded-xl bg-action px-4 py-3 font-semibold text-white transition-colors hover:bg-action-hover"><Camera size={17} />{biometric?.enrolled ? 'Update face online' : 'Enroll face online'}</button>}
                   <Link to="/privacy-policy" className="mt-2 inline-block text-sm font-semibold text-link underline underline-offset-4">Read the Library Privacy Notice</Link>
                 </div>
               </div>

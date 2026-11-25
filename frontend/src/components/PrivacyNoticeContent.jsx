@@ -12,7 +12,7 @@ export default function PrivacyNoticeContent({ headingTag = 'h2' }) {
       </p>
       <section>
         <Heading className="mb-2 font-semibold text-ink">Information used for library services</Heading>
-        <p>The library uses your name, member ID, address, contact details where supplied, account status and a securely hashed password to manage your membership and sign-in. If you provide an optional identification document or profile photo, the library uses it to support identification or manage your profile.</p>
+        <p>The library uses your name, member ID, address, contact details where supplied, account status and a securely hashed password to manage your membership and sign-in. A government photo ID is required when a librarian creates a member account in person. The library keeps the original upload in private storage for identity checks. A profile photo remains optional.</p>
         <p className="mt-2">Borrowing, returns, reservations and attendance records support library services. Book interactions may be used to recommend titles to you. Visitors also record their visits in the library’s manual logbook.</p>
       </section>
       <section>
@@ -22,8 +22,8 @@ export default function PrivacyNoticeContent({ headingTag = 'h2' }) {
       </section>
       <section>
         <Heading className="mb-2 font-semibold text-ink">Optional facial recognition</Heading>
-        <p>If you choose to enroll, the library asks for separate consent before using the camera. Enrollment uses a live image to create a numerical facial template. The system uses that template to identify you for supported library services, including face sign-in, borrowing and returns, and entrance attendance. The template can identify you and must be protected as personal information.</p>
-        <p className="mt-2">Enrollment generally saves the template. During camera checks, suspected attempts to impersonate someone can produce a saved facial image and related security information for authorized staff to review. The entrance station can process faces it cannot match while scanning is active.</p>
+        <p>If you choose to enroll, the library asks for separate consent before using the camera. Enrollment uses a live image to create a numerical facial template. Online enrollment also requires an ID photo and compares its portrait and your live face with the ID already verified by the librarian. The remote ID photo and live comparison frames are discarded after the check, including unsuccessful comparisons. The system keeps the encrypted facial template and verification result when enrollment succeeds. It does not automatically authenticate an ID with its issuing authority. The system uses that template to identify you for supported library services, including face sign-in, borrowing and returns, and entrance attendance. The template can identify you and must be protected as personal information.</p>
+        <p className="mt-2">Online enrollment comparison images are discarded as described above. Other camera workflows, including supervised enrollment and station checks, can save a facial image and related security information when they detect a suspected impersonation attempt, for authorized staff to review. The entrance station can process faces it cannot match while scanning is active.</p>
         <p className="mt-2">The library uses facial data for the library identification and related security purposes described here. Password sign-in is available, and staff can assist with supervised identification if you choose not to enroll or if a match fails.</p>
       </section>
       <section>

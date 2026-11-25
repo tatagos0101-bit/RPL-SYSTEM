@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi import HTTPException, UploadFile
 import jwt
 from jwt import InvalidTokenError
+from starlette.concurrency import run_in_threadpool
 
 from config import JWT_SECRET_KEY, JWT_ALGORITHM, STORAGE_BACKEND
 from services import storage_service as storage
@@ -44,7 +45,7 @@ async def read_upload(*, folder: str, user_id: int, file: UploadFile | None, tic
                 raise ValueError("Wrong upload owner or category.")
         except (InvalidTokenError, ValueError, TypeError):
             raise HTTPException(403, "Invalid or expired upload ticket.") from None
-        content = storage.read_cloud_upload(folder, filename)
+        content = await run_in_threadpool(storage.read_cloud_upload, folder, filename)
         if len(content) > UPLOAD_RULES[folder][1]:
             raise HTTPException(413, "Uploaded file is too large.")
         return content, filename, storage.cloud_reference(folder, filename)

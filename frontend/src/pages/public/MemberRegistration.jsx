@@ -23,7 +23,7 @@ export default function MemberRegistration() {
     <div className="mx-auto max-w-4xl">
       <p className="mb-2 text-sm font-semibold text-link">Rizal Provincial Library</p>
       <h1 className="font-serif text-4xl sm:text-5xl">Apply for membership</h1>
-      <p className="mb-8 mt-3 max-w-2xl text-muted">Apply from anywhere. A librarian reviews your details before issuing your account. There is no camera or ID upload required for this application.</p>
+      <p className="mb-8 mt-3 max-w-2xl text-muted">Start your application from anywhere, then bring the receipt and your original government photo ID to the library. A librarian must verify you in person and upload the required ID before creating your account. No ID is collected on this public application form.</p>
       {receipt ? <section className="space-y-5 rounded-2xl border border-line bg-panel p-6 sm:p-8" aria-label="Application receipt">
         <CheckCircle2 size={36} className="text-success" aria-hidden="true" /><h2 className="text-2xl font-semibold">Application received</h2>
         <p className="font-medium">{receipt.name}</p><p className="break-all rounded-lg bg-subtle p-4 font-mono">{receipt.receipt}</p>

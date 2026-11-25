@@ -25,6 +25,16 @@ Existing loans, copy QR identities and assessed fines must remain unchanged.
 Anonymous member signup no longer issues active accounts; `/register` applications
 are reviewed in `/librarian/applications` before borrowing access is issued.
 
+## Required ID and remote enrollment prerequisite
+
+Apply the nullable identity-verification columns and unique ID-digest index through
+the reviewed additive migration before releasing the new API. No existing ID or
+face data is backfilled as verified. Keep `AUTO_MIGRATE=false`. Install the pinned
+OCR dependencies in both runtime targets and verify bundled model checksums.
+Remote enrollment requires a librarian-verified original ID; comparison uploads
+are discarded. Account issuance now requires an in-person ID check, including
+applicants who started remotely. See [workflow and acceptance limits](REMOTE_FACE_ENROLLMENT.md).
+
 ## Inactive member notices prerequisite
 
 The [inactive account review](ACCOUNT_INACTIVITY.md) feature adds nullable
@@ -98,10 +108,12 @@ production PostgreSQL locking or real inbox delivery.
 
 ## Member registration delivery prerequisite
 
-Government ID remains optional. Member registration now uses email-only delivery
+Government photo ID is now required for in-person member registration; see the
+remote-enrollment prerequisite above. Credential delivery still uses email-only delivery
 with librarian handoff for missing email or unconfirmed sending. Phone fields and
 SMS transports are removed; old Twilio settings have no effect. No schema/dependency
-upgrade is required. Deploy the updated API before the frontend because forced
+upgrade was required for the earlier email-only change; the required-ID upgrade
+above must be applied for this release. Deploy the updated API before the frontend because forced
 first-login password setup no longer submits the current password. The server
 allows omission only for authenticated accounts requiring a password change;
 normal changes still require it. Configure SMTP only in the API server

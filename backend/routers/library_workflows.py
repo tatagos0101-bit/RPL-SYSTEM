@@ -1,10 +1,7 @@
 import secrets
-import string
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from starlette.concurrency import run_in_threadpool
 
 from database import get_db
 from dependencies import require_librarian, require_member
@@ -17,12 +14,9 @@ from models.transaction import Transaction
 from models.user import User
 from schemas.library_workflows import (AccountActionRequest, ApplicationRequest,
     ApplicationReviewRequest, CopyConditionRequest, TERMS_VERSION)
-from services.credential_expiry import temporary_password_deadline
-from services.email_identity import email_matches, normalize_email
+from services.email_identity import normalize_email
 from services.member_accountability import accountability, apply_account_action
 from services.member_deletion import lock_existing_member
-from services.passwords import hash_password
-from services.registration_delivery import deliver_registration_credentials
 from services.reservation_policy import promote_next_pending_reservation
 from timezone_utils import as_ph, now_ph
 
@@ -41,7 +35,7 @@ def apply_membership(request: Request, response: Response, body: ApplicationRequ
     response.headers["Cache-Control"] = "no-store"
     return {"receipt": application.receipt, "status": application.status,
         "submitted_at": as_ph(application.submitted_at), "name": application.name,
-        "message": "Application received. A librarian must review your details before borrowing access is granted. Keep this receipt; if you did not provide an email, contact the library desk to collect your account details."}
+        "message": "Application received. Bring this receipt and your original government photo ID to the library. A librarian must verify your identity in person and upload the required ID before creating your account."}
 
 
 @router.get("/api/librarian/applications")
@@ -64,41 +58,16 @@ async def review_application(application_id: int, body: ApplicationReviewRequest
         raise HTTPException(404, "Application not found.")
     if row.status != "pending":
         raise HTTPException(409, "This application has already been reviewed. Refresh the list.")
-    if body.decision == "approve" and (not body.identity_checked or body.reason != "details_verified"):
-        raise HTTPException(422, "Review the applicant's identity and select Details verified before approval.")
-    if body.decision == "reject" and body.reason == "details_verified":
+    if body.decision == "approve":
+        raise HTTPException(422, "Create the account through in-person registration with a required photo ID. Select this application from the librarian application list.")
+    if body.reason == "details_verified":
         raise HTTPException(422, "Choose the reason this application cannot be approved.")
     row.reviewed_at, row.reviewed_by_id = now_ph(), actor.id
     row.review_reason, row.review_notes = body.reason, (body.notes or "").strip() or None
+    row.status = "rejected"
+    db.commit()
     response.headers["Cache-Control"] = "no-store"
-    if body.decision == "reject":
-        row.status = "rejected"
-        db.commit()
-        return {"status": row.status, "receipt": row.receipt}
-    if row.email and email_matches(db, row.email):
-        raise HTTPException(409, "An account already uses this email. Review the existing member; do not create a duplicate.")
-    alphabet = string.ascii_letters + string.digits
-    password = "".join(secrets.choice(alphabet) for _ in range(9)) + secrets.choice(string.digits)
-    member_id = "RPL-" + "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(5))
-    while db.query(User.id).filter_by(member_id=member_id).first():
-        member_id = "RPL-" + "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(5))
-    member = User(name=row.name, email=row.email, location=row.location, role="member", status="active",
-        member_id=member_id, password_hash=hash_password(password), must_change_password=True,
-        temporary_password_expires_at=temporary_password_deadline(), privacy_consent_pending=True,
-        email_verified=False, phone_verified=False)
-    db.add(member)
-    try:
-        db.flush()
-        row.member_user_id, row.status = member.id, "approved"
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(409, "Account details conflict with an existing record. Refresh before reviewing again.") from None
-    delivery = await run_in_threadpool(deliver_registration_credentials, member_id=member.member_id,
-        temporary_password=password, email=member.email)
-    return {"status": "approved", "receipt": row.receipt, "member_id": member.member_id,
-        "name": member.name, "password_delivery": delivery,
-        "temporary_password": None if delivery["status"] == "accepted" else password}
+    return {"status": row.status, "receipt": row.receipt}
 
 
 @router.get("/api/librarian/users/{user_id}/accountability")

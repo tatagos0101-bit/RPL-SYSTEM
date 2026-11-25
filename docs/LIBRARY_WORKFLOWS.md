@@ -57,9 +57,12 @@ settlement receipts, automatic fee-based suspension or automatic blacklisting.
    borrower terms. No phone, ID-image or face upload is required for an application.
 3. The application receives a random receipt reference and pending status. The applicant
    can save/print the receipt. No user account, sign-in cookie or borrowing access is issued.
-4. Librarians use **Membership Applications** in the staff menu or Users page. They check
-   the applicant's details, select a review reason, and approve or reject the application.
-5. Approval atomically creates one member account. Concurrent/repeated reviews cannot
+4. Librarians use **Membership Applications** in the staff menu or Users page. They can
+   reject an application with a reason, or select **Register applicant in person** when
+   the applicant visits with an original government photo ID. The required ID upload,
+   OCR/portrait check and librarian attestation cannot be skipped. See
+   [required ID and online face enrollment](REMOTE_FACE_ENROLLMENT.md).
+5. In-person registration atomically approves the application and creates one member account. Concurrent/repeated reviews cannot
    create a second account. A conflicting existing email requires explicit review.
 6. The existing credential delivery service sends the temporary password if email delivery
    is accepted. Otherwise a one-time private librarian handoff is shown. No phone/SMS

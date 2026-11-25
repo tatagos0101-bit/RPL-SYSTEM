@@ -71,6 +71,34 @@ def cloud_reference(folder: str, filename: str) -> str:
     return f"supabase://{BUCKETS[folder]}/{filename}"
 
 
+def read_private_upload(reference: str, *, folder: str, max_bytes: int) -> bytes:
+    """Read a saved private identity only from its expected category, never a URL."""
+    if folder not in {"ids", "avatars"}:
+        raise ValueError("Invalid private category")
+    if reference.startswith("supabase://"):
+        parsed = urlsplit(reference)
+        filename = parsed.path.lstrip("/")
+        if parsed.netloc != BUCKETS[folder] or not filename or Path(filename).name != filename or "/" in filename or "\\" in filename:
+            raise HTTPException(409, "The saved private document needs librarian review.")
+        content = read_cloud_upload(folder, filename)
+    elif STORAGE_BACKEND == "local" and reference.startswith(f"/uploads/{folder}/"):
+        filename = reference.removeprefix(f"/uploads/{folder}/")
+        if not filename or Path(filename).name != filename or "/" in filename or "\\" in filename:
+            raise HTTPException(409, "The saved private document needs librarian review.")
+        path = Path("uploads") / folder / filename
+        try:
+            if path.stat().st_size > max_bytes:
+                raise HTTPException(422, "The saved ID is too large to check.")
+            content = path.read_bytes()
+        except OSError:
+            raise HTTPException(409, "The saved ID is unavailable. Ask the librarian to review your identity.") from None
+    else:
+        raise HTTPException(409, "The saved ID needs librarian review before online enrollment.")
+    if len(content) > max_bytes:
+        raise HTTPException(422, "The saved ID is too large to check.")
+    return content
+
+
 def resolve_upload_url(reference: str | None) -> str | None:
     if not reference or not reference.startswith("supabase://"):
         return reference

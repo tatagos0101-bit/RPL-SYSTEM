@@ -110,10 +110,12 @@ Provider references: [Python SMTP](https://docs.python.org/3/library/smtplib.htm
 
 ## New-member registration credentials
 
-Local implementation added November 16, 2026. This does not establish a deployed
-release or real delivery. ID upload is optional in both librarian registration
-forms; supplied documents retain their existing private Storage and ticket rules.
-Name/address remain required. No schema migration or new dependency is needed.
+Credential delivery was added November 16, 2026; its fixture tests alone do not
+establish real inbox delivery. Current registration requires a government photo ID
+checked in person, retaining private Storage and owner-bound ticket rules.
+Name/address remain required. Email delivery itself needs no additional schema;
+see the [required-ID upgrade and OCR dependencies](REMOTE_FACE_ENROLLMENT.md) for
+the current registration and online enrollment workflow.
 
 Registration generates a random 10-character password that meets the existing
 password policy. The account is committed before sending. Email is used when

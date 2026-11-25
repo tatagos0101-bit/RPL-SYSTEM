@@ -105,6 +105,7 @@ class LibMemberOut(BaseModel):
     status:       str
     face_enrolled: bool
     face_enrollment_display_only: bool = False
+    identity_verified: bool = False
     active_loans: int
     total_loans:  int
     joined_at:    datetime

@@ -72,16 +72,17 @@ def test_mixed_live_and_photo_frame_is_rejected_before_any_access(client, db_ses
 
 
 @pytest.mark.parametrize("assisted", [False, True])
-def test_photo_cannot_overwrite_enrollment(client, db_session, monkeypatch, assisted):
+def test_photo_cannot_overwrite_enrollment(client, db_session, monkeypatch, assisted, remote_identity_ready):
     staff = User(name="Staff", email="staff-pad@example.test", role="librarian", password_hash="unused")
     member = User(name="Member", email="member-pad@example.test", role="member", password_hash="unused", face_encoding="[0.1]")
     db_session.add_all([staff, member]); db_session.commit()
     monkeypatch.setattr(liveness_service, "check_liveness", lambda _: ("ok", .99))
     monkeypatch.setattr(face_engine_service, "detect_faces", lambda *a, **k: [FACE])
     monkeypatch.setattr(pad, "score_face", lambda *a: ("spoof", .01))
+    identity_payload = remote_identity_ready(member, db_session)
     who = staff if assisted else member
     path = f"/api/librarian/users/{member.id}/enroll-face" if assisted else "/api/auth/enroll-face"
-    response = client.post(path, json={"image": _frame(), "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION},
+    response = client.post(path, json={"image": _frame(), "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION, **identity_payload},
                            headers={"Authorization": f"Bearer {_make_token(who.id)}"})
     assert response.status_code == 422
     db_session.refresh(member)
@@ -177,7 +178,7 @@ def test_reference_models_and_recognition_end_to_end(client, db_session, monkeyp
 
 @pytest.mark.parametrize("assisted", [False, True])
 @pytest.mark.parametrize("name,accepted", [("image_F1.jpg", False), ("image_F2.jpg", False), ("image_T1.jpg", True)])
-def test_reference_models_protect_enrollment(client, db_session, monkeypatch, assisted, name, accepted):
+def test_reference_models_protect_enrollment(client, db_session, monkeypatch, assisted, name, accepted, remote_identity_ready):
     sample = REFERENCE_DIR / name
     if not sample.exists():
         pytest.skip("Set PAD_REFERENCE_DIR to the upstream reference sample directory")
@@ -186,9 +187,10 @@ def test_reference_models_protect_enrollment(client, db_session, monkeypatch, as
     staff = User(name="Reference staff", email="reference-staff@example.test", role="librarian", password_hash="unused")
     member = User(name="Reference member", email="reference-member@example.test", role="member", password_hash="unused")
     db_session.add_all([staff, member]); db_session.commit()
+    identity_payload = remote_identity_ready(member, db_session)
     who = staff if assisted else member
     path = f"/api/librarian/users/{member.id}/enroll-face" if assisted else "/api/auth/enroll-face"
-    response = client.post(path, json={"image": frame, "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION},
+    response = client.post(path, json={"image": frame, "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION, **identity_payload},
                            headers={"Authorization": f"Bearer {_make_token(who.id)}"})
     assert response.status_code == (200 if accepted else 422)
     db_session.refresh(member)

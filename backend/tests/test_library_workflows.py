@@ -157,7 +157,7 @@ def test_blacklist_requires_librarian_and_revokes_access(client, db_session):
     assert db_session.query(MemberAccountAction).filter_by(user_id=member.id).count() == 2
 
 
-def test_remote_application_issues_receipt_not_account_then_approval(client, db_session):
+def test_remote_application_issues_receipt_not_account_then_approval(client, db_session, checked_photo_id):
     member, staff, other, book, h = setup(db_session)
     response = client.post("/api/membership/applications", json={"name": "Synthetic Applicant", "email": "synthetic-applicant@example.com", "location": "Synthetic Address", "accept_terms": True})
     assert response.status_code == 201, response.text
@@ -171,7 +171,15 @@ def test_remote_application_issues_receipt_not_account_then_approval(client, db_
     assert client.post(path, headers=h[0], json=payload).status_code == 403
     assert client.post(path, headers=h[1], json={**payload, "identity_checked": False}).status_code == 422
     result = client.post(path, headers=h[1], json=payload)
-    assert result.status_code == 200, result.text
+    assert result.status_code == 422  # Online review cannot issue an account.
+    assert db_session.query(User).count() == 3
+    client.headers["Authorization"] = h[1]["Authorization"]
+    fields, files = checked_photo_id(client)
+    client.headers.pop("Authorization")
+    result = client.post("/api/librarian/users/register", headers=h[1], data={
+        "name": app.name, "email": app.email, "location": app.location,
+        "application_id": app.id, **fields}, files=files)
+    assert result.status_code == 201, result.text
     issued = result.json()
     assert issued["temporary_password"] and len(issued["temporary_password"]) == 10
     approved = db_session.query(User).filter_by(member_id=issued["member_id"]).one()

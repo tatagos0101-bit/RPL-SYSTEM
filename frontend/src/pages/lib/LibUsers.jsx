@@ -8,10 +8,13 @@ import PageControls from '../../components/PageControls';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, User, BadgeCheck, UserPlus, MoreHorizontal, RefreshCw,
-  ScanFace, X, Camera, Upload, ImageIcon, CheckCircle2, Info,
+  ScanFace, X, Camera, CheckCircle2, Info,
   KeyRound, MapPin, Trash2,
 } from 'lucide-react';
 import FaceEnrollModal from '../../components/FaceEnrollModal';
+import VerifiedIdUpload from '../../components/VerifiedIdUpload';
+import MemberIdentityModal from '../../components/MemberIdentityModal';
+import { appendIdentityReview } from '../../api/identity';
 import MemberDeletionModal from '../../components/MemberDeletionModal';
 import AccountActivityReview, { AccountNoticeQueue } from '../../components/AccountActivityReview';
 import FloatingActions from '../../components/FloatingActions';
@@ -175,32 +178,19 @@ function PasswordResetModal({ user, onClose }) {
   );
 }
 
-function RegisterMemberModal({ onClose, onSuccess }) {
-  const fileRef = useRef(null);
-  const [form,      setForm]      = useState({ name:'', email:'', location:'' });
-  const [idFile,    setIdFile]    = useState(null);
-  const [idPreview, setIdPreview] = useState(null);
+export function RegisterMemberModal({ onClose, onSuccess, application = null }) {
+  const [form, setForm] = useState({ name: application?.name || '', email: application?.email || '', location: application?.location || '' });
+  const [idDocument, setIdDocument] = useState(null);
+  const [identityChecked, setIdentityChecked] = useState(false);
   const [errors,    setErrors]    = useState({});
   const [apiErr,    setApiErr]    = useState('');
   const [step,      setStep]      = useState('form'); // form | loading | success
   const [result,    setResult]    = useState(null);
 
-  const onFile = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setIdFile(f);
-    setErrors(v => ({ ...v, idFile: undefined }));
-    if (f.type.startsWith('image/')) {
-      const r = new FileReader();
-      r.onload = ev => setIdPreview(ev.target.result);
-      r.readAsDataURL(f);
-    } else {
-      setIdPreview(null);
-    }
-  };
-
   const validate = () => {
     const e = {};
+    if (!idDocument) e.idFile = 'Upload and check the required government photo ID.';
+    if (!identityChecked) e.identityChecked = 'Confirm the in-person identity check.';
     if (!form.name.trim())     e.name     = 'Full name is required.';
     if (!form.location.trim()) e.location = 'Address is required.';
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email.';
@@ -211,11 +201,13 @@ function RegisterMemberModal({ onClose, onSuccess }) {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     setStep('loading'); setApiErr('');
-    const fd = buildMemberRegistrationForm(form, idFile);
+    const fd = appendIdentityReview(buildMemberRegistrationForm(form), idDocument, identityChecked);
+    if (application) fd.set('application_id', String(application.id));
     try {
       const res = await registerMember(fd);
       setResult(res.data);
       setStep('success');
+      onSuccess?.();
     } catch (err) {
       setApiErr(registrationErrorMessage(err));
       setStep('form');
@@ -234,7 +226,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
 
   return (
     <ModalFrame onClose={close} className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/70">
-      <div className="bg-panel border border-line rounded-xl shadow-sm w-full max-w-lg flex flex-col" style={{ maxHeight: '90vh' }}>
+      <div className="relative bg-panel border border-line rounded-xl shadow-sm w-full max-w-lg flex flex-col" style={{ maxHeight: '90vh' }}>
 
         {/* Header */}
         <div className="flex-shrink-0 px-7 pt-7 pb-5 border-b border-line">
@@ -266,7 +258,7 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                 The member must review and accept the Privacy Notice and choose a new password on their first sign-in.
               </p>
             </div>
-            <button onClick={() => { onSuccess(); onClose(); }} className="px-8 py-3 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all">Done</button>
+            <button onClick={onClose} className="px-8 py-3 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all">Done</button>
           </div>
         )}
 
@@ -303,6 +295,9 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                 </div>
               </div>
 
+              <VerifiedIdUpload value={idDocument} onChange={value => { setIdDocument(value); setIdentityChecked(false); setErrors(previous => ({ ...previous, idFile: undefined, identityChecked: undefined })); }} onSuggestions={value => { setForm(previous => ({ ...previous, name: value.suggested_name || previous.name, location: value.suggested_location || previous.location })); setErrors(previous => ({ ...previous, name: undefined, location: undefined })); }} />
+              {errors.idFile && <p role="alert" className="text-sm text-danger">{errors.idFile}</p>}
+
               {/* Name */}
               <div>
                 <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Full Name <span className="text-danger">*</span></label>
@@ -318,66 +313,13 @@ function RegisterMemberModal({ onClose, onSuccess }) {
                 {errors.email && <p className="mt-1 text-sm font-bold text-danger">{errors.email}</p>}
               </div>
 
-              {/* Location */}
               <div>
-                <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">Address <span className="text-danger">*</span></label>
-                <input aria-label="Address" {...field('location')} type="text" placeholder="City, Province" className={inp(errors.location)}/>
+                <label className="mb-1.5 block text-sm font-semibold text-muted" htmlFor="member-registration-address">Address <span className="text-danger">*</span></label>
+                <input id="member-registration-address" aria-label="Address" {...field('location')} type="text" maxLength="120" autoComplete="street-address" placeholder="City, Province" className={inp(errors.location)} />
                 {errors.location && <p className="mt-1 text-sm font-bold text-danger">{errors.location}</p>}
               </div>
-
-              {/* ── Valid ID Upload ── */}
-              <div>
-                <label className="block text-sm font-semibold tracking-normal text-muted mb-1.5">
-                  Government ID <span className="font-normal normal-case">(optional)</span>
-                </label>
-
-                <input ref={fileRef} type="file" aria-label="Government ID (optional)" accept="image/jpeg,image/png,image/webp,application/pdf" onChange={onFile} className="hidden"/>
-
-                {!idFile ? (
-                  /* Upload drop zone */
-                  <button type="button" onClick={() => fileRef.current?.click()}
-                    className={`w-full flex flex-col items-center justify-center gap-2 py-8 rounded-lg border-2 border-dashed cursor-pointer transition-all
- ${errors.idFile
-                        ? 'border-danger bg-danger-soft bg-danger-soft'
-                        : 'border-line bg-subtle hover:border-line hover:border-line hover:bg-info-soft hover:bg-info-soft'
-                      }`}
-                  >
-                    <Upload size={22} className={errors.idFile ? 'text-danger' : 'text-muted'}/>
-                    <div className="text-center">
-                      <p className={`text-sm font-bold ${errors.idFile ? 'text-danger' : 'text-muted '}`}>Click to upload government ID</p>
-                      <p className="text-sm text-muted mt-0.5">JPG · PNG · WEBP · PDF — max 10 MB</p>
-                    </div>
-                  </button>
-                ) : (
-                  /* Preview */
-                  <div className="rounded-xl overflow-hidden border border-line bg-subtle">
-                    {idPreview
-                      ? <img src={idPreview} alt="ID preview" className="w-full max-h-48 object-contain"/>
-                      : (
-                        <div className="flex items-center gap-3 px-5 py-4">
-                          <ImageIcon size={20} className="text-muted flex-shrink-0"/>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-bold text-muted truncate">{idFile.name}</p>
-                            <p className="text-sm text-muted">{(idFile.size / 1024).toFixed(0)} KB</p>
-                          </div>
-                        </div>
-                      )
-                    }
-                    <div className="flex border-t border-line">
-                      <button type="button" onClick={() => fileRef.current?.click()}
-                        className="flex-1 py-2 text-sm font-semibold tracking-normal text-link hover:bg-info-soft transition-colors">
-                        Change
-                      </button>
-                      <button type="button" onClick={() => { setIdFile(null); setIdPreview(null); if (fileRef.current) fileRef.current.value=''; }}
-                        className="flex-1 py-2 text-sm font-semibold tracking-normal text-danger hover:bg-danger-soft transition-colors border-l border-line">
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {errors.idFile && <p className="mt-1 text-sm font-bold text-danger">{errors.idFile}</p>}
-              </div>
-
+              <label className="flex items-start gap-3 rounded-xl border border-line bg-subtle p-4 text-sm text-ink"><input type="checkbox" checked={identityChecked} disabled={!idDocument} onChange={event => { setIdentityChecked(event.target.checked); setErrors(previous => ({ ...previous, identityChecked: undefined })); }} className="mt-1 h-5 w-5 shrink-0" />I inspected the original ID and its validity/security features, compared the portrait with the applicant present in the library, and confirmed the name and address above.</label>
+              {errors.identityChecked && <p role="alert" className="text-sm text-danger">{errors.identityChecked}</p>}
             </div>
 
             {/* Footer */}
@@ -409,6 +351,7 @@ export default function LibUsers() {
   const [actionAnchor, setActionAnchor] = useState(null);
   const closeActionMenu = useCallback(() => setActionMenu(null), []);
   const [enrollTarget, setEnrollTarget] = useState(null);
+  const [identityTarget, setIdentityTarget] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [accountReview, setAccountReview] = useState(null);
   const [noticeRevision, setNoticeRevision] = useState(0);
@@ -564,6 +507,7 @@ export default function LibUsers() {
                         {actionMenu===u.id && (
                           <FloatingActions anchor={actionAnchor} onClose={closeActionMenu}>
                             <button onClick={() => { setActionMenu(null); setAccountabilityTarget(u); }} className="w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-link hover:bg-info-soft">Borrowing record & restrictions</button>
+                            {!u.identity_verified && <button onClick={() => { setActionMenu(null); setIdentityTarget(u); }} className="w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-link hover:bg-info-soft">Verify ID for online enrollment</button>}
                             {(
                               <button onClick={() => { setActionMenu(null); setEnrollTarget(u); }}
                                 className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold tracking-normal text-link hover:bg-info-soft flex items-center gap-2 transition-all">
@@ -619,6 +563,7 @@ export default function LibUsers() {
           onSuccess={fetchMembers}
         />
       )}
+      {identityTarget && <MemberIdentityModal user={identityTarget} onClose={() => setIdentityTarget(null)} onSuccess={fetchMembers} />}
       {deleteTarget && <MemberDeletionModal {...deleteTarget} onClose={() => setDeleteTarget(null)}
         onSuccess={() => { fetchMembers(); setNoticeRevision(value => value + 1); }} />}
       {accountReview && <AccountActivityReview user={accountReview} onClose={() => setAccountReview(null)}

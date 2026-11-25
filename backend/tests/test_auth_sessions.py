@@ -155,13 +155,14 @@ def test_recovery_revokes_sessions_and_all_outstanding_reset_codes(client, db_se
     }).status_code == 400
 
 
-def test_registration_does_not_assert_contact_ownership(client, db_session):
+def test_registration_does_not_assert_contact_ownership(client, db_session, checked_photo_id):
     staff = account(db_session, "librarian")
     login(client, staff)
+    fields, files = checked_photo_id(client)
     result = client.post("/api/librarian/users/register", data={
         "name": "New synthetic member", "email": "new@example.com",
-        "phone": "+63 900 000 0000", "location": "Test location",
-    }, files={"id_image": ("id.png", BytesIO(b"\x89PNG\r\n\x1a\n" + b"synthetic"), "image/png")})
+        "phone": "+63 900 000 0000", "location": "Test location", **fields,
+    }, files=files)
     assert result.status_code == 201
     assert result.json()["email_verified"] is False
     assert result.json()["phone_verified"] is False

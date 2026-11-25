@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, Text, Enum, DateTime, false
+from sqlalchemy import Boolean, Column, Integer, String, Text, Enum, DateTime, Index, false
 from sqlalchemy.orm import deferred, relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -7,6 +7,7 @@ from services.biometric_crypto import BiometricText
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (Index("uq_users_id_document_digest", "id_document_digest", unique=True),)
 
     id             = Column(Integer, primary_key=True, index=True)
     member_id      = Column(String(20), unique=True, nullable=True, index=True)
@@ -38,6 +39,12 @@ class User(Base):
 
     # Valid government ID uploaded during librarian-assisted registration
     id_image_url   = Column(String(300), nullable=True)
+    # Never infer verification from a legacy upload or a display-only face badge.
+    id_document_digest = Column(String(64), nullable=True)
+    id_document_type = Column(String(40), nullable=True)
+    id_verified_at = Column(DateTime(timezone=True), nullable=True)
+    id_verified_by_id = Column(Integer, nullable=True)
+    face_id_verified_at = Column(DateTime(timezone=True), nullable=True)
 
     # Profile avatar photo uploaded by the member
     avatar_url     = Column(String(300), nullable=True)

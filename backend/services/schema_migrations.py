@@ -45,6 +45,11 @@ ADDITIONS = {
         ("deleted_at", DateTime(timezone=True), None),
         ("member_id", String(20), None),
         ("id_image_url", String(300), None),
+        ("id_document_digest", String(64), None),
+        ("id_document_type", String(40), None),
+        ("id_verified_at", DateTime(timezone=True), None),
+        ("id_verified_by_id", Integer, None),
+        ("face_id_verified_at", DateTime(timezone=True), None),
         ("avatar_url", String(300), None),
         ("generated_location", String(120), None),
         ("must_change_password", Boolean, false()),
@@ -95,6 +100,7 @@ def upgrade_schema(conn, metadata) -> None:
 
     # create_all does not add indexes to tables that already exist.
     for table_name, index_name in (
+        ("users", "uq_users_id_document_digest"),
         ("account_deletion_notices", "uq_account_deletion_notices_pending_member"),
         ("account_deletion_notices", "ix_account_deletion_notices_status_deadline"),
         ("account_deletion_notices", "ix_account_deletion_notices_notification_id"),

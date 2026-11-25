@@ -50,11 +50,12 @@ def _token(client, email):
 
 
 @pytest.mark.parametrize("assisted", [False, True])
-def test_enroll_face_stores_dlib_legacy_insightface_and_consent(client, db_session, monkeypatch, assisted):
+def test_enroll_face_stores_dlib_legacy_insightface_and_consent(client, db_session, monkeypatch, assisted, remote_identity_ready):
     import services.face_engine_service as face_engine_service
     import services.liveness_service as liveness_service
 
     user = _member(db_session, dlib_encoding=None)
+    identity_payload = remote_identity_ready(user, db_session)
     actor = _librarian(db_session) if assisted else user
     token = _token(client, actor.email)
     path = f"/api/librarian/users/{user.id}/enroll-face" if assisted else "/api/auth/enroll-face"
@@ -79,7 +80,7 @@ def test_enroll_face_stores_dlib_legacy_insightface_and_consent(client, db_sessi
     response = client.post(
         path,
         headers={"Authorization": f"Bearer {token}"},
-        json={"image": IMAGE, "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION},
+        json={"image": IMAGE, "accept_face_recognition": True, "face_consent_version": FACE_CONSENT_VERSION, **identity_payload},
     )
 
     assert response.status_code == 200
@@ -87,7 +88,7 @@ def test_enroll_face_stores_dlib_legacy_insightface_and_consent(client, db_sessi
     assert json.loads(user.face_encoding) == [0.2] * 128
     assert user.face_consent_version == FACE_CONSENT_VERSION
     assert user.face_consent_at is not None
-    assert user.face_consent_method == ("librarian_assisted" if assisted else "self")
+    assert user.face_consent_method == ("librarian_assisted" if assisted else "self_id_checked")
     assert user.face_consent_recorded_by_id == actor.id
     stored = db_session.query(FaceEmbedding).filter_by(user_id=user.id, engine="insightface").one()
     assert stored.dimension == 512

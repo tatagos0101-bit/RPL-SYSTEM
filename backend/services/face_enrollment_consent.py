@@ -4,7 +4,7 @@ from models.user import User
 from timezone_utils import now_ph
 
 
-FACE_CONSENT_VERSION = "2026-11-24"
+FACE_CONSENT_VERSION = "2026-11-25"
 
 
 def require_enrollment_consent(accepted: bool, notice_version: str | None) -> None:

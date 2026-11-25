@@ -59,7 +59,7 @@ librarian administration, circulation, reporting, QR labels, and attendance.
   into a loan; return, cancellation and expiry free slots. Confirmation retries
   reuse a member-scoped request ID to prevent duplicates.
   Confirmation uses the authenticated session, without an additional face scan.
-- **Librarian tools:** register members with an optional government ID upload, enroll faces,
+- **Librarian tools:** register members in person with a required government photo ID, enroll faces,
   replace/delete enrolled face data, delete member accounts after all books are
   returned, suspend/reactivate accounts, issue temporary password resets, manage inventory,
   import `.xlsx` workbooks with per-row validation/savepoints, and process

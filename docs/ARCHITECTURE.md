@@ -354,8 +354,13 @@ when a member supplies their own address. The assignment uses barangays in
 [Cainta](https://psa.gov.ph/classification/psgc/barangays/0405805000), and
 [Taytay](https://psa.gov.ph/classification/psgc/barangays/0405813000).
 
-Librarian registration accepts an optional government ID; attached files/tickets
-retain the existing private-upload validation. It creates a random 10-character
+Librarian registration requires an in-person government photo ID check, local OCR
+suggestions, a portrait check and explicit staff attestation. Original IDs retain
+private-upload validation and storage. Verified members can enroll online with a
+live PAD-checked face and an ID-to-face-to-saved-ID comparison; remote comparison
+images are discarded. Legacy uploads are not backfilled as verified. See
+[the identity workflow and authenticity limits](REMOTE_FACE_ENROLLMENT.md).
+Registration creates a random 10-character
 password with forced first-login change, commits the member, then attempts email
 when supplied. Without email, credentials are shown to the librarian. The registration-only
 [delivery service](../backend/services/registration_delivery.py) uses existing SMTP

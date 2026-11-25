@@ -19,6 +19,8 @@ class UserProfile(BaseModel):
     member_since: datetime
     member_id:    Optional[str] = None
     avatar_url:   Optional[str] = None
+    identity_verified: bool = False
+    remote_face_enrollment_allowed: bool = False
 
     class Config:
         from_attributes = True

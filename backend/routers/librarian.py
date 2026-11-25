@@ -337,6 +337,7 @@ def list_members(
             accountability_count = issue_counts.get(m.id, 0),
             face_enrolled = m.id in enrolled_ids,
             face_enrollment_display_only = bool(m.face_enrollment_display_only),
+            identity_verified = bool(m.id_verified_at and m.id_document_digest and m.id_image_url and m.id_verified_by_id),
             active_loans = count.active if count else 0,
             total_loans  = count.total if count else 0,
             joined_at    = m.created_at,
@@ -396,10 +397,25 @@ async def register_member(
     location: str              = Form(..., max_length=120),
     id_image: UploadFile | None = File(None),
     upload_ticket: str | None = Form(None),
+    id_review_token: str | None = Form(None),
+    identity_checked: bool = Form(False),
+    application_id: int | None = Form(None),
     db:       Session          = Depends(get_db),
     _:        User             = Depends(require_librarian),
 ):
-    """Librarian registers a member; an optional ID retains private upload checks."""
+    """Create an account after checking the required original ID in person."""
+    from services.identity_documents import checked_id_upload, mark_identity_verified
+    from models.member_application import MemberApplication
+    if not identity_checked:
+        raise HTTPException(422, "Confirm that you checked the original ID and the applicant is present in the library.")
+    content, ext, reference, claims = await checked_id_upload(_.id, id_image, upload_ticket, id_review_token)
+    if db.query(User.id).filter(User.id_document_digest == claims["digest"]).first():
+        raise HTTPException(409, "This ID upload is already linked to an account. Review the existing member before creating another.")
+    application = None
+    if application_id is not None:
+        application = db.query(MemberApplication).filter_by(id=application_id).with_for_update().first()
+        if not application or application.status != "pending":
+            raise HTTPException(409, "This application is unavailable or was already reviewed. Refresh the list.")
     email = (email.strip().lower() or None) if email else None
     if email:
         try:
@@ -416,19 +432,7 @@ async def register_member(
     if email and email_matches(db, email):
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
-    id_reference = None
-    if id_image is not None or upload_ticket:
-        content, original_filename, reference = await read_upload(folder="ids", user_id=_.id, file=id_image, ticket=upload_ticket)
-        ext = validate_upload_bytes(
-            content=content,
-            filename=original_filename,
-            allowed_exts=ID_EXTS,
-            max_bytes=10 * 1024 * 1024,
-            human_label="ID image",
-        )
-
-        filename = f"{uuid.uuid4().hex}{ext}"
-        id_reference = reference or save_upload("ids", filename, content)
+    id_reference = reference or await run_in_threadpool(save_upload, "ids", f"{uuid.uuid4().hex}{ext}", content)
 
     temporary_password = _generate_temporary_password(length=10)
     new_user = User(
@@ -447,7 +451,13 @@ async def register_member(
         member_id     = _generate_member_id(db),
     )
     db.add(new_user)
+    mark_identity_verified(new_user, claims, _.id, id_reference)
     try:
+        if application is not None:
+            db.flush()
+            application.member_user_id, application.status = new_user.id, "approved"
+            application.reviewed_at, application.reviewed_by_id = now_ph(), _.id
+            application.review_reason = "details_verified"
         db.commit()
     except IntegrityError:
         db.rollback()
