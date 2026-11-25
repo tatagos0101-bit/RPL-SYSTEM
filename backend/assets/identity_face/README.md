@@ -31,12 +31,20 @@ one temporary file only during native initialization; it is removed immediately
 after loading, including on failure. No ID/camera images or descriptors are
 written to that file or any other local artifact.
 
+Before YuNet/SFace, every comparison portrait uses an aspect-preserving Lanczos
+resize targeting a 160px short face-box edge, with a 1024px crop cap. Previously,
+only small ID faces were enlarged; large camera faces were kept much larger and
+then directly bilinear-warped to 112px inside OpenCV alignment. The common scale
+antialiases large captures before the same alignment step. Original live frames,
+PAD inputs and stored sign-in descriptors are unchanged. Diagnostics identify
+this processing as `face_scale_160_lanczos_v1`; this is not an accuracy claim.
+
 YuNet uses confidence >= 0.90 and requires exactly one face in the bounded
 portrait crop. Detection downsizes face boxes larger than 200px on their longest
 edge, preserving aspect ratio, to stay inside YuNet's documented approximately
 10--300px training range. Bottom/right padding fills complete 32px stride cells.
-Detected landmarks map back to the original crop; alignment/recognition still
-use its original pixels. Padding cannot make an out-of-image landmark valid.
+Detected landmarks map back to the common-scale comparison crop for alignment
+and recognition. Padding cannot make an out-of-image landmark valid.
 Its face must overlap and have its center inside the face already
 detected by enrollment; the five landmarks must be finite, nondegenerate and
 within the crop. SFace aligns that portrait and returns a finite, nonzero 128D
@@ -70,3 +78,4 @@ No claim of issuer authenticity or biometric certification is made.
 - [Pinned SFace model and license](https://github.com/opencv/opencv_zoo/tree/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/face_recognition_sface)
 - [Pinned YuNet model and license](https://github.com/opencv/opencv_zoo/tree/48b10fa505aeb51fbd127fc60a5c660040e823b7/models/face_detection_yunet)
 - [OpenCV detection, alignment and recognition tutorial](https://docs.opencv.org/4.x/d0/dd4/tutorial_dnn_face.html)
+- [OpenCV 4.10 native SFace alignment implementation](https://github.com/opencv/opencv/blob/4.10.0/modules/objdetect/src/face_recognize.cpp)

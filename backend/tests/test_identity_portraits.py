@@ -59,6 +59,29 @@ def test_crop_is_bounded_keeps_rgb_and_does_not_mutate_source():
     assert np.array_equal(rgb, before)
 
 
+@pytest.mark.parametrize("face_pixels", [80, 120, 180, 320, 660])
+def test_id_and_live_comparison_faces_have_one_scale_before_native_alignment(face_pixels):
+    size = face_pixels * 2
+    rgb = np.full((size, size, 3), [171, 103, 57], np.uint8)
+    box = {"top": .25, "left": .25, "width": .5, "height": .5}
+    crop, (top, right, bottom, left) = portraits._portrait_crop(rgb, box, "synthetic portrait")
+    assert abs((right - left) - 160) <= 1
+    assert abs((bottom - top) - 160) <= 1
+    assert max(crop.shape[:2]) <= 274
+    assert crop[0, 0].tolist() == [171, 103, 57]
+
+
+def test_fine_grid_is_antialiased_before_comparison_alignment():
+    # A high-frequency synthetic grid, not a face/ID. Direct bilinear warp
+    # subsamples its stripes; pre-resizing must average them at the same scale.
+    indices = np.indices((1320, 1320))
+    pixels = np.repeat(((indices.sum(axis=0) % 2) * 255).astype(np.uint8)[:, :, None], 3, axis=2)
+    crop, (top, right, bottom, left) = portraits._portrait_crop(pixels,
+        {"top": .25, "left": .25, "width": .5, "height": .5}, "synthetic grid")
+    assert abs((right - left) - 160) <= 1 and abs((bottom - top) - 160) <= 1
+    assert crop[10:-10, 10:-10].std() < 1
+
+
 @pytest.mark.parametrize("box", [None, {}, {**BOX, "width": 0}, {**BOX, "top": -1},
     {**BOX, "left": float("nan")}, {**BOX, "height": float("inf")}, {**BOX, "width": 2},
     {**BOX, "width": .01}, {**BOX, "height": .01}])

@@ -20,7 +20,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from config import JWT_ALGORITHM, JWT_SECRET_KEY
 from services.id_face_verifier import PortraitDetectionError
-from services.identity_portraits import comparison_face, portrait_quality
+from services.identity_portraits import COMPARISON_PREPROCESSING, comparison_face, portrait_quality
 from timezone_utils import now_ph
 
 ID_CHECK_VERSION = "2026-11-25"
@@ -363,6 +363,7 @@ def _comparison_diagnostic(stage, pairs, inputs):
         distances[name] = value
     maximum = _sface_maximum_distance()
     return {"model": "sface_2021dec_int8", "metric": "cosine_distance", "stage": stage,
+        "preprocessing": COMPARISON_PREPROCESSING,
         "maximum_distance": round(maximum, 4) if maximum is not None else None,
         "distances": distances,
         "quality": {name: portrait_quality(frame, face) for name, (frame, face) in inputs.items()}}

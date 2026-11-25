@@ -12,6 +12,7 @@ export function faceEnrollmentSupportDetails(diagnostic) {
       || !['live_alignment', 'live_to_saved', 'live_to_id'].includes(diagnostic.stage)) return '';
   const numeric = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 10_000_000;
   const lines = ['RPL-ID-FACE-DIAG/1', `model=${diagnostic.model}`, `stage=${diagnostic.stage}`, 'metric=cosine_distance'];
+  if (diagnostic.preprocessing === 'face_scale_160_lanczos_v1') lines.push(`preprocessing=${diagnostic.preprocessing}`);
   if (['not_found', 'multiple_faces', 'invalid_detection', 'different_face', 'invalid_landmarks'].includes(diagnostic.detector_issue)) {
     lines.push(`detector_issue=${diagnostic.detector_issue}`);
   }

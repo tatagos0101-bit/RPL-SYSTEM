@@ -42,3 +42,10 @@ test('live alignment reports allow only known detector issue codes', () => {
   value.detector_issue = 'private-or-arbitrary-text';
   assert.ok(!faceEnrollmentSupportDetails(value).includes(value.detector_issue));
 });
+
+test('the fixed preprocessing identifier is copied without accepting arbitrary text', () => {
+  const value = { ...diagnostic(), preprocessing: 'face_scale_160_lanczos_v1' };
+  assert.match(faceEnrollmentSupportDetails(value), /preprocessing=face_scale_160_lanczos_v1/);
+  value.preprocessing = 'private-arbitrary-text';
+  assert.ok(!faceEnrollmentSupportDetails(value).includes(value.preprocessing));
+});

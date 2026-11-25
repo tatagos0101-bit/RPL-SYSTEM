@@ -11,6 +11,8 @@ from PIL import Image
 
 from services.face_frame import decode_rgb
 
+COMPARISON_PREPROCESSING = "face_scale_160_lanczos_v1"
+
 
 def _portrait_crop(rgb: np.ndarray, box: dict | None, label: str):
     try:
@@ -29,7 +31,11 @@ def _portrait_crop(rgb: np.ndarray, box: dict | None, label: str):
     x0, y0 = max(0, math.floor(x - w * .35)), max(0, math.floor(y - h * .35))
     x1, y1 = min(image_width, math.ceil(x + w * 1.35)), min(image_height, math.ceil(y + h * 1.35))
     crop = Image.fromarray(rgb[y0:y1, x0:x1])
-    scale = min(max(1.0, 160 / min(w, h)), 1024 / max(crop.size))
+    # ID portraits and close camera faces must reach the recognizer at one
+    # scale. Native SFace alignCrop uses bilinear warping to 112px, which
+    # does not antialias a much larger camera portrait. Lanczos resampling
+    # here handles downscaling before the same landmark/alignment pipeline.
+    scale = min(160 / min(w, h), 1024 / max(crop.size))
     original_width, original_height = crop.size
     crop = crop.resize((max(1, round(original_width * scale)), max(1, round(original_height * scale))), Image.Resampling.LANCZOS)
     scale_x, scale_y = crop.width / original_width, crop.height / original_height
