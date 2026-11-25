@@ -365,6 +365,10 @@ images are discarded. A saved manual review can cover unreadable comparison text
 but never replaces face matching, PAD or deduplication. Legacy uploads are not
 backfilled as verified. See
 [the identity workflow and authenticity limits](REMOTE_FACE_ENROLLMENT.md).
+Online ID comparisons preserve small original uploads and use lossless ID working
+frames, bounded portrait alignment, consistent engine/color inputs and specific
+mismatch messages. Comparison descriptors remain ephemeral; successful enrollment
+stores the original live descriptor. Matching thresholds and PAD remain unchanged.
 Registration creates a random 10-character
 password with forced first-login change, commits the member, then attempts email
 when supplied. Without email, credentials are shown to the librarian. The registration-only

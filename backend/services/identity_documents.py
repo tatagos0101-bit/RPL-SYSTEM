@@ -19,6 +19,7 @@ import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from config import JWT_ALGORITHM, JWT_SECRET_KEY
+from services.identity_portraits import comparison_face
 from timezone_utils import now_ph
 
 ID_CHECK_VERSION = "2026-11-25"
@@ -73,8 +74,9 @@ def document_image(content: bytes) -> tuple[np.ndarray, str]:
             image = ImageOps.exif_transpose(source).convert("RGB")
             image.thumbnail((1600, 1600))
             buffer = io.BytesIO()
-            image.save(buffer, format="JPEG", quality=92)
-            frame = "data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+            # Avoid another lossy JPEG pass before reading a small printed portrait.
+            image.save(buffer, format="PNG", compress_level=1)
+            frame = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
             return np.array(image), frame
     except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
         raise HTTPException(422, "Use a clear JPG, PNG or WEBP photo of the complete ID, with readable text and portrait. PDF and small thumbnails cannot be checked.") from None
@@ -310,7 +312,7 @@ def _same_face(first: dict, second: dict) -> bool:
     return bool(np.isfinite(score) and score < engine._purpose_threshold("login", selected))
 
 
-def verify_remote_identity(member, id_image: str, live_face: dict) -> None:
+def verify_remote_identity(member, id_image: str, live_face: dict, live_image: str) -> None:
     from services.storage_service import read_private_upload
     if not has_verified_identity(member):
         raise HTTPException(403, "A librarian must first verify your original photo ID in person. Existing face sign-in and password access are unchanged.")
@@ -331,9 +333,27 @@ def verify_remote_identity(member, id_image: str, live_face: dict) -> None:
         raise HTTPException(409, "Your saved ID needs librarian review before online face enrollment can continue.")
     _, baseline_frame = document_image(baseline)
     original_face = document_face(baseline_frame)
-    if not (_same_face(uploaded.face, original_face) and _same_face(live_face, original_face)
-            and _same_face(live_face, uploaded.face)):
-        raise HTTPException(422, "The live face and ID portrait could not be matched to your verified library ID. Retake clear photos or ask the library desk for help.")
+    _, uploaded_frame = document_image(content)
+    faces = [uploaded.face, original_face, live_face]
+    engines = {face.get("engine", "dlib") for face in faces}
+    if len(engines) == 1 and engines <= {"dlib", "insightface"}:
+        selected_engine = next(iter(engines))
+    elif all(face.get("engine", "dlib") == "dlib" or face.get("dlib_encoding") for face in faces):
+        selected_engine = "dlib"
+    else:
+        raise HTTPException(422, "The ID and camera face readings could not be compared consistently. Retake clear photos, or ask the librarian for assisted face enrollment.")
+    uploaded_portrait = comparison_face(uploaded_frame, uploaded.face,
+        engine_name=selected_engine, label="uploaded ID")
+    saved_portrait = comparison_face(baseline_frame, original_face,
+        engine_name=selected_engine, label="saved library ID")
+    if not _same_face(uploaded_portrait, saved_portrait):
+        raise HTTPException(422, "The uploaded ID portrait did not match the ID verified by the librarian. Upload the same ID photo, with the full card in focus and no glare. If it is already the same photo, ask the librarian to review the saved ID.")
+    live_portrait = comparison_face(live_image, live_face,
+        engine_name=selected_engine, label="live camera")
+    if not _same_face(live_portrait, saved_portrait):
+        raise HTTPException(422, "Your live face could not be matched to the saved library ID portrait. Face the camera straight on in even light, remove glare or anything covering your face, and retake the capture. If the ID photo is old or unclear, ask the librarian for assisted enrollment.")
+    if not _same_face(live_portrait, uploaded_portrait):
+        raise HTTPException(422, "Your live face could not be matched to the uploaded ID portrait. Retake a sharp, straight-on camera capture and a clear photo of the complete ID, without glare.")
 
 
 def enroll_remote_face(db, member, body) -> None:
@@ -352,7 +372,7 @@ def enroll_remote_face(db, member, body) -> None:
         raise HTTPException(422, "Capture one live face in good lighting before continuing.")
     # Do not run PAD on a printed ID portrait. Only the live camera must pass it.
     require_live_enrollment(body.image, faces)
-    verify_remote_identity(member, body.id_image, faces[0])
+    verify_remote_identity(member, body.id_image, faces[0], body.image)
     if engine.find_duplicate_for_enrollment(db, faces[0], member.id) is not None:
         raise HTTPException(409, "This face is already registered to another account. Ask the librarian for assistance.")
     engine.store_enrollment_face(db, member, faces[0], source="remote_id_checked")

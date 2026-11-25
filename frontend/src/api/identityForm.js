@@ -22,13 +22,24 @@ export async function encodeComparisonId(file) {
     await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error('This photo could not be opened.')); image.src = url; });
     if (image.naturalWidth * image.naturalHeight > 16_000_000) throw new Error('Use a photo of 16 megapixels or less.');
     if (Math.min(image.naturalWidth, image.naturalHeight) < 320 || Math.max(image.naturalWidth, image.naturalHeight) < 600) throw new Error('Use a larger, clear photo of the entire ID.');
+    // Keep a small original photo byte-for-byte instead of repeatedly JPEG-
+    // compressing the same printed portrait. The server strips metadata in memory.
+    if (file.size <= 1_100_000 && Math.max(image.naturalWidth, image.naturalHeight) <= 1600) {
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('This ID photo could not be read. Choose it again.'));
+        reader.onabort = () => reject(new Error('ID photo preparation was interrupted. Choose it again.'));
+        reader.readAsDataURL(file);
+      });
+    }
     const ratio = Math.min(1, 1600 / Math.max(image.naturalWidth, image.naturalHeight));
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(image.naturalWidth * ratio); canvas.height = Math.round(image.naturalHeight * ratio);
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Image preparation is unavailable in this browser.');
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    for (const quality of [0.9, 0.8, 0.7]) {
+    for (const quality of [0.95, 0.9, 0.8, 0.7]) {
       const encoded = canvas.toDataURL('image/jpeg', quality);
       if (encoded.length <= 1_600_000) return encoded;
     }

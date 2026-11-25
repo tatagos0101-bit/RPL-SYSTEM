@@ -9,6 +9,9 @@ import { encodeComparisonId, identityError } from '../api/identity';
 const VIDEO_CONSTRAINTS = {
   facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 },
 };
+const ONLINE_VIDEO_CONSTRAINTS = {
+  facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 960 },
+};
 
 export default function FaceEnrollModal({ user, onClose, onSuccess, selfService = false }) {
   const webcam = useRef(null);
@@ -109,7 +112,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
               try { const prepared = await encodeComparisonId(file); if (attempt === idAttempt.current) setIdImage(prepared); }
               catch (failure) { if (attempt === idAttempt.current) setError(identityError(failure)); }
               finally { if (attempt === idAttempt.current) setPreparingId(false); }
-            }} /></label><p className="text-xs text-muted">Use a clear JPG, PNG or WEBP of the complete government photo ID, up to 10 MB. BIR/TIN photo IDs are supported; include the name, issuer and one clear main portrait. A tax form or a card without a usable portrait cannot be used for face comparison. The photo cannot change your verified name.</p>{preparingId && <p role="status">Preparing ID photo…</p>}{idImage && <><img src={idImage} alt="ID ready for private comparison" className="max-h-36 w-full rounded-lg object-contain" /><p role="status" className="font-semibold text-success">ID photo ready. The server will check it with your live face.</p></>}</div>}
+            }} /></label><p className="text-xs text-muted">Use the same government photo ID verified by the librarian. Include the complete card, with its name, issuer and one sharp portrait, without glare. JPG, PNG or WEBP, up to 10 MB; BIR/TIN photo IDs are supported. A tax form or a card without a usable portrait cannot be used for face comparison. The photo cannot change your verified name.</p>{preparingId && <p role="status">Preparing ID photo…</p>}{idImage && <><img src={idImage} alt="ID ready for private comparison" className="max-h-36 w-full rounded-lg object-contain" /><p role="status" className="font-semibold text-success">ID photo ready. The server will check it with your live face.</p></>}</div>}
             <a href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="inline-block text-link underline underline-offset-4">Read the library privacy notice (opens in a new tab)</a>
             <label className="flex items-start gap-3 rounded-lg border border-line bg-subtle p-3 text-ink">
               <input type="checkbox" checked={consented} onChange={event => setConsented(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-action" />
@@ -123,7 +126,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
             <div className="aspect-[4/3] overflow-hidden rounded-xl bg-subtle">
               <Webcam key={cameraAttempt} ref={webcam} audio={false} mirrored={!selfService}
                 screenshotFormat="image/jpeg" screenshotQuality={0.9} forceScreenshotSourceSize
-                videoConstraints={VIDEO_CONSTRAINTS} className={`h-full w-full object-cover ${selfService ? '-scale-x-100' : ''}`}
+                videoConstraints={selfService ? ONLINE_VIDEO_CONSTRAINTS : VIDEO_CONSTRAINTS} className={`h-full w-full object-cover ${selfService ? '-scale-x-100' : ''}`}
                 onCanPlay={() => { setReady(true); setError(''); }}
                 onEmptied={() => setReady(false)}
                 onUserMediaError={() => {
@@ -133,7 +136,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
               />
             </div>
             <p role="status" className="my-3 text-sm text-muted">
-              {ready ? "Position the member's face clearly in frame." : 'Waiting for the camera preview…'}
+              {ready ? (selfService ? 'Face the camera straight on. Keep your face still and clearly visible in even light, without glare or filters.' : "Position the member's face clearly in frame.") : 'Waiting for the camera preview…'}
             </p>
           </>
         )}

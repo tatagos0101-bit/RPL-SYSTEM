@@ -55,9 +55,30 @@ The server requires an active authenticated account, the current consent version
 and a librarian-verified ID. It enforces the existing liveness/PAD checks and
 enrollment deduplication. It compares the uploaded ID portrait, saved verified ID
 portrait and live face using the existing engine and strict login threshold.
+Small original uploads (at most 1600px on the longest edge and 1.1 MB) are sent
+without another JPEG conversion. Larger photos are bounded to 1600px and the
+request limit. The server makes its ID working frame lossless in memory.
+Online camera capture requests 1280 by 960 pixels when supported; it keeps the
+live image unmirrored while mirroring only its preview.
+
+Comparison uses bounded, padded crops of the already-detected portraits, one
+common engine, and consistent color input/alignment. Dlib uses the existing
+five-point/128D model with three resamples per portrait; optional InsightFace uses
+OpenCV BGR input. Portraits below 64 pixels on either face-box edge are rejected
+with a quality message rather than treated as a different identity. These extra
+descriptors are request-local comparison data only. Successful enrollment still
+stores the original live-camera descriptor for existing sign-in compatibility.
+The extra comparison work does not change entrance/login processing or apply
+image enhancement to PAD. PAD checks the original live capture before comparison.
 There is no threshold reduction or manual success fallback. Missing, mismatched,
 uncertain or unavailable checks cannot enroll a face. The member cannot replace
 their verified identity with a new upload.
+
+Errors distinguish an uploaded-to-saved-ID mismatch, live-to-saved-ID mismatch
+and live-to-uploaded-ID mismatch, with advice for the failing capture. Responses
+do not return similarity scores, descriptors or saved-ID images. These processing
+changes do not establish actual TIN-card or real-camera accuracy; operational
+acceptance still requires consenting trials under library conditions.
 
 For an original ID that a librarian manually verified, unreadable comparison text
 can use that stored review provenance. This exception comes only from the saved

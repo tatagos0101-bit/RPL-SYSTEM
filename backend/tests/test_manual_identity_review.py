@@ -75,6 +75,7 @@ def mock_live(monkeypatch, hint="ok", live=None):
     monkeypatch.setattr(engine, "detect_faces", lambda *a, **kw: [live or face()])
     monkeypatch.setattr(anti_spoof_service, "check_detected_faces_liveness", lambda *a, **kw: (hint, 1.0))
     monkeypatch.setattr(engine, "find_duplicate_for_enrollment", lambda *a, **kw: None)
+    monkeypatch.setattr(ids, "comparison_face", lambda image, face, **kw: face)
 
 
 def test_unreadable_text_offers_review_without_issuing_a_pass(client, db_session, monkeypatch):
