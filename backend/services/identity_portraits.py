@@ -83,3 +83,22 @@ def comparison_face(frame: str, detected: dict, *, engine_name: str, label: str)
         raise
     except Exception:
         raise HTTPException(503, "Portrait comparison is temporarily unavailable. Try again or ask the librarian for assisted enrollment.") from None
+
+
+def portrait_quality(frame: str, detected: dict) -> dict:
+    """Numeric troubleshooting metadata only; never return a crop or descriptor."""
+    try:
+        import cv2
+        rgb = decode_rgb(frame)
+        box = detected["face_box"]
+        height, width = rgb.shape[:2]
+        left, top = round(box["left"] * width), round(box["top"] * height)
+        right = min(width, round((box["left"] + box["width"]) * width))
+        bottom = min(height, round((box["top"] + box["height"]) * height))
+        crop = np.ascontiguousarray(rgb[max(0, top):bottom, max(0, left):right])
+        gray = cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY)
+        return {"width_px": int(crop.shape[1]), "height_px": int(crop.shape[0]),
+            "brightness": round(float(gray.mean()), 2), "contrast": round(float(gray.std()), 2),
+            "sharpness": round(float(cv2.Laplacian(gray, cv2.CV_64F).var()), 2)}
+    except Exception:
+        return {}  # Diagnostics must never replace the actual verification outcome.

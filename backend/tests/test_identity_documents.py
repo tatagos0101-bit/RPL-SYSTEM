@@ -214,6 +214,13 @@ def test_remote_sface_comparison_still_enforces_matches_and_keeps_original_templ
     monkeypatch.setattr(ids, "comparison_face", compare)
     result = client.post("/api/auth/enroll-face", json=enrollment(content))
     assert result.status_code == (200 if matches else 422)
+    if not matches:
+        assert result.headers["cache-control"] == "no-store"
+        report = result.json()["comparison_diagnostic"]
+        assert report["stage"] == "live_to_saved" and report["distances"]["id_to_saved"] == 0
+        assert report["distances"]["live_to_saved"] == 1 and report["distances"]["live_to_id"] == 1
+        for private in ("synthetic-live-camera", member.name, member.id_image_url, member.id_document_digest):
+            assert private not in result.text
     assert calls == ["uploaded ID", "saved library ID", "live camera"]
     db_session.refresh(member)
     assert member.face_encoding == (json.dumps([0.0] * 128) if matches else None)
@@ -226,6 +233,19 @@ def test_live_pad_failure_cannot_reach_the_new_comparator(client, db_session, mo
     def forbidden(*args, **kwargs): pytest.fail("A failed live check cannot run identity comparison")
     monkeypatch.setattr(ids, "comparison_face", forbidden)
     assert client.post("/api/auth/enroll-face", json=enrollment(content)).status_code == 422
+
+
+def test_support_diagnostics_require_a_matching_original_id(client, db_session, monkeypatch):
+    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+    mock_document(monkeypatch); mock_live(monkeypatch)
+    def compare(frame, detected, **kwargs):
+        assert kwargs["label"] != "live camera"
+        values = [0.0] * 128
+        values[1 if kwargs["label"] == "uploaded ID" else 0] = 1.0
+        return {"engine": "sface", "encoding": values}
+    monkeypatch.setattr(ids, "comparison_face", compare)
+    result = client.post("/api/auth/enroll-face", json=enrollment(content))
+    assert result.status_code == 422 and "comparison_diagnostic" not in result.json()
 
 
 def test_private_id_reader_rejects_arbitrary_paths_and_categories():

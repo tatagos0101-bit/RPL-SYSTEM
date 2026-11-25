@@ -6,3 +6,22 @@ export const buildFaceEnrollment = (imageBase64, acceptFaceRecognition, idImage)
   face_consent_version: FACE_CONSENT_VERSION,
   ...(idImage ? { id_image: idImage } : {}),
 });
+
+export function faceEnrollmentSupportDetails(diagnostic) {
+  if (diagnostic?.model !== 'sface_2021dec_int8' || diagnostic.metric !== 'cosine_distance'
+      || !['live_to_saved', 'live_to_id'].includes(diagnostic.stage)) return '';
+  const numeric = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 10_000_000;
+  const lines = ['RPL-ID-FACE-DIAG/1', `model=${diagnostic.model}`, `stage=${diagnostic.stage}`, 'metric=cosine_distance'];
+  if (numeric(diagnostic.maximum_distance)) lines.push(`maximum_distance=${diagnostic.maximum_distance.toFixed(4)}`);
+  for (const name of ['id_to_saved', 'live_to_saved', 'live_to_id']) {
+    const value = diagnostic.distances?.[name];
+    if (numeric(value) && value <= 2) lines.push(`${name}=${value.toFixed(4)}`);
+  }
+  for (const name of ['uploaded_id', 'saved_id', 'live']) {
+    for (const field of ['width_px', 'height_px', 'brightness', 'contrast', 'sharpness']) {
+      const value = diagnostic.quality?.[name]?.[field];
+      if (numeric(value)) lines.push(`${name}.${field}=${value}`);
+    }
+  }
+  return lines.join('\n');
+}

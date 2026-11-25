@@ -208,3 +208,13 @@ def test_matching_threshold_is_not_relaxed_for_id_comparisons():
     above = face((threshold + .0001) / np.sqrt(128))
     assert ids._same_face(base, below)
     assert not ids._same_face(base, above)
+
+
+def test_support_quality_is_numeric_only_and_does_not_return_pixels(monkeypatch):
+    monkeypatch.setattr(portraits, "decode_rgb", lambda frame: np.full((600, 900, 3), [170, 100, 50], np.uint8))
+    result = portraits.portrait_quality("synthetic-private-frame", face())
+    assert set(result) == {"width_px", "height_px", "brightness", "contrast", "sharpness"}
+    assert result["width_px"] == 270 and result["height_px"] == 240
+    assert all(isinstance(value, (int, float)) for value in result.values())
+    monkeypatch.setattr(portraits, "decode_rgb", lambda frame: None)
+    assert portraits.portrait_quality("synthetic-private-frame", face()) == {}

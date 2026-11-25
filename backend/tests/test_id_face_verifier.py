@@ -41,6 +41,12 @@ def test_sface_retains_existing_cosine_policy_and_reference_cap(monkeypatch):
     assert not ids._same_face(descriptor(), descriptor(np.arccos(.3)))  # Reference cap is stricter.
 
 
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), 0, -1])
+def test_invalid_policy_cannot_authorize_a_face_match(monkeypatch, value):
+    monkeypatch.setattr(engine, "_purpose_threshold", lambda *args: value)
+    assert not ids._same_face(descriptor(), descriptor())
+
+
 @pytest.mark.parametrize("change", ["none", "multiple", "nonfinite", "low_confidence", "other_person", "outside", "collapsed_eyes"])
 def test_uncertain_or_different_detected_face_cannot_be_substituted(change):
     row = detection()

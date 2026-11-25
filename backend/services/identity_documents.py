@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from config import JWT_ALGORITHM, JWT_SECRET_KEY
-from services.identity_portraits import comparison_face
+from services.identity_portraits import comparison_face, portrait_quality
 from timezone_utils import now_ph
 
 ID_CHECK_VERSION = "2026-11-25"
@@ -34,6 +34,12 @@ DOCUMENT_KINDS = frozenset({"national_id", "tin_id", "drivers_license", "passpor
 
 class DocumentReadabilityError(HTTPException):
     """Text could not be checked; only supervised staff may review the original."""
+
+
+class IdentityComparisonError(HTTPException):
+    def __init__(self, message, diagnostic):
+        super().__init__(422, message)
+        self.diagnostic = diagnostic
 
 
 @dataclass
@@ -298,12 +304,18 @@ def has_verified_identity(member) -> bool:
     return bool(member.id_image_url and member.id_document_digest and member.id_verified_at and member.id_verified_by_id)
 
 
+def _sface_maximum_distance():
+    from services import face_engine_service as engine
+    from services.id_face_verifier import REFERENCE_MAX_DISTANCE
+    value = engine._purpose_threshold("login", "insightface")
+    return min(REFERENCE_MAX_DISTANCE, value) if np.isfinite(value) and 0 < value <= 2 else None
+
+
 def _same_face(first: dict, second: dict) -> bool:
     from services import face_engine_service as engine
     selected = first.get("engine", "dlib")
     left, right = first.get("encoding"), second.get("encoding")
     if "sface" in {selected, second.get("engine", "dlib")}:
-        from services.id_face_verifier import REFERENCE_MAX_DISTANCE
         if selected != "sface" or second.get("engine") != "sface":
             return False  # A 128D SFace descriptor is not a 128D dlib descriptor.
         try:
@@ -311,8 +323,8 @@ def _same_face(first: dict, second: dict) -> bool:
             if vectors.shape != (2, 128) or not np.isfinite(vectors).all() or (np.linalg.norm(vectors, axis=1) == 0).any():
                 return False
             score = engine._cosine_distance(left, right)
-            maximum = min(REFERENCE_MAX_DISTANCE, engine._purpose_threshold("login", "insightface"))
-            return bool(np.isfinite(score) and score < maximum)
+            maximum = _sface_maximum_distance()
+            return bool(maximum is not None and np.isfinite(score) and score < maximum)
         except (TypeError, ValueError):
             return False
     if selected != second.get("engine", "dlib"):
@@ -323,6 +335,27 @@ def _same_face(first: dict, second: dict) -> bool:
         return False
     score = engine._distance(left, right, selected)
     return bool(np.isfinite(score) and score < engine._purpose_threshold("login", selected))
+
+
+def _comparison_diagnostic(stage, pairs, inputs):
+    from services import face_engine_service as engine
+    distances = {}
+    for name, (first, second) in pairs.items():
+        value = None
+        if first.get("engine") == second.get("engine") == "sface":
+            try:
+                vectors = np.asarray([first.get("encoding"), second.get("encoding")], dtype=float)
+                if vectors.shape == (2, 128) and np.isfinite(vectors).all() and (np.linalg.norm(vectors, axis=1) > 0).all():
+                    score = engine._cosine_distance(first["encoding"], second["encoding"])
+                    if np.isfinite(score): value = round(float(score), 4)
+            except (TypeError, ValueError):
+                pass
+        distances[name] = value
+    maximum = _sface_maximum_distance()
+    return {"model": "sface_2021dec_int8", "metric": "cosine_distance", "stage": stage,
+        "maximum_distance": round(maximum, 4) if maximum is not None else None,
+        "distances": distances,
+        "quality": {name: portrait_quality(frame, face) for name, (frame, face) in inputs.items()}}
 
 
 def verify_remote_identity(member, id_image: str, live_face: dict, live_image: str) -> None:
@@ -354,14 +387,21 @@ def verify_remote_identity(member, id_image: str, live_face: dict, live_image: s
         engine_name=selected_engine, label="uploaded ID")
     saved_portrait = comparison_face(baseline_frame, original_face,
         engine_name=selected_engine, label="saved library ID")
+    pairs = {"id_to_saved": (uploaded_portrait, saved_portrait)}
+    inputs = {"uploaded_id": (uploaded_frame, uploaded.face), "saved_id": (baseline_frame, original_face)}
     if not _same_face(uploaded_portrait, saved_portrait):
+        # Detailed diagnostics require a matching original ID, not just a session.
         raise HTTPException(422, "The uploaded ID portrait did not match the ID verified by the librarian. Upload the same ID photo, with the full card in focus and no glare. If it is already the same photo, ask the librarian to review the saved ID.")
     live_portrait = comparison_face(live_image, live_face,
         engine_name=selected_engine, label="live camera")
+    pairs.update({"live_to_saved": (live_portrait, saved_portrait), "live_to_id": (live_portrait, uploaded_portrait)})
+    inputs["live"] = (live_image, live_face)
     if not _same_face(live_portrait, saved_portrait):
-        raise HTTPException(422, "Your live face could not be matched to the saved library ID portrait. Face the camera straight on in even light, remove glare or anything covering your face, and retake the capture. If the ID photo is old or unclear, ask the librarian for assisted enrollment.")
+        raise IdentityComparisonError("Your live face could not be matched to the saved library ID portrait. Face the camera straight on in even light, remove glare or anything covering your face, and retake the capture. If the ID photo is old or unclear, ask the librarian for assisted enrollment.",
+            _comparison_diagnostic("live_to_saved", pairs, inputs))
     if not _same_face(live_portrait, uploaded_portrait):
-        raise HTTPException(422, "Your live face could not be matched to the uploaded ID portrait. Retake a sharp, straight-on camera capture and a clear photo of the complete ID, without glare.")
+        raise IdentityComparisonError("Your live face could not be matched to the uploaded ID portrait. Retake a sharp, straight-on camera capture and a clear photo of the complete ID, without glare.",
+            _comparison_diagnostic("live_to_id", pairs, inputs))
 
 
 def enroll_remote_face(db, member, body) -> None:

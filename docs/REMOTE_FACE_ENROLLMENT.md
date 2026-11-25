@@ -85,7 +85,13 @@ their verified identity with a new upload.
 
 Errors distinguish an uploaded-to-saved-ID mismatch, live-to-saved-ID mismatch
 and live-to-uploaded-ID mismatch, with advice for the failing capture. Responses
-do not return similarity scores, descriptors or saved-ID images. These processing
+never return descriptors or saved-ID images. Only after authenticated, live-PAD
+and matching-original-ID checks can a failed live comparison return a text-only diagnostic with rounded
+cosine distances, the applied limit and numeric crop-quality measurements. The
+member can explicitly copy its allowlisted fields using **Copy support details**.
+The report excludes identity/contact fields, ID references/digests, images and
+templates; it is not logged, persisted or automatically sent to support. It is
+cleared on a new attempt/file or closing the dialog. These processing
 changes do not establish actual TIN-card or real-camera accuracy; operational
 acceptance still requires consenting trials under library conditions.
 

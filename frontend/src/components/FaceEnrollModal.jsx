@@ -5,6 +5,7 @@ import ModalFrame from './ModalFrame';
 import { enrollMemberFace } from '../api/librarian';
 import { enrollFace } from '../api/auth';
 import { encodeComparisonId, identityError } from '../api/identity';
+import { faceEnrollmentSupportDetails } from '../api/faceConsent';
 
 const VIDEO_CONSTRAINTS = {
   facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 },
@@ -22,6 +23,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
   const [cameraAttempt, setCameraAttempt] = useState(0);
   const [image, setImage] = useState(null);
   const [error, setError] = useState('');
+  const [supportDetails, setSupportDetails] = useState(''), [copyStatus, setCopyStatus] = useState('');
   const [idImage, setIdImage] = useState(null);
   const [preparingId, setPreparingId] = useState(false);
   const idAttempt = useRef(0);
@@ -42,6 +44,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
       idAttempt.current += 1;
       setPreparingId(false);
       setError('');
+      setSupportDetails(''); setCopyStatus('');
       setStep('consent');
     };
     document.addEventListener('visibilitychange', pauseCamera);
@@ -52,6 +55,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
     setReady(false);
     setImage(null);
     setError('');
+    setSupportDetails(''); setCopyStatus('');
     setCameraAttempt(value => value + 1);
     setStep('preview');
   };
@@ -75,6 +79,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
     if (!consented || !image || submitting.current) return;
     submitting.current = true;
     setError('');
+    setSupportDetails(''); setCopyStatus('');
     setStep('loading');
     try {
       if (selfService) await enrollFace(image, consented, idImage);
@@ -87,6 +92,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
       const detail = err.response?.data?.detail;
       const fallback = selfService ? 'Enrollment could not be confirmed. Refresh your profile before retrying.' : 'Enrollment could not be confirmed. Refresh the member list before retrying.';
       setError((typeof detail === 'string' ? detail : fallback) + (selfService ? ' Comparison images were discarded. Choose the ID photo again and retake your face when ready.' : ''));
+      if (selfService) setSupportDetails(faceEnrollmentSupportDetails(err.response?.data?.comparison_diagnostic));
       if (selfService) { setImage(null); setIdImage(null); setConsented(false); }
       setStep(selfService ? 'consent' : 'captured');
     } finally {
@@ -107,7 +113,7 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
             <p>Face enrollment is optional. You can sign in with your password, and library staff can help with identification for transactions and visits. Ask staff if you later want to remove your enrolled face data.</p>
             {selfService && <div className="space-y-3 rounded-xl border border-line bg-subtle p-3"><label className="block font-semibold text-ink">Photo ID (required)<input type="file" accept="image/jpeg,image/png,image/webp" disabled={preparingId} className="mt-2 block w-full min-w-0 text-sm" onChange={async event => {
               const file = event.target.files?.[0], attempt = ++idAttempt.current;
-              setIdImage(null); setError(''); if (!file) return;
+              setIdImage(null); setError(''); setSupportDetails(''); setCopyStatus(''); if (!file) return;
               setPreparingId(true);
               try { const prepared = await encodeComparisonId(file); if (attempt === idAttempt.current) setIdImage(prepared); }
               catch (failure) { if (attempt === idAttempt.current) setError(identityError(failure)); }
@@ -142,6 +148,15 @@ export default function FaceEnrollModal({ user, onClose, onSuccess, selfService 
         )}
         {image && <img src={image} alt="Captured face preview" className="w-full rounded-xl"/>}
         {error && <p role="alert" className="my-3 text-sm text-danger">{error}</p>}
+        {supportDetails && <section aria-label="Enrollment support details" className="my-3 space-y-3 rounded-xl border border-line bg-subtle p-3 text-sm">
+          <p className="text-muted">You can share this text-only report with support. It contains comparison results and image-quality measurements, with no photos or identity details.</p>
+          <button type="button" onClick={async () => {
+            try { await navigator.clipboard.writeText(supportDetails); setCopyStatus('Support details copied.'); }
+            catch { setCopyStatus('Open the report below, then select and copy its text.'); }
+          }} className="min-h-11 rounded-lg bg-action px-4 py-2 font-semibold text-white">Copy support details</button>
+          {copyStatus && <p role="status" className="text-muted">{copyStatus}</p>}
+          <details><summary className="cursor-pointer text-link">View text-only report</summary><pre className="mt-2 max-h-64 overflow-y-auto whitespace-pre-wrap break-all text-xs text-muted">{supportDetails}</pre></details>
+        </section>}
         {busy && <p role="status" className="my-4 flex items-center gap-2"><RefreshCw className="animate-spin" size={18}/> Enrolling face…</p>}
         {step === 'success' && <div role="status" className="my-6 space-y-2 font-semibold text-success"><p>{resetting ? 'Face data reset successfully.' : 'Face enrolled successfully.'}</p>{selfService && <p className="text-sm">Verified for {user.name}. Comparison images were discarded.</p>}</div>}
         <div className="mt-4 flex flex-wrap gap-3">
