@@ -2,7 +2,7 @@ import CirculationDialog from '../../components/CirculationDialog';
 import FineContent from '../../components/FineContent';
 import { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, Clock, Search, Bell, CheckCircle2, RefreshCw, BookOpen, List } from 'lucide-react';
-import { getDueBooks } from '../../api/librarian';
+import { getDueBooks, getFineSummary } from '../../api/librarian';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
@@ -30,6 +30,7 @@ export default function LibDueBooks() {
 
   // Due Books state
   const [books, setBooks] = useState([]);
+  const [fines, setFines] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [operationError, setOperationError] = useState('');
@@ -41,8 +42,8 @@ export default function LibDueBooks() {
   const fetchBooks = useCallback((f = 'all') => {
     setLoading(true);
     setOperationError('');
-    getDueBooks(f)
-      .then((res) => setBooks(res.data))
+    Promise.all([getDueBooks(f), getFineSummary()])
+      .then(([res, summary]) => { setBooks(res.data); setFines(summary.data); })
       .catch(() => setOperationError('Could not load loans. Please retry.'))
       .finally(() => setLoading(false));
   }, []);
@@ -89,6 +90,11 @@ export default function LibDueBooks() {
             Monitor active borrowings, overdue items, and upcoming due dates.
           </p>
         </div>
+
+        <section id="member-fines" aria-label="Member overdue fines" className="mb-7 scroll-mt-24 rounded-xl border border-line bg-panel p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="text-xl font-semibold">Member overdue fines</h2><p className="mt-1 text-3xl font-semibold text-link">{fines ? `₱${Number(fines.total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : '—'}</p></div><button type="button" onClick={() => fetchBooks(filter)} disabled={loading} className="flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 text-sm font-semibold hover:bg-subtle disabled:opacity-50"><RefreshCw size={15} />Refresh fines</button></div>
+          {fines && <><p className="mt-3 text-sm">{fines.members_with_fines} members with accrued fines · {fines.overdue_loans} overdue loans</p><p className="mt-1 text-sm text-muted">PHP {fines.daily_rate} per book for each completed day after the due time. Books that are not overdue have no late fee. These are current assessments, not payment records.</p><p className="mt-2 text-xs text-muted">Calculated {toUtcDate(fines.as_of).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}. Refresh to recalculate; the amount stops increasing when the loan is returned or closed.</p></>}
+        </section>
 
         {/* Tab switcher */}
         <div className="flex flex-wrap gap-3 mb-7 animate-fade-in-up delay-75">
@@ -183,6 +189,7 @@ export default function LibDueBooks() {
                             <span className="text-sm font-semibold text-muted">{b.member_id}</span>
                           </div>
                           <p className="text-sm text-muted font-medium">{b.book_title}</p>
+                          <FineContent><p className={`mt-1 text-sm font-semibold ${Number(b.fine_amount) > 0 ? 'text-danger' : 'text-muted'}`}>Current late fee: PHP {Number(b.fine_amount || 0).toFixed(2)}</p></FineContent>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-4 text-sm min-w-0">
@@ -219,7 +226,7 @@ export default function LibDueBooks() {
                             onClick={() => handleReturn(b)}
                             className="group/btn flex items-center gap-1.5 px-3 py-2 bg-success-soft text-success border border-success rounded-lg text-sm font-semibold tracking-normal hover:bg-success-soft transition-all duration-200"
                           >
-                            <CheckCircle2 size={11} /> Returned
+                            <CheckCircle2 size={11} /> Inspect return
                           </button>
                         </div>
                       </div>

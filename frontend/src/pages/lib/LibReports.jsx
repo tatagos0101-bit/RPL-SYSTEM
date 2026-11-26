@@ -92,8 +92,8 @@ export default function LibReports() {
     {draft.category === 'acquisitions' && <AcquisitionEditor onSaved={() => apply()} />}
     <section className="staff-preview-stats">
       {[
-        ['Matching Records', result?.total?.toLocaleString() ?? '—'],
-        ['Preview Rows', result?.rows.length ?? '—'],
+        [{ visits: 'Number of visitor entries', circulation: 'Number of loan records', patrons: 'Number of member accounts', collection: 'Number of inventory records', inventory: 'Number of catalog titles', acquisitions: 'Number of acquisition records' }[draft.category] || 'Number of matching records', result?.total?.toLocaleString() ?? '—'],
+        ['Records shown on this page', result?.rows.length ?? '—'],
         ['Start Date', result?.filters.start ?? '—'],
         ['End Date', result?.filters.end ?? '—'],
       ].map(([label, value]) => <div key={label}><p className="break-words text-xl font-semibold text-ink sm:text-2xl">{value}</p><p className="mt-1 text-sm font-semibold text-muted">{label}</p></div>)}

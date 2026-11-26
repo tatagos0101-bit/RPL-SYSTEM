@@ -41,7 +41,14 @@ The configured `LOAN_DAYS` and `FINE_PER_DAY` remain authoritative. The server s
 the due timestamp at borrowing and evaluates overdue records using Philippine time.
 This is not a new scheduled reminder service.
 
-The existing daily late fee is calculated at return/loss closure. A librarian can add
+Current late fees are calculated on reads for each completed 24-hour day after the due
+timestamp, using the same configured rate as return/loss closure. No late fee applies
+before the due time; the first completed overdue day accrues the first daily fee.
+The dashboard replaces its unique-visitor card with **Current overdue fines**, linking
+to **Due Books**. Due Books shows the all-member total and per-loan current late fees;
+the Users list and member accountability review also show each member's current total.
+These amounts are recalculated when loaded or refreshed, without changing saved loan
+history. Historical visitor analytics remain available in Reports. A librarian can add
 a nonnegative damage/loss assessment. There is no automatic fixed damage/replacement fee.
 `fine_amount` is the combined assessed total; `late_fee` and `condition_fee` preserve
 the breakdown for newly inspected loans. Old records retain their original fine amounts
@@ -51,6 +58,33 @@ Assessments are **not proof of payment**. This release does not add payment coll
 settlement receipts, automatic fee-based suspension or automatic blacklisting.
 
 ## Remote registration and receipt
+
+The account-issuance form requires the applicant's agreement to the displayed borrower
+terms before saving, even when a librarian starts registration directly. The API
+rejects absent agreement or a stale terms version. An approved membership receipt
+records the agreement version, librarian and issuance time; a pre-existing application
+keeps its original submitted terms version and records the issuance agreement in its
+review notes. This uses the existing `member_applications` table; no new migration is
+needed for this revision. Staff must obtain the applicant's actual agreement rather
+than assuming consent from the presence of an ID.
+
+First-login setup presents the borrower terms with Privacy Notice version **2026-11-26**
+and requires affirmative agreement before setting the new password. The existing
+privacy-version/acceptance-time fields record acknowledgment of that displayed notice
+and its included terms. This does not opt the member into facial recognition.
+Successful initial setup opens `/user/face-setup`, offering optional online enrollment
+after librarian ID verification, or continued password access. Later password changes
+and librarian accounts retain their existing destination and requirements.
+
+Return inspections show a fixed **No issues found** or **Normal wear and tear** remark
+for good/worn copies. Damaged copies retain damage choices. Lost copies allow reported
+loss, reported theft, or another reported loss with required explanatory notes. These
+are reports by the borrower, not determinations that theft occurred.
+
+Report chart/table headings and summary exports use specific counts and units (visitor
+entries, books, members, days and PHP). Visitor entries count recorded visit sessions;
+they must not be described as distinct individual visitors. Detail exports retain
+their safe projections, formula protection and existing row limits.
 
 1. Applicants open **Member sign-in → Apply for membership** at `/register`.
 2. They supply their name and location, optionally an email, and accept the displayed

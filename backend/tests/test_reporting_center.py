@@ -13,6 +13,7 @@ from models.copy_acquisition import CopyAcquisition
 from routers.auth import _hash, _make_token
 from timezone_utils import PH_TZ, now_ph
 from services import reporting
+from config import FINE_PER_DAY
 
 
 @pytest.fixture()
@@ -65,6 +66,10 @@ def test_shared_counts_and_read_only_dashboard(client, db_session, report_data):
     assert visits['summary']['returning_visitors'] == 1
     assert visits['summary']['unidentified_visits'] == 1
     assert metrics['unique_visitors'] == visits['summary']['identified_unique_visitors']
+    assert float(metrics['current_overdue_fines']) == 20 * FINE_PER_DAY
+    assert visits['summary_labels']['matching_records'] == 'Number of visitor entries'
+    assert visits['charts'][0]['value_label'] == 'Number of visitor entries'
+    assert visits['charts'][0]['group_label'] == 'Date'
     circulation = query(client, report_data)
     assert circulation['summary']['borrows'] == metrics['borrows']
     assert circulation['summary']['returns'] == metrics['returns']
@@ -110,6 +115,24 @@ def test_exports_share_preview_and_escape_untrusted_cells(client, report_data):
             assert any(cell.value=='=Dangerous title' and cell.data_type=='s' for row in workbook['Records'] for cell in row)
         if format=='pdf': assert 'Rizal Provincial Library' in PdfReader(io.BytesIO(response.content)).pages[0].extract_text()
         if format=='print': assert '2026-11-01' in response.text
+
+
+def test_visit_export_summaries_name_the_measure_and_unit(client, report_data):
+    result = query(client, report_data, 'visits')
+    payload = {'filters': filters('visits'), 'context': result['context'], 'scope': 'summary'}
+    for format in ('csv', 'pdf', 'print'):
+        response = client.post('/api/reporting/export', json={**payload, 'format': format}, headers=report_data['staff'])
+        assert response.status_code == 200
+        if format == 'csv':
+            with ZipFile(io.BytesIO(response.content)) as archive:
+                text = archive.read('records.csv').decode('utf-8-sig')
+                assert 'Library measure,Result (unit shown in measure)' in text
+        elif format == 'pdf':
+            text = '\n'.join(page.extract_text() for page in PdfReader(io.BytesIO(response.content)).pages)
+        else:
+            text = response.text
+        assert 'Number of visitor entries' in text
+        assert 'matching_records' not in text
 
 
 def test_acquisitions_unknown_and_concurrent_edit(client, db_session, report_data):
@@ -287,7 +310,7 @@ def test_yesterday_visitors_filter_details_charts_and_export_together(client, db
     assert response.status_code == 200
     with ZipFile(io.BytesIO(response.content)) as archive:
         rows = list(csv.DictReader(io.StringIO(archive.read('records.csv').decode('utf-8-sig'))))
-        assert len(rows) == 2 and all(row['Visited'].startswith('2026-11-03T') for row in rows)
+    assert len(rows) == 2 and all(row['Visit time-in'].startswith('2026-11-03T') for row in rows)
     assert 'unavailable' not in client.get('/api/reporting/metadata',headers=report_data['staff']).json()
 
 

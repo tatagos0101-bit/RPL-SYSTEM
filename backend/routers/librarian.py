@@ -48,6 +48,7 @@ from models.transaction import Transaction
 from models.user import User
 from services.auth_sessions import revoke_user_sessions
 from services.loan_policy import sync_overdue_loans
+from services.fines import current_fines, late_fee
 from services.manual_visitor_service import serialize_entry_log
 from services.member_address_fill import fill_missing_member_addresses
 from services.reservation_policy import (
@@ -89,11 +90,7 @@ def _days_left(due_date: datetime) -> int:
 
 
 def _calc_fine(due_date: datetime) -> Decimal:
-    from config import FINE_PER_DAY
-    if due_date.tzinfo is None:
-        due_date = due_date.replace(tzinfo=PH_TZ)
-    days_late = max(0, (_now() - due_date).days)
-    return Decimal(days_late * FINE_PER_DAY)
+    return late_fee(due_date, _now())
 
 
 def _loan_status(days_left: int) -> str:
@@ -319,6 +316,7 @@ def list_members(
             Transaction.return_date > Transaction.due_date,
             Transaction.return_condition.in_(["damaged", "lost"]), Transaction.fine_amount > 0)
     ).group_by(Transaction.user_id).all())
+    fines = current_fines(db, member_ids, _now())["by_member"]
     for m in members:
         count = counts.get(m.id)
         location_is_generated = bool(m.generated_location and not (m.location or "").strip())
@@ -335,6 +333,7 @@ def list_members(
             status       = m.status,
             is_blacklisted = bool(m.is_blacklisted),
             accountability_count = issue_counts.get(m.id, 0),
+            current_overdue_fine = fines.get(m.id, Decimal("0")),
             face_enrolled = m.id in enrolled_ids,
             face_enrollment_display_only = bool(m.face_enrollment_display_only),
             identity_verified = bool(m.id_verified_at and m.id_document_digest and m.id_image_url and m.id_verified_by_id),
@@ -349,6 +348,12 @@ def list_members(
 def count_members(search: str = Query("", max_length=200), status: str = Query(""),
                   db: Session = Depends(get_db), _: User = Depends(require_librarian)):
     return {"total": member_query(db, search, status).count()}
+
+
+@router.get("/fines/summary")
+def fines_summary(db: Session = Depends(get_db), _: User = Depends(require_librarian)):
+    summary = current_fines(db, at=_now())
+    return {key: value for key, value in summary.items() if key != "by_member"}
 
 
 @router.post("/users/fill-missing-addresses")
@@ -399,6 +404,8 @@ async def register_member(
     upload_ticket: str | None = Form(None),
     id_review_token: str | None = Form(None),
     identity_checked: bool = Form(False),
+    member_agreed_terms: bool = Form(False),
+    terms_version: str | None = Form(None, max_length=32),
     application_id: int | None = Form(None),
     db:       Session          = Depends(get_db),
     _:        User             = Depends(require_librarian),
@@ -406,6 +413,11 @@ async def register_member(
     """Create an account after checking the required original ID in person."""
     from services.identity_documents import checked_id_upload, mark_identity_verified
     from models.member_application import MemberApplication
+    from schemas.library_workflows import TERMS_VERSION
+    if not member_agreed_terms:
+        raise HTTPException(422, "The applicant must read and agree to the borrower terms before the account is created.")
+    if terms_version != TERMS_VERSION:
+        raise HTTPException(409, "The borrower terms have changed. Refresh and review the current terms with the applicant.")
     if not identity_checked:
         raise HTTPException(422, "Confirm that you checked the original ID and the applicant is present in the library.")
     content, ext, reference, claims = await checked_id_upload(_.id, id_image, upload_ticket, id_review_token)
@@ -453,11 +465,15 @@ async def register_member(
     db.add(new_user)
     mark_identity_verified(new_user, claims, _.id, id_reference)
     try:
-        if application is not None:
-            db.flush()
-            application.member_user_id, application.status = new_user.id, "approved"
-            application.reviewed_at, application.reviewed_by_id = now_ph(), _.id
-            application.review_reason = "details_verified"
+        db.flush()
+        if application is None:
+            application = MemberApplication(receipt="RPL-APP-" + secrets.token_urlsafe(18),
+                name=name, email=email, location=location.strip(), terms_version=TERMS_VERSION)
+            db.add(application)
+        application.member_user_id, application.status = new_user.id, "approved"
+        application.reviewed_at, application.reviewed_by_id = now_ph(), _.id
+        application.review_reason = "details_verified"
+        application.review_notes = f"Applicant agreed to borrower terms {TERMS_VERSION} before account issuance; recorded by the verifying librarian."
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -476,6 +492,7 @@ async def register_member(
         "email_verified":   bool(new_user.email_verified),
         "phone_verified":   bool(new_user.phone_verified),
         "phone":            new_user.phone,
+        "registration_receipt": application.receipt,
         "password_delivery": delivery,
         "temporary_password": None if delivery["status"] == "accepted" else temporary_password,
     }

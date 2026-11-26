@@ -12,6 +12,7 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.graphics.shapes import Drawing, Rect, String
 from timezone_utils import now_ph
+from services.report_labels import summary_labels
 
 
 def safe_cell(value):
@@ -40,13 +41,15 @@ def metadata(report):
 def export_report(report, format, scope):
     columns = report['columns']
     rows = report['rows']
+    labels = report.get('summary_labels') or summary_labels(report['summary'], report['filters']['category'])
+    summary_rows = [(labels.get(key, key), value) for key, value in report['summary'].items()]
     meta = metadata(report) + [('Generated at', now_ph().isoformat()), ('Export scope', scope), ('Exported detail rows', len(rows))]
     if format == 'csv':
         output = io.StringIO(newline='')
         writer = csv.writer(output)
         if scope == 'summary':
-            writer.writerow(['Metric', 'Value'])
-            writer.writerows((safe_cell(k), safe_cell(v)) for k, v in report['summary'].items())
+            writer.writerow(['Library measure', 'Result (unit shown in measure)'])
+            writer.writerows((safe_cell(k), safe_cell(v)) for k, v in summary_rows)
         else:
             writer.writerow([c['label'] for c in columns])
             writer.writerows([safe_cell(row.get(c['key'])) for c in columns] for row in rows)
@@ -60,8 +63,8 @@ def export_report(report, format, scope):
         sheet = workbook.create_sheet('Report information')
         for row in meta: sheet.append([safe_cell(v) for v in row])
         summary = workbook.create_sheet('Summary')
-        summary.append(['Metric', 'Value'])
-        for row in report['summary'].items(): summary.append([safe_cell(v) for v in row])
+        summary.append(['Library measure', 'Result (unit shown in measure)'])
+        for row in summary_rows: summary.append([safe_cell(v) for v in row])
         if scope != 'summary':
             detail = workbook.create_sheet('Records')
             detail.append([c['label'] for c in columns])
@@ -93,7 +96,7 @@ def export_report(report, format, scope):
                 headings = ''.join(f'<th>{escape(c["label"])}</th>' for c in group)
                 body = ''.join('<tr>' + ''.join(f'<td>{escape(row.get(c["key"]))}</td>' for c in group) + '</tr>' for row in rows)
                 tables += f'<h3>Detailed records — section {index+1} of {len(groups)}</h3><table><thead><tr>{headings}</tr></thead><tbody>{body}</tbody></table>'
-        summary = ''.join(f'<tr><th>{escape(key)}</th><td>{escape(value)}</td></tr>' for key, value in report['summary'].items())
+        summary = ''.join(f'<tr><th>{escape(key)}</th><td>{escape(value)}</td></tr>' for key, value in summary_rows)
         info = ''.join(f'<p><strong>{escape(key)}:</strong> {escape(value)}</p>' for key, value in meta)
         charts = ''
         for chart in [c for c in report['charts'] if c['type'] != 'grouped'][:4]:
@@ -101,7 +104,7 @@ def export_report(report, format, scope):
             if not points: continue
             high = max(1, *(p.get('value', 0) or 0 for p in points))
             marks = ''.join(f'<g><rect x="{i*85+10}" y="{125-(p.get("value",0) or 0)/high*90}" width="45" height="{(p.get("value",0) or 0)/high*90}" fill="#2457a7"/><text x="{i*85+10}" y="145" font-size="9">{escape(str(p["label"])[:13])}</text><text x="{i*85+10}" y="20" font-size="11">{escape(p.get("value",0))}</text></g>' for i,p in enumerate(points))
-            charts += f'<section style="break-inside:avoid"><h3>{escape(chart["title"])} (first 8 points)</h3><svg role="img" aria-label="{escape(chart["title"])}" viewBox="0 0 700 165" style="max-width:700px;width:100%">{marks}</svg></section>'
+            charts += f'<section style="break-inside:avoid"><h3>{escape(chart["title"])} (first 8 points)</h3><p>{escape(chart.get("value_label", "Number of records"))}</p><svg role="img" aria-label="{escape(chart["title"])}" viewBox="0 0 700 165" style="max-width:700px;width:100%">{marks}</svg></section>'
         document = f'''<!doctype html><html><head><meta charset="utf-8"><title>{escape(report['title'])}</title>
 <style>body{{font:14px 'Segoe UI',Arial,sans-serif;color:#14263d;margin:24px}}h1{{font-size:24px}}p{{margin:4px 0}}table{{border-collapse:collapse;width:100%;margin:20px 0;font-size:11px}}td,th{{border:1px solid #cbd5e1;padding:6px;text-align:left;overflow-wrap:anywhere}}thead{{display:table-header-group}}tr{{break-inside:avoid}}@page{{size:A4 landscape;margin:15mm}}@media print{{a{{display:none}}}}</style></head><body><h1>Rizal Provincial Library</h1><h2>{escape(report['title'])}</h2>{info}<table>{summary}</table>{charts}{tables}</body></html>'''
         return document.encode(), 'text/html; charset=utf-8', 'html'
@@ -114,7 +117,7 @@ def export_report(report, format, scope):
     story = [Paragraph('Rizal Provincial Library', styles['Title']), Paragraph(html.escape(report['title']), styles['Heading2'])]
     for key, value in meta: story.append(para(f'{key}: {value}'))
     story.append(Spacer(1, 12))
-    grid = [[para(key), para(value)] for key, value in report['summary'].items()]
+    grid = [[para(key), para(value)] for key, value in summary_rows]
     if grid: story.append(Table(grid, colWidths=[280, 440], style=TableStyle([('GRID', (0,0), (-1,-1), .3, colors.lightgrey), ('VALIGN', (0,0), (-1,-1), 'TOP')])))
     for chart in [c for c in report['charts'] if c['type'] != 'grouped'][:4]:
         points = chart['points'][:8]
@@ -127,7 +130,7 @@ def export_report(report, format, scope):
             drawing.add(Rect(x, 25, 50, value / high * 85, fillColor=colors.HexColor('#2457a7'), strokeColor=None))
             drawing.add(String(x, 12, str(point['label'])[:13], fontSize=7))
             drawing.add(String(x, 115, str(value), fontSize=8))
-        story += [Spacer(1, 12), Paragraph(html.escape(chart['title']) + ' (first 8 points)', styles['Heading3']), drawing]
+        story += [Spacer(1, 12), Paragraph(html.escape(chart['title']) + ' (first 8 points)', styles['Heading3']), para(chart.get('value_label', 'Number of records')), drawing]
     if rows and scope != 'summary':
         # Split wide records into manageable column groups, always repeat identity.
         groups = [columns[i:i+6] for i in range(0, len(columns), 6)]

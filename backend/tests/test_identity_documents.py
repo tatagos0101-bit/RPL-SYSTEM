@@ -121,7 +121,7 @@ def test_registration_requires_original_id_check_and_librarian(client, db_sessio
     assert checked.status_code == 200
     assert checked.headers["cache-control"] == "no-store"
     assert "ID NO" not in checked.text
-    fields = {"name": "Synthetic Member", "location": "Test Town", "identity_checked": "true", "id_review_token": checked.json()["review_token"]}
+    fields = {"name": "Synthetic Member", "location": "Test Town", "identity_checked": "true", "id_review_token": checked.json()["review_token"], "member_agreed_terms": "true", "terms_version": "2026-11-26"}
     wrong = client.post("/api/librarian/users/register", data=fields, files={"id_image": ("id.png", photo("blue"), "image/png")})
     assert wrong.status_code == 422
     assert db_session.query(User).count() == original_count

@@ -1,4 +1,5 @@
 import { PRIVACY_NOTICE_VERSION } from '../api/privacyPolicy';
+import BorrowingTerms from './BorrowingTerms';
 
 const noticeDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeZone: 'Asia/Manila' })
   .format(new Date(PRIVACY_NOTICE_VERSION));
@@ -7,6 +8,7 @@ export default function PrivacyNoticeContent({ headingTag = 'h2' }) {
   const Heading = headingTag;
   return (
     <div className="space-y-6">
+      <BorrowingTerms />
       <p className="text-sm font-medium text-muted">
         Rizal Provincial Library · Updated <time dateTime={PRIVACY_NOTICE_VERSION}>{noticeDate}</time>
       </p>

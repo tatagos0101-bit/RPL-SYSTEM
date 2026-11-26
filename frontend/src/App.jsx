@@ -24,6 +24,7 @@ const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const UserHome = lazy(() => import('./pages/user/UserHome'));
 const UserBrowseBooks = lazy(() => import('./pages/user/UserBrowseBooks'));
 const UserProfile = lazy(() => import('./pages/user/UserProfile'));
+const MemberFaceSetup = lazy(() => import('./pages/user/MemberFaceSetup'));
 const UserReservations = lazy(() => import('./pages/user/UserReservations'));
 
 const LibDashboard = lazy(() => import('./pages/lib/LibDashboard'));
@@ -89,6 +90,7 @@ const AppContent = () => {
               <Route path="/user/browse" element={<UserBrowseBooks />} />
               <Route path="/user/reservations" element={<UserReservations />} />
               <Route path="/user/profile" element={<UserProfile />} />
+              <Route path="/user/face-setup" element={<MemberFaceSetup />} />
               <Route path="/user/notifications" element={<NotificationsPage role="member" />} />
               <Route path="/user/notifications/:notificationId" element={<NotificationsPage role="member" />} />
               <Route path="/user/change-password" element={<ChangePasswordPage />} />

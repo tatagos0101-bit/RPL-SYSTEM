@@ -23,6 +23,8 @@ from models.entry_log import EntryLog
 from models.reservation import Reservation
 from models.copy_acquisition import CopyAcquisition
 from timezone_utils import PH_TZ, as_ph, now_ph
+from services.fines import current_fines
+from services.report_labels import CHART_LABELS, column_label, summary_labels
 
 CATEGORIES = {
     'visits': 'Library visits logbook', 'patrons': 'Patrons', 'circulation': 'Circulation and return inspections',
@@ -356,7 +358,9 @@ def analyze(db, f, as_of, sub):
 
 
 def chart(key, title, points, kind='bar'):
-    return {'id': key, 'title': title, 'type': kind, 'points': points}
+    group_label, value_label = CHART_LABELS.get(key, ('Category', 'Number of records'))
+    return {'id': key, 'title': title, 'type': kind, 'points': points,
+        'group_label': group_label, 'value_label': value_label}
 
 
 def encode_rows(rows):
@@ -394,10 +398,10 @@ def report(db, request, actor, export=False):
     query = db.query(sub).order_by(order, sub.c.id)
     if not export or request.scope == 'page': query = query.offset(request.page * request.page_size).limit(request.page_size)
     rows = [] if export and request.scope == 'summary' else encode_rows(query.all())
-    columns = [{'key': key, 'label': key.replace('_', ' ').title()} for key in sub.c.keys() if key not in ('visitor_key', 'patron_key')]
+    columns = [{'key': key, 'label': column_label(key)} for key in sub.c.keys() if key not in ('visitor_key', 'patron_key')]
     rows = [{c['key']: row[c['key']] for c in columns} for row in rows]
     return {'title': CATEGORIES[f.category], 'filters': f.model_dump(mode='json'), 'as_of': as_of.isoformat(), 'context': token,
-        'summary': summary, 'charts': charts, 'total': total, 'columns': columns, 'rows': rows,
+        'summary': summary, 'summary_labels': summary_labels(summary, f.category), 'charts': charts, 'total': total, 'columns': columns, 'rows': rows,
         'notes': notes(f)}
 
 
@@ -425,6 +429,7 @@ def metric_bundle(db, f, as_of):
         'registered_patrons': db.query(func.count(User.id)).filter(User.role == 'member', User.deleted_at.is_(None), User.created_at <= as_of).scalar(),
         'visits_today': db.query(func.count(EntryLog.id)).filter(EntryLog.granted.is_(True), between(EntryLog.accessed_at, as_of.replace(hour=0, minute=0, second=0, microsecond=0), as_of)).scalar(),
         'unique_visitors': data['visits'][0]['identified_unique_visitors'],
+        'current_overdue_fines': current_fines(db, at=as_of)['total'],
         'currently_borrowed': db.query(func.count(Transaction.id)).filter(outstanding(as_of)).scalar(),
         'borrows': data['circulation'][0]['borrows'], 'returns': data['circulation'][0]['returns'],
         'overdue': db.query(func.count(Transaction.id)).filter(overdue(as_of)).scalar(),

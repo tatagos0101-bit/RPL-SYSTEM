@@ -7,6 +7,20 @@ same required-ID form used by **Registered Users → Register Member**.
 
 ## Librarian registration
 
+After first-login terms/privacy acknowledgment and password setup, members are offered
+optional online Face ID setup at `/user/face-setup`. It checks the server's ID-verification
+eligibility before offering enrollment and uses the same `FaceEnrollModal` and protected
+API as Profile. Choosing **Continue without Face ID** preserves password access. The
+camera does not start until the separate biometric-consent and ID-upload requirements
+are met. Account issuance still requires the librarian's original-ID check; the facial
+capture itself can take place remotely afterward.
+
+The proposed live-ID threshold change was cancelled before release on November 26.
+This onboarding revision does not loosen ID comparison, PAD or login thresholds.
+Synthetic checks establish routing and access behavior, not real-camera or ID-matching
+accuracy. A first-time enrollment whose ID/live comparisons fail still requires a
+new valid capture or supervised librarian assistance.
+
 1. Check that the applicant is present with an original, valid government photo ID.
 2. Upload its front as JPG, PNG or WEBP (up to 10 MB and 16 megapixels).
 3. Select **Check ID and read details**. Local OCR checks readable identifying

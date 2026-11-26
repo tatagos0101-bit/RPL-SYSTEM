@@ -851,6 +851,16 @@ Keep real patron data out of all fixtures and test artifacts. Report the actual
 checks, limitations, and skipped work instead of copying historical pass counts.
 
 
+## Current fines and member setup
+
+The November 26 operations revision uses [shared fine calculations](../backend/services/fines.py)
+for current overdue assessments across librarian/member views and the dashboard. It
+reuses the existing daily-rate policy and preserves finalized return charges. See
+[borrowing and membership workflows](LIBRARY_WORKFLOWS.md) for required registration
+terms, simplified inspection remarks and report units, and [remote Face ID setup](REMOTE_FACE_ENROLLMENT.md)
+for the optional post-password registration step. These changes need no additional
+database columns; existing workflow/identity schema prerequisites still apply.
+
 ## Category mapping
 
 See [category normalization and migration](CATEGORY_MAPPING.md) for the authoritative

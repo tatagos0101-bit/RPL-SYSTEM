@@ -29,7 +29,7 @@ from timezone_utils import now_ph
 logger = get_logger("users")
 
 router = APIRouter(prefix="/api/user", tags=["User"])
-PRIVACY_POLICY_VERSION = "2026-11-25"
+PRIVACY_POLICY_VERSION = "2026-11-26"
 
 
 def _face_enrolled(db: Session, user: User) -> bool:
@@ -127,7 +127,7 @@ def change_password(
 
     if current_user.requires_privacy_consent:
         if not body.accept_privacy_policy:
-            raise HTTPException(422, "Accept the Privacy Notice to finish setting up your account.")
+            raise HTTPException(422, "Agree to the borrower terms and acknowledge the Privacy Notice to finish setting up your account.")
         if body.privacy_policy_version != PRIVACY_POLICY_VERSION:
             raise HTTPException(409, "The Privacy Notice has changed. Refresh this page and review the current notice.")
         current_user.privacy_policy_version = PRIVACY_POLICY_VERSION

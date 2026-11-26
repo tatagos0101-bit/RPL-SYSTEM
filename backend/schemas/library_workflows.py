@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-TERMS_VERSION = "2026-11-25"
+TERMS_VERSION = "2026-11-26"
 AccountReason = Literal["late_return", "damaged_book", "lost_book", "repeated_violations", "conduct", "resolved", "librarian_review", "other"]
 
 

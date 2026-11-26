@@ -112,7 +112,9 @@ def checked_photo_id(monkeypatch):
         files = {"id_image": ("synthetic.png", output.getvalue(), "image/png")}
         result = client.post("/api/librarian/identity/inspect", files=files)
         assert result.status_code == 200, result.text
-        return {"identity_checked": "true", "id_review_token": result.json()["review_token"]}, files
+        from schemas.library_workflows import TERMS_VERSION
+        return {"identity_checked": "true", "id_review_token": result.json()["review_token"],
+            "member_agreed_terms": "true", "terms_version": TERMS_VERSION}, files
     return prepare
 
 

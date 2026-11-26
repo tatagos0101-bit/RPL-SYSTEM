@@ -17,4 +17,7 @@ test('assessments must be valid and apply only to damage or loss', () => {
   assert.ok(inspectionError({ ...damaged, inspection_reason: 'other', inspection_notes: ' ' }));
   assert.equal(inspectionError({ ...damaged, inspection_reason: 'other', inspection_notes: 'Synthetic damage remark' }), '');
   assert.equal(inspectionError({ ...good, return_condition: 'lost', inspection_reason: 'reported_lost' }), '');
+  assert.equal(inspectionError({ ...good, return_condition: 'lost', inspection_reason: 'reported_stolen' }), '');
+  assert.ok(inspectionError({ ...good, return_condition: 'lost', inspection_reason: 'other' }));
+  assert.equal(inspectionError({ ...good, return_condition: 'lost', inspection_reason: 'other', inspection_notes: 'Synthetic loss details' }), '');
 });

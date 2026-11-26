@@ -12,16 +12,19 @@ export default function ReportChart({ chart, variant }) {
   const points = chart.points || [];
   const staff = variant === 'staff';
   const grouped = chart.type === 'grouped';
+  const valueLabel = chart.value_label || 'Number of records';
+  const groupLabel = chart.group_label || (grouped ? 'Date' : 'Category / period');
   const max = Math.max(1, ...points.flatMap(p => grouped ? [p.borrowed, p.returned] : [p.value]));
   const total = points.reduce((sum, p) => sum + (p.value || 0), 0);
   const horizontal = chart.type === 'bar' && !points.some(p => /^\d{4}-\d\d-\d\d$/.test(p.label));
-  const text = p => `${p.label}: ${grouped ? `${p.borrowed} borrowed, ${p.returned} returned` : formatReportValue(p.value)}`;
+  const text = p => `${p.label}: ${grouped ? `${p.borrowed} books borrowed, ${p.returned} books returned` : `${valueLabel}: ${formatReportValue(p.value)}`}`;
   const { canvasWidth, canvasHeight, fontSize, plotLeft, plotRight, plotTop, plotBottom, labelLines, ticks } = reportChartLayout(width, max, points.map(p => p.label));
   const step = (plotRight - plotLeft) / Math.max(1, points.length);
   const x = i => plotLeft + (i + .5) * step;
   const y = value => plotBottom - (value || 0) / max * (plotBottom - plotTop);
   return <section ref={container} className={staff ? 'staff-report-chart' : 'min-w-0 rounded-xl border border-line bg-panel p-4 sm:p-5'} data-chart-type={chart.type} data-chart-layout={horizontal ? 'horizontal' : undefined} aria-labelledby={id}>
     <h2 id={id} className="text-xl font-semibold text-ink">{chart.title}</h2>
+    {!grouped && <p className="mt-1 text-xs text-muted">{valueLabel}</p>}
     {grouped && <p className="mt-2 flex flex-wrap gap-4 text-sm"><span className={`text-link ${staff ? 'staff-chart-legend' : ''}`}>{staff ? 'Borrowed' : '● Borrowed'}</span><span className={`text-success ${staff ? 'staff-chart-legend' : ''}`}>{staff ? 'Returned' : '■ Returned'}</span></p>}
     {!points.length ? <p className="py-12 text-center text-muted">No matching records.</p> : <>
       {horizontal ? <ol className="my-5 space-y-3">{points.map((p, i) => <li key={i} className="text-sm"><div className="mb-1 flex items-start justify-between gap-4"><span>{p.label}</span><strong className="tabular-nums">{formatReportValue(p.value)}</strong></div><svg viewBox="0 0 100 3" preserveAspectRatio={staff ? 'none' : undefined} className="w-full" role="img" aria-label={text(p)} tabIndex="0" onFocus={() => setActive(i)} onBlur={() => setActive(null)} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)} onClick={() => setActive(i)}><title>{text(p)}</title><rect width="100" height="3" fill="var(--rpl-subtle)" /><rect width={(p.value || 0) / max * 100} height="3" fill="var(--rpl-link)" /></svg></li>)}</ol> : <svg viewBox={chart.type === 'donut' ? '25 0 210 210' : `0 0 ${canvasWidth} ${canvasHeight}`} className={chart.type === 'donut' ? 'mx-auto mt-4 h-44 w-44 overflow-visible' : 'mt-4 h-auto w-full overflow-visible'} role="group" aria-label={`${chart.title}. Tap or focus a point for its value; the data table follows.`}>
@@ -54,8 +57,8 @@ export default function ReportChart({ chart, variant }) {
         </>}
       </svg>}
       {chart.type === 'donut' && <ul className="my-4 space-y-2 text-sm">{points.map((p, i) => <li key={i} className="flex justify-between gap-3"><span><span aria-hidden="true" style={{ color: palette[i % palette.length] }}>■ </span>{p.label}</span><strong>{formatReportValue(p.value)}</strong></li>)}</ul>}
-      <p className="min-h-10 text-sm text-muted" aria-live="polite">{active != null && points[active] ? text(points[active]) : 'Tap, focus, or point to a chart mark to read its value.'}</p>
-      <details className="mt-2 text-sm"><summary className="cursor-pointer text-link">View chart data ({points.length} intervals / groups)</summary><div className="mt-3 max-h-64 overflow-auto" tabIndex="0" role="region" aria-label={`${chart.title} data`}><table className="w-full text-left"><thead><tr><th className="p-2">Period / group</th>{grouped ? <><th className="p-2">Borrowed</th><th className="p-2">Returned</th></> : <th className="p-2">Count</th>}</tr></thead><tbody>{points.map((p, i) => <tr key={i} className="border-t border-line"><th className="p-2 font-normal">{p.label}</th>{grouped ? <><td className="p-2">{p.borrowed}</td><td className="p-2">{p.returned}</td></> : <td className="p-2">{formatReportValue(p.value)}</td>}</tr>)}</tbody></table></div></details>
+      <p className="min-h-10 text-sm text-muted" aria-live="polite">{active != null && points[active] ? text(points[active]) : `Tap, focus, or point to a chart mark to read ${grouped ? 'the numbers of books borrowed and returned' : valueLabel.toLowerCase()}.`}</p>
+      <details className="mt-2 text-sm"><summary className="cursor-pointer text-link">View chart data ({points.length} intervals / groups)</summary><div className="mt-3 max-h-64 overflow-auto" tabIndex="0" role="region" aria-label={`${chart.title} data`}><table className="w-full text-left"><thead><tr><th className="p-2">{groupLabel}</th>{grouped ? <><th className="p-2">Number of books borrowed</th><th className="p-2">Number of books returned</th></> : <th className="p-2">{valueLabel}</th>}</tr></thead><tbody>{points.map((p, i) => <tr key={i} className="border-t border-line"><th className="p-2 font-normal">{p.label}</th>{grouped ? <><td className="p-2">{p.borrowed}</td><td className="p-2">{p.returned}</td></> : <td className="p-2">{formatReportValue(p.value)}</td>}</tr>)}</tbody></table></div></details>
     </>}
   </section>;
 }

@@ -13,7 +13,7 @@ const cards = [
   ['currently_borrowed', 'Currently borrowed books', 'circulation', { loan_status: 'outstanding' }, true],
   ['overdue', 'Overdue books', 'circulation', { loan_status: 'overdue' }, true],
   ['visits_today', 'Visits today', 'visits', {}, false],
-  ['unique_visitors', 'Identified unique visitors', 'visits', {}, false],
+  ['current_overdue_fines', 'Current overdue fines', 'circulation', {}, true],
   ['borrows', 'Books borrowed', 'circulation', { date_basis: 'borrowed' }, false],
   ['returns', 'Books returned', 'circulation', { date_basis: 'returned' }, false],
   ['physical_copies', 'Physical copies held', 'collection', { date_scope: 'all', holdings: 'current' }, true],
@@ -61,9 +61,9 @@ export default function LibDashboard() {
       <section aria-label="Library measures" className="staff-metrics">{cards.map(([key, label, category, filters, snapshot]) => {
         const comparison = data.comparisons[key];
         const period = key === 'visits_today' ? periodDates('today', new Date(data.as_of)) : data.filters;
-        return <Link key={key} to={reportHref(period, category, filters)} className="staff-metric" data-metric={key}>
+        return <Link key={key} to={key === 'current_overdue_fines' ? '/librarian/due-books#member-fines' : reportHref(period, category, filters)} className="staff-metric" data-metric={key}>
           <div className="staff-metric-heading">{metricIcons[key] && <span className="staff-metric-icon" aria-hidden="true">{metricIcons[key]}</span>}<h2>{label}</h2><ArrowUpRight size={14} aria-hidden="true" /></div>
-          <p className="staff-metric-value">{formatReportValue(data.metrics[key])}</p>
+          <p className="staff-metric-value">{key === 'current_overdue_fines' ? `₱${Number(data.metrics[key] || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : formatReportValue(data.metrics[key])}</p>
           <p className="staff-metric-scope">{snapshot ? `As of ${formatReportValue(data.as_of)}` : `${period.start}–${period.end}`}</p>
           {comparison && <p className="staff-metric-comparison">{comparison.delta == null ? 'Comparison unavailable' : comparison.percent == null ? 'No percentage baseline' : `${comparison.percent > 0 ? '+' : ''}${comparison.percent}% vs previous period`}</p>}
         </Link>;
@@ -79,7 +79,7 @@ export default function LibDashboard() {
         <div className="staff-chart-grid">{renderChart('visits', 'visitors')}{renderChart('circulation', 'categories')}</div>
         <div className="staff-chart-grid">{renderChart('collection', 'category-titles')}{renderChart('collection', 'least')}</div>
       </section>
-      <details className="staff-panel staff-trends"><summary>Previous-period visits and circulation trends</summary><div className="staff-chart-grid"><ReportChart chart={{ title: 'Previous-period visits', type: 'line', points: data.previous_visits }} variant="staff" />{renderChart('circulation', 'borrows')}{renderChart('circulation', 'returns')}</div></details>
+      <details className="staff-panel staff-trends"><summary>Previous-period visits and circulation trends</summary><div className="staff-chart-grid"><ReportChart chart={{ title: 'Previous-period visits', type: 'line', group_label: 'Date', value_label: 'Number of visitor entries', points: data.previous_visits }} variant="staff" />{renderChart('circulation', 'borrows')}{renderChart('circulation', 'returns')}</div></details>
       <section className="staff-panel"><h2>Needs attention</h2><ul className="staff-attention-list">{data.alerts.map(alert => <li key={alert.label}><Link to={alert.href}><span>{alert.label}</span><strong>{alert.count}</strong></Link></li>)}</ul></section>
     </div>}
   </div>;

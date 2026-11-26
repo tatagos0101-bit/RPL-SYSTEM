@@ -171,7 +171,7 @@ def test_required_id_registration_accepts_attested_manual_proof(client, db_sessi
     fields = {"name": "Synthetic Applicant", "location": "Test Town", "id_review_token": manual_proof(client)}
     files = {"id_image": ("synthetic.png", photo(), "image/png")}
     assert client.post("/api/librarian/users/register", data=fields, files=files).status_code == 422
-    result = client.post("/api/librarian/users/register", data={**fields, "identity_checked": "true"}, files=files)
+    result = client.post("/api/librarian/users/register", data={**fields, "identity_checked": "true", "member_agreed_terms": "true", "terms_version": "2026-11-26"}, files=files)
     assert result.status_code == 201
     member = db_session.get(User, result.json()["id"])
     assert member.id_document_type == "manual_tin_id" and member.must_change_password

@@ -20,6 +20,7 @@ export default function BorrowingTerms() {
     <p>Overdue, damaged and lost-book records are available for librarian review. Librarians may issue a warning, suspend an account or blacklist borrowing access, and may reactivate it after review. The system does not impose automatic suspension or blacklisting based on a fixed number of violations.</p>
     <p>Remote applications need librarian approval. Your submitted name is reviewed by the librarian. After approval, use the temporary password within 24 hours and set a new password of 8–128 characters with at least one digit. If email delivery is unavailable, collect your credentials from the library desk.</p>
     <p>Read the <Link to="/privacy-policy" target="_blank" rel="noopener noreferrer" className="font-semibold text-link underline underline-offset-4">Library Privacy Notice</Link> for account information, email messages and optional facial-recognition choices. Applying does not enroll your face.</p>
-    <p className="text-xs">Terms version: 2026-11-25. The due date and assessed charges on each confirmed loan remain the record to review with the library.</p>
+    <p>After the librarian verifies your original photo ID and issues your account, you may enroll your face online during account setup or later from Profile. Online enrollment requires separate consent, a live camera capture and matching against the ID kept by the library. You can continue using a password without enrolling your face.</p>
+    <p className="text-xs">Terms version: 2026-11-26. The due date and assessed charges on each confirmed loan remain the record to review with the library.</p>
   </section>;
 }

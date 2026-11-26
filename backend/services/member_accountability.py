@@ -6,6 +6,7 @@ from models.member_account_action import MemberAccountAction
 from models.notification import Notification
 from models.transaction import Transaction
 from services.auth_sessions import revoke_user_sessions
+from services.fines import current_fines, late_fee
 from timezone_utils import as_ph, now_ph
 
 
@@ -44,10 +45,14 @@ def accountability(db, member, skip=0, limit=25):
             "borrow_date": as_ph(loan.borrow_date), "due_date": as_ph(loan.due_date) if loan.due_date else None,
             "return_date": as_ph(loan.return_date) if loan.return_date else None,
             "condition": loan.return_condition, "remark": loan.inspection_reason,
-            "notes": loan.inspection_notes, "assessed_charges": loan.fine_amount or Decimal("0"),
+            "notes": loan.inspection_notes,
+            "is_outstanding": loan.return_date is None and loan.status in ("active", "overdue"),
+            "current_late_fee": late_fee(loan.due_date, now) if loan.return_date is None and loan.status in ("active", "overdue") else Decimal("0"),
+            "assessed_charges": loan.fine_amount or Decimal("0"),
             "inspected_by_id": loan.inspected_by_id, "inspected_at": loan.inspected_at})
     actions = db.query(MemberAccountAction).filter_by(user_id=member.id)
     return {"status": member.status, "is_blacklisted": bool(member.is_blacklisted),
+        "current_overdue_fine": current_fines(db, [member.id], now)["total"],
         "current_overdue": overdue_count, "total": issues.count(), "skip": skip, "limit": limit,
         "records": records, "actions_total": actions.count(), "actions": [
             {"id": item.id, "action": item.action, "reason": item.reason, "notes": item.notes,

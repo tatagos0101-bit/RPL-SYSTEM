@@ -51,6 +51,8 @@ from schemas.transaction import (
     TransactionOut, LoanOut, FinesSummary,
 )
 
+from services.fines import late_fee
+
 router = APIRouter(tags=["Transactions"])
 
 
@@ -61,14 +63,7 @@ def _now() -> datetime:
 
 
 def _calc_fine(due_date: datetime, return_date: datetime = None) -> Decimal:
-    ref = return_date or _now()
-    # Make both timezone-aware for comparison
-    if due_date.tzinfo is None:
-        due_date = due_date.replace(tzinfo=PH_TZ)
-    if ref.tzinfo is None:
-        ref = ref.replace(tzinfo=PH_TZ)
-    days_late = max(0, (ref - due_date).days)
-    return Decimal(days_late * FINE_PER_DAY)
+    return late_fee(due_date, return_date or _now())
 
 
 def _days_left(due_date: datetime) -> int:
@@ -79,6 +74,9 @@ def _days_left(due_date: datetime) -> int:
 
 def _enrich(tx: Transaction) -> TransactionOut:
     out = TransactionOut.model_validate(tx)
+    if tx.return_date is None and tx.status in ("active", "overdue"):
+        out.late_fee = _calc_fine(tx.due_date)
+        out.fine_amount = out.late_fee + (tx.condition_fee or Decimal("0"))
     for field in ("borrow_date", "due_date", "return_date", "inspected_at"):
         value = getattr(out, field)
         if value is not None:

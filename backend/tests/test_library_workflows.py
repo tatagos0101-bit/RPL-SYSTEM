@@ -84,7 +84,7 @@ def test_return_requires_inspection_and_preserves_original_loan(client, db_sessi
     assert db_session.query(Transaction).count() == 1
 
 
-@pytest.mark.parametrize("condition,remark", [("damaged", "torn_pages"), ("lost", "reported_lost")])
+@pytest.mark.parametrize("condition,remark", [("damaged", "torn_pages"), ("lost", "reported_lost"), ("lost", "reported_stolen")])
 def test_damaged_lost_copies_and_assessments_remain_accountable(client, db_session, condition, remark):
     member, staff, other, book, h = setup(db_session)
     loan = borrow(client, book, member, h[1])

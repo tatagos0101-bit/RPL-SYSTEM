@@ -13,7 +13,7 @@ class BorrowRequest(BaseModel):
 class ReturnRequest(BaseModel):
     inspection_confirmed: Literal[True]
     return_condition: Literal["good", "worn", "damaged", "lost"]
-    inspection_reason: Literal["no_issues", "wear_and_tear", "water_damage", "torn_pages", "missing_pages", "binding_damage", "marked_pages", "reported_lost", "other"]
+    inspection_reason: Literal["no_issues", "wear_and_tear", "water_damage", "torn_pages", "missing_pages", "binding_damage", "marked_pages", "reported_lost", "reported_stolen", "other"]
     inspection_notes: Optional[str] = Field(default=None, max_length=1000)
     condition_fee: Decimal = Field(default=Decimal("0"), ge=0, max_digits=8, decimal_places=2)
     transaction_id: Optional[int] = None
@@ -33,14 +33,14 @@ class ReturnRequest(BaseModel):
         valid_reasons = {
             "good": {"no_issues"}, "worn": {"wear_and_tear"},
             "damaged": {"water_damage", "torn_pages", "missing_pages", "binding_damage", "marked_pages", "other"},
-            "lost": {"reported_lost"},
+            "lost": {"reported_lost", "reported_stolen", "other"},
         }
         if self.inspection_reason not in valid_reasons[self.return_condition]:
             raise ValueError("Choose a remark that matches the inspected condition.")
         if self.return_condition in ("good", "worn") and self.condition_fee:
             raise ValueError("Damage/loss charges apply only to damaged or lost copies.")
         if self.inspection_reason == "other" and not (self.inspection_notes or "").strip():
-            raise ValueError("Describe the damage when choosing Other.")
+            raise ValueError("Describe the damage or loss when choosing Other.")
         return self
 
 

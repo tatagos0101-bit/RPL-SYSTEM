@@ -91,6 +91,7 @@ class ManualVisitorSearch(BaseModel):
 
 
 class LibMemberOut(BaseModel):
+    current_overdue_fine: Decimal = Decimal("0")
     is_blacklisted: bool = False
     accountability_count: int = 0
     id:           int

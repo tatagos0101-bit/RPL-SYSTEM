@@ -22,6 +22,8 @@ export const getEntryLogs = (params = {}) =>
 export const getDueBooks = (filter = 'all') =>
   client.get('/api/librarian/due-books', { params: { filter } });
 
+export const getFineSummary = () => client.get('/api/librarian/fines/summary');
+
 // Members
 export const getMembers = (params = {}) =>
   client.get('/api/librarian/users', { params });

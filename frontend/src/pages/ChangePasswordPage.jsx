@@ -25,7 +25,7 @@ export default function ChangePasswordPage() {
     event.preventDefault();
     if (pending.current) return;
     if (requiresPrivacyConsent && !acceptedPrivacyPolicy) {
-      setError('Accept the Privacy Notice to finish setting up your account.');
+      setError('Agree to the borrower terms and acknowledge the Privacy Notice to finish setting up your account.');
       return;
     }
     if (!isValidNewPassword(form.next)) {
@@ -56,7 +56,7 @@ export default function ChangePasswordPage() {
       };
       updateStoredProfile(profile);
       setForm({ next: '', confirm: '' });
-      navigate(homeForRole(profile.role), { replace: true, state: { passwordChanged: true } });
+      navigate(requiresPrivacyConsent && profile.role === 'member' ? '/user/face-setup' : homeForRole(profile.role), { replace: true, state: { passwordChanged: true } });
     } catch (err) {
       const detail = err.response?.data?.detail;
       const rejected = err.response?.status >= 400 && err.response?.status < 500;
@@ -84,13 +84,13 @@ export default function ChangePasswordPage() {
 
         <p className="mb-6 text-sm leading-6 text-muted">
           {requiresPrivacyConsent
-            ? 'Read the privacy notice and choose a new password to activate your library account.'
+            ? 'Review the borrower terms and privacy notice, then choose a new password. Next, you can choose whether to enroll your face online.'
             : 'Choose a new password to finish setting up your account. After it is saved, you will go to your homepage.'}
         </p>
 
         {requiresPrivacyConsent && (
           <section className="mb-6">
-            <h2 id="setup-privacy-title" className="rpl-section-title">Library Privacy Notice</h2>
+            <h2 id="setup-privacy-title" className="rpl-section-title">Terms and Library Privacy Notice</h2>
             <p id="setup-privacy-hint" className="mb-2 text-sm text-muted">Scroll to read the full notice.</p>
             <div role="region" aria-labelledby="setup-privacy-title" aria-describedby="setup-privacy-hint" tabIndex={0}
               className="max-h-72 overflow-y-auto rounded-xl border border-line bg-subtle p-4 text-sm leading-6 text-ink focus-visible:outline-2 focus-visible:outline-link">
@@ -108,7 +108,7 @@ export default function ChangePasswordPage() {
                 disabled={saving}
                 required
               />
-              <span>I acknowledge the Library Privacy Notice and agree that the library may use my email address, if provided, for the account and library service messages described above.</span>
+              <span>I have read and agree to the borrower terms and conditions. I acknowledge the Library Privacy Notice and agree that the library may use my email address, if provided, for the account and library service messages described above.</span>
             </label>
             <p className="mt-2 text-sm text-muted">Facial recognition is optional and requires separate consent when you enroll.</p>
           </section>

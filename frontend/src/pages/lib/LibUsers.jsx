@@ -2,6 +2,7 @@ import ModalFrame from '../../components/ModalFrame';
 import { Link } from 'react-router-dom';
 import MemberAccountability from '../../components/MemberAccountability';
 import RegistrationDelivery from '../../components/RegistrationDelivery';
+import BorrowingTerms from '../../components/BorrowingTerms';
 import { buildMemberRegistrationForm, registrationErrorMessage } from '../../api/memberRegistration';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
@@ -182,6 +183,7 @@ export function RegisterMemberModal({ onClose, onSuccess, application = null }) 
   const [form, setForm] = useState({ name: application?.name || '', email: application?.email || '', location: application?.location || '' });
   const [idDocument, setIdDocument] = useState(null);
   const [identityChecked, setIdentityChecked] = useState(false);
+  const [memberAgreedTerms, setMemberAgreedTerms] = useState(false);
   const [errors,    setErrors]    = useState({});
   const [apiErr,    setApiErr]    = useState('');
   const [step,      setStep]      = useState('form'); // form | loading | success
@@ -191,6 +193,7 @@ export function RegisterMemberModal({ onClose, onSuccess, application = null }) 
     const e = {};
     if (!idDocument) e.idFile = 'Upload and check the required government photo ID.';
     if (!identityChecked) e.identityChecked = 'Confirm the in-person identity check.';
+    if (!memberAgreedTerms) e.terms = 'The applicant must agree to the borrower terms before registration.';
     if (!form.name.trim())     e.name     = 'Full name is required.';
     if (!form.location.trim()) e.location = 'Address is required.';
     if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Enter a valid email.';
@@ -202,6 +205,8 @@ export function RegisterMemberModal({ onClose, onSuccess, application = null }) 
     if (Object.keys(e).length) { setErrors(e); return; }
     setStep('loading'); setApiErr('');
     const fd = appendIdentityReview(buildMemberRegistrationForm(form), idDocument, identityChecked);
+    fd.set('member_agreed_terms', String(memberAgreedTerms));
+    fd.set('terms_version', '2026-11-26');
     if (application) fd.set('application_id', String(application.id));
     try {
       const res = await registerMember(fd);
@@ -255,7 +260,7 @@ export function RegisterMemberModal({ onClose, onSuccess, application = null }) 
             <div className="flex items-start gap-2.5 px-4 py-3 bg-warning-soft border border-warning rounded-xl w-full max-w-xs text-left mb-6">
               <Info size={14} className="text-warning flex-shrink-0 mt-0.5"/>
               <p className="text-sm font-medium text-warning">
-                The member must review and accept the Privacy Notice and choose a new password on their first sign-in.
+                On first sign-in, the member reviews the terms and Privacy Notice and sets a new password. They can then choose online Face ID enrollment from home using this verified ID, or continue with a password.
               </p>
             </div>
             <button onClick={onClose} className="px-8 py-3 bg-action hover:bg-action-hover text-white rounded-lg font-semibold text-sm tracking-normal transition-all">Done</button>
@@ -320,6 +325,9 @@ export function RegisterMemberModal({ onClose, onSuccess, application = null }) 
               </div>
               <label className="flex items-start gap-3 rounded-xl border border-line bg-subtle p-4 text-sm text-ink"><input type="checkbox" checked={identityChecked} disabled={!idDocument} onChange={event => { setIdentityChecked(event.target.checked); setErrors(previous => ({ ...previous, identityChecked: undefined })); }} className="mt-1 h-5 w-5 shrink-0" />I inspected the original ID and its validity/security features, compared the portrait with the applicant present in the library, and confirmed the name and address above.</label>
               {errors.identityChecked && <p role="alert" className="text-sm text-danger">{errors.identityChecked}</p>}
+              <div className="max-h-64 overflow-y-auto rounded-xl border border-line bg-subtle p-4" tabIndex="0" role="region" aria-label="Registration terms"><BorrowingTerms /></div>
+              <label className="flex items-start gap-3 rounded-xl border border-line p-4 text-sm text-ink"><input type="checkbox" checked={memberAgreedTerms} onChange={event => { setMemberAgreedTerms(event.target.checked); setErrors(previous => ({ ...previous, terms: undefined })); }} className="mt-1 h-5 w-5 shrink-0" />The applicant has read and agreed to the borrower terms and conditions above. I am recording their agreement before creating this account.</label>
+              {errors.terms && <p role="alert" className="text-sm text-danger">{errors.terms}</p>}
             </div>
 
             {/* Footer */}
@@ -449,7 +457,7 @@ export default function LibUsers() {
               <table role="table" aria-labelledby="members-list-heading" className="staff-members-table w-full text-left">
                 <thead role="rowgroup">
                   <tr role="row" className="text-sm font-semibold text-muted tracking-normal border-b border-line">
-                    {['Member','ID','Location','Joined','Loans','Face ID','Status','Actions'].map(h => (
+                    {['Member','ID','Location','Joined','Loans / fines','Face ID','Status','Actions'].map(h => (
                       <th key={h} role="columnheader" scope="col" className="px-6 py-4">{h}</th>
                     ))}
                   </tr>
@@ -481,7 +489,7 @@ export default function LibUsers() {
                         <span className="staff-member-label" aria-hidden="true">Joined</span>
                         {toUtcDate(u.joined_at).toLocaleDateString('en-PH',{month:'short',year:'numeric'})}
                       </td>
-                      <td role="cell" className="px-6 py-4 text-sm font-semibold"><span className="staff-member-label" aria-hidden="true">Loans</span>{u.active_loans}</td>
+                      <td role="cell" className="px-6 py-4 text-sm font-semibold"><span className="staff-member-label" aria-hidden="true">Loans / fines</span>{u.active_loans} loans<button type="button" onClick={() => setAccountabilityTarget(u)} className={`mt-1 block text-left text-xs underline underline-offset-4 ${Number(u.current_overdue_fine) > 0 ? 'text-danger' : 'text-muted'}`}>₱{Number(u.current_overdue_fine || 0).toFixed(2)} overdue</button></td>
                       <td role="cell" className="px-6 py-4">
                         <span className="staff-member-label" aria-hidden="true">Face ID</span>
                         <span title={!u.face_enrolled && u.face_enrollment_display_only ? 'Display status only; no facial template is registered.' : undefined} aria-label={!u.face_enrolled && u.face_enrollment_display_only ? 'Enrolled — display status only' : undefined} className={`staff-member-badge px-2 py-0.5 rounded-full text-sm font-semibold ${u.face_enrolled || u.face_enrollment_display_only?'bg-info-soft bg-info-soft text-link text-link':'bg-subtle text-muted'}`}>
