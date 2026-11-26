@@ -23,8 +23,8 @@ export const requestPasswordReset = (identifier, channel = 'auto') =>
 export const confirmPasswordReset = (identifier, code, newPassword) =>
   client.post(PASSWORD_RESET_CONFIRM_PATH, buildPasswordResetConfirm(identifier, code, newPassword));
 
-export const enrollFace = (imageBase64, acceptFaceRecognition, idImage) =>
-  client.post('/api/auth/enroll-face', buildFaceEnrollment(imageBase64, acceptFaceRecognition, idImage), { timeout: 90000 });
+export const enrollFace = (imageBase64, acceptFaceRecognition) =>
+  client.post('/api/auth/enroll-face', buildFaceEnrollment(imageBase64, acceptFaceRecognition), { timeout: 90000 });
 
 export const faceAuth = (imageBase64, expectedRole, config) =>
   client.post('/api/auth/face', { image: imageBase64, expected_role: expectedRole }, { timeout: 30000, ...config });

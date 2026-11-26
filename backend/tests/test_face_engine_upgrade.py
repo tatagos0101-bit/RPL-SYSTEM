@@ -88,7 +88,7 @@ def test_enroll_face_stores_dlib_legacy_insightface_and_consent(client, db_sessi
     assert json.loads(user.face_encoding) == [0.2] * 128
     assert user.face_consent_version == FACE_CONSENT_VERSION
     assert user.face_consent_at is not None
-    assert user.face_consent_method == ("librarian_assisted" if assisted else "self_id_checked")
+    assert user.face_consent_method == ("librarian_assisted" if assisted else "self")
     assert user.face_consent_recorded_by_id == actor.id
     stored = db_session.query(FaceEmbedding).filter_by(user_id=user.id, engine="insightface").one()
     assert stored.dimension == 512

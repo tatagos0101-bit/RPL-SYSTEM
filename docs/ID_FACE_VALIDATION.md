@@ -1,5 +1,10 @@
 # Validating the online ID comparison policy
 
+As of November 26, online member enrollment uses the signed-in account, fresh
+consent and live-face checks without an ID comparison. This document and analyzer
+remain evaluation material for the separate ID comparator; they do not describe
+the current enrollment gate. See [the active workflow](REMOTE_FACE_ENROLLMENT.md).
+
 The operator selected keeping the existing **0.45 maximum cosine distance** on
 November 25, 2026. No less strict SFace policy is approved by this document or
 the analysis tool. Login, entrance, PAD and duplicate-enrollment rules are unchanged.

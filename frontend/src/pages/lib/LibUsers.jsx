@@ -515,7 +515,7 @@ export default function LibUsers() {
                         {actionMenu===u.id && (
                           <FloatingActions anchor={actionAnchor} onClose={closeActionMenu}>
                             <button onClick={() => { setActionMenu(null); setAccountabilityTarget(u); }} className="w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-link hover:bg-info-soft">Borrowing record & restrictions</button>
-                            {!u.identity_verified && <button onClick={() => { setActionMenu(null); setIdentityTarget(u); }} className="w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-link hover:bg-info-soft">Verify ID for online enrollment</button>}
+                            {!u.identity_verified && <button onClick={() => { setActionMenu(null); setIdentityTarget(u); }} className="w-full rounded-lg px-4 py-2.5 text-left text-sm font-semibold text-link hover:bg-info-soft">Verify ID</button>}
                             {(
                               <button onClick={() => { setActionMenu(null); setEnrollTarget(u); }}
                                 className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold tracking-normal text-link hover:bg-info-soft flex items-center gap-2 transition-all">

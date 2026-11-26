@@ -186,7 +186,7 @@ def test_manual_baseline_remote_enrollment_keeps_all_face_checks_and_no_comparis
     result = client.post("/api/auth/enroll-face", json=enrollment(content))
     assert result.status_code == 200
     db_session.refresh(member)
-    assert member.face_encoding and member.face_id_verified_at
+    assert member.face_encoding and member.face_id_verified_at is None
     assert member.id_document_type == "manual_tin_id"
     assert {str(p) for p in Path("uploads").rglob("*") if p.is_file()} == before
 
@@ -200,7 +200,7 @@ def test_manual_baseline_cannot_bypass_remote_pad(client, db_session, monkeypatc
 
 
 @pytest.mark.parametrize("mismatch", ["live", "uploaded", "baseline", "deduplication", "invalid_text", "portrait"])
-def test_manual_baseline_cannot_bypass_remote_identity_checks(client, db_session, monkeypatch, mismatch):
+def test_separate_manual_id_comparison_and_duplicate_policy(client, db_session, monkeypatch, mismatch):
     member, content = verified_member(db_session); sign_in(client, member)
     mock_text_failure(monkeypatch); mock_live(monkeypatch, live=face(1) if mismatch == "live" else face())
     code = 422
@@ -216,13 +216,20 @@ def test_manual_baseline_cannot_bypass_remote_identity_checks(client, db_session
     elif mismatch == "portrait":
         def no_portrait(frame): raise HTTPException(422, "A usable ID portrait is required.")
         monkeypatch.setattr(ids, "document_face", no_portrait)
-    assert client.post("/api/auth/enroll-face", json=enrollment(content)).status_code == code
+    if mismatch == "deduplication":
+        assert client.post("/api/auth/enroll-face", json=enrollment(content)).status_code == code
+    else:
+        with pytest.raises(HTTPException) as failure:
+            ids.verify_remote_identity(member, enrollment(content)["id_image"], face(1) if mismatch == "live" else face(), "synthetic-live")
+        assert failure.value.status_code == code
     db_session.refresh(member); assert member.face_encoding is None
 
 
-def test_member_request_cannot_authorize_manual_review(client, db_session, monkeypatch):
+def test_member_enrollment_cannot_change_librarian_id_review(client, db_session, monkeypatch):
     member, content = verified_member(db_session, "national_id"); sign_in(client, member)
     mock_text_failure(monkeypatch); mock_live(monkeypatch)
     body = {**enrollment(content), "manual_review": True, "document_type": "manual_tin_id"}
-    assert client.post("/api/auth/enroll-face", json=body).status_code == 422
-    db_session.refresh(member); assert member.face_encoding is None
+    assert client.post("/api/auth/enroll-face", json=body).status_code == 200
+    db_session.refresh(member)
+    assert member.face_encoding and member.id_document_type == "national_id"
+    assert member.id_document_digest == hashlib.sha256(content).hexdigest()

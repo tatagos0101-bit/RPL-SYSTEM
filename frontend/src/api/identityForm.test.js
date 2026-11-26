@@ -21,11 +21,11 @@ test('registration needs an ID review and preserves the bound upload ticket', ()
   assert.equal(form.get('identity_checked'), 'true');
 });
 
-test('remote enrollment submits a separate comparison ID with current consent', () => {
+test('online enrollment submits the live capture and fresh consent without an ID', () => {
   const body = buildFaceEnrollment('synthetic-live', true, 'synthetic-id');
-  assert.equal(body.id_image, 'synthetic-id');
+  assert.equal(Object.hasOwn(body, 'id_image'), false);
   assert.equal(body.image, 'synthetic-live');
-  assert.equal(body.face_consent_version, '2026-11-25');
+  assert.equal(body.face_consent_version, '2026-11-26');
   assert.equal(body.accept_face_recognition, true);
   assert.equal(Object.hasOwn(buildFaceEnrollment('synthetic-live', true), 'id_image'), false);
 });

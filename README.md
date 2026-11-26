@@ -42,6 +42,10 @@ librarian administration, circulation, reporting, QR labels, and attendance.
 - **Member accounts:** email or Member ID/password login, profile and avatar
   updates, optional face enrollment/login, and first-login password setup with
   a privacy notice for members registered by staff.
+  Online face enrollment asks for separate agreement and a live camera capture;
+  it does not request an ID upload or compare the face with an ID. Librarian
+  registration retains the required original-ID check. See the
+  [enrollment workflow](docs/REMOTE_FACE_ENROLLMENT.md).
 - **Member dashboard:** active loans, due dates, fines, borrowing history,
   activity, and reading goals. Returned loans remain part of historical statistics.
 - **Member Browse Books:** an Open Library-inspired Featured view shows

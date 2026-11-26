@@ -12,7 +12,7 @@ from services.email_identity import email_matches, normalize_email
 from database import get_db
 from dependencies import get_current_user, get_session_user, get_locked_current_user, get_locked_session_user, require_member
 from services.member_deletion import lock_active_account, remove_profile_photo
-from services.identity_documents import can_verify_registered_face, has_verified_identity
+from services.identity_documents import has_verified_identity
 from services.auth_cookie import set_auth_cookie
 from services.auth_sessions import create_session_token, revoke_user_sessions
 from services.password_reset import expire_unused_reset_codes_for_user
@@ -44,7 +44,6 @@ def _face_enrolled(db: Session, user: User) -> bool:
 
 
 def _build_profile(user: User, db: Session) -> UserProfile:
-    registered_face = can_verify_registered_face(db, user)
     return UserProfile(
         id=user.id,
         name=user.name,
@@ -62,9 +61,9 @@ def _build_profile(user: User, db: Session) -> UserProfile:
         member_id=user.member_id or f"RPL-{user.id:05d}",
         avatar_url=resolve_upload_url(user.avatar_url),
         identity_verified=has_verified_identity(user),
-        remote_face_enrollment_allowed=user.role == "member" and user.status == "active" and not user.must_change_password and not user.requires_privacy_consent and has_verified_identity(user),
-        remote_face_verification_method="registered_face" if registered_face else "id_portrait",
-        remote_face_capture_mirrored=registered_face and user.face_consent_method == "librarian_assisted",
+        remote_face_enrollment_allowed=user.role == "member" and user.status == "active" and not user.must_change_password and not user.requires_privacy_consent,
+        remote_face_verification_method="account_session",
+        remote_face_capture_mirrored=True,
     )
 
 

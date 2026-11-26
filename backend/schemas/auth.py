@@ -208,7 +208,6 @@ class EnrollFaceRequest(BaseModel):
     image: str   # base64 JPEG
     accept_face_recognition: StrictBool = False
     face_consent_version: str | None = Field(default=None, max_length=32)
-    id_image: str | None = Field(default=None, max_length=1_600_000)
 
     @field_validator("image")
     @classmethod

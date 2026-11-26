@@ -359,32 +359,23 @@ suggestions, a portrait check and explicit staff attestation. Original IDs retai
 private-upload validation and storage. When OCR cannot read the text, a librarian
 can password-confirm a supervised original-ID review; the saved `manual_` ID type
 records that provenance. This does not override detected invalid/expired evidence
-or a failed portrait check. Verified members can enroll online with a
-live PAD-checked face and an ID-to-face-to-saved-ID comparison; remote comparison
-images are discarded. A saved manual review can cover unreadable comparison text,
-but never replaces face matching, PAD or deduplication. Legacy uploads are not
-backfilled as verified. See
-[the identity workflow and authenticity limits](REMOTE_FACE_ENROLLMENT.md).
-Online ID comparisons preserve small original uploads and use lossless ID working
-frames, bounded portrait alignment, a checksummed local SFace/YuNet comparison
-engine and specific mismatch messages. All comparison crops use an antialiased
-160px face scale before native alignment; additional landmark-detector resizing
-maps back to that common-scale crop. Original live/PAD/sign-in inputs are unchanged.
-Private text diagnostics also cover live
-alignment failures after a matching-original-ID and live PAD check.
-The existing cosine policy is retained unless an explicit server-only
-`ID_FACE_MAX_DISTANCE` sets a reviewed SFace ID-comparison policy. It cannot change
-sign-in, entrance or duplicate-enrollment thresholds; invalid settings fail closed.
-SFace vectors never share the dlib
-descriptor space. Comparison descriptors remain ephemeral; successful enrollment
-stores the original live descriptor. Matching thresholds and PAD remain unchanged.
-Already registered members with trusted enrollment provenance have a separate
-read-only online verification operation. It matches their uploaded ID to the
-verified original and their PAD-checked live face to their own registered face
-using the existing login threshold/margin. Server-side provenance and real-template
-checks select the operation before first-time matching. It never replaces the
-reference or records a new enrollment; first-time online registration retains the
-three ID/live comparisons. The profile exposes only a method hint, not a template.
+or a failed portrait check. Legacy uploads are not backfilled as verified.
+See [the identity workflow and authenticity limits](REMOTE_FACE_ENROLLMENT.md).
+
+Online member enrollment now relies on the active signed-in account, not an ID
+upload or ID-to-face comparison. Profile and first-login face setup both display
+fresh, separate facial-recognition terms before the camera starts. The server
+requires an explicit current-version agreement on every attempt, one live face,
+existing PAD checks and enrollment deduplication. It only updates the authenticated
+account; submitted user IDs, names and ID-review flags cannot change ownership or
+the librarian's saved identity record. A successful update replaces existing face
+templates, records self-consent version/time/actor and clears the face-to-ID
+verification timestamp. It does not claim identity verification. Live enrollment
+images are not persisted, including failures. Matching thresholds, account/session
+restrictions, librarian registration checks and supervised enrollment are preserved.
+The former online registered-reference/ID-comparison operation is no longer routed.
+There is no new schema, dependency or environment requirement.
+
 Registration creates a random 10-character
 password with forced first-login change, commits the member, then attempts email
 when supplied. Without email, credentials are shown to the librarian. The registration-only

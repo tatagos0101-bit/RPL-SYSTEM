@@ -331,7 +331,7 @@ export default function UserProfile() {
     <div className="rpl-page rpl-profile min-h-screen bg-canvas text-ink pb-24 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 md:px-8 pt-8 space-y-5">
         <AccountNotice />
-        {showFaceEnrollment && <Suspense fallback={<p role="status">Opening face enrollment…</p>}><FaceEnrollModal selfService user={profile} onClose={() => setShowFaceEnrollment(false)} onSuccess={() => { setProfile(previous => ({ ...previous, face_enrolled: true, remote_face_verification_method: 'registered_face' })); setBiometric(previous => ({ ...previous, enrolled: true })); }} /></Suspense>}
+        {showFaceEnrollment && <Suspense fallback={<p role="status">Opening face enrollment…</p>}><FaceEnrollModal selfService user={profile} onClose={() => setShowFaceEnrollment(false)} onSuccess={() => { setProfile(previous => ({ ...previous, face_enrolled: true })); setBiometric(previous => ({ ...previous, enrolled: true })); }} /></Suspense>}
         <AccountabilityDisclosure />
 
         {/* Page title */}
@@ -529,16 +529,16 @@ export default function UserProfile() {
                       </p>
                     </div>
                     <p className="text-sm text-muted leading-relaxed">
-                      {biometric?.enrolled ? 'Registered for library face identification.' : profile.remote_face_enrollment_allowed ? 'Enroll online using your ID and a live face capture.' : 'Ask a librarian to verify your original photo ID in person first.'}
+                      {biometric?.enrolled ? 'Registered for library face identification.' : profile.remote_face_enrollment_allowed ? 'Enroll online with your own live face capture.' : 'Complete your required account setup first.'}
                     </p>
                   </div>
                 </div>
 
                 <div className="pt-3.5 border-t border-line">
                   <p className="text-sm text-muted leading-relaxed">
-                    {profile.remote_face_verification_method === 'registered_face' ? 'Your face is already verified for library identification. You can verify it online using your ID and a live capture. A librarian can help if the registered face needs replacing.' : profile.remote_face_enrollment_allowed ? 'Online enrollment compares your live face with your uploaded ID and the ID verified by the library. It cannot change your verified name.' : 'Once your identity has been verified in the library, you can enroll your face from home. Password access remains available.'}
+                    {profile.remote_face_enrollment_allowed ? 'Enroll or update your own face online after agreeing to the separate facial-recognition terms. Use a live camera capture; no ID upload is needed here. Your name and the librarian’s ID record stay unchanged.' : 'Complete your required account setup to enroll your face online. Password access remains available.'}
                   </p>
-                  {profile.remote_face_enrollment_allowed && <button type="button" onClick={() => setShowFaceEnrollment(true)} className="mt-4 flex min-h-11 items-center gap-2 rounded-xl bg-action px-4 py-3 font-semibold text-white transition-colors hover:bg-action-hover"><Camera size={17} />{profile.remote_face_verification_method === 'registered_face' ? 'Verify face online' : biometric?.enrolled ? 'Update face online' : 'Enroll face online'}</button>}
+                  {profile.remote_face_enrollment_allowed && <button type="button" onClick={() => setShowFaceEnrollment(true)} className="mt-4 flex min-h-11 items-center gap-2 rounded-xl bg-action px-4 py-3 font-semibold text-white transition-colors hover:bg-action-hover"><Camera size={17} />{biometric?.enrolled ? 'Update face online' : 'Enroll face online'}</button>}
                   <Link to="/privacy-policy" className="mt-2 inline-block text-sm font-semibold text-link underline underline-offset-4">Read the Library Privacy Notice</Link>
                 </div>
               </div>

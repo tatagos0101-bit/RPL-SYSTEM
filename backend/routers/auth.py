@@ -8,7 +8,6 @@ import string
 import secrets
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
-from starlette.responses import JSONResponse
 from services.passwords import hash_password, verify_password, needs_legacy_replacement
 from services.email_identity import find_email_user, email_matches, normalize_email
 from services.credential_expiry import require_current_temporary_password
@@ -758,19 +757,10 @@ def enroll_face(
     current_user = lock_active_account(db, current_user.id)
     require_enrollment_consent(body.accept_face_recognition, body.face_consent_version)
     if current_user.role == "member":
-        from services.identity_documents import IdentityComparisonError, enroll_remote_face
-        try:
-            outcome = enroll_remote_face(db, current_user, body)
-        except IdentityComparisonError as error:
-            # Reached only after this account's ID and live-PAD checks. No image,
-            # embedding, identity field, file reference or diagnostic log is sent.
-            return JSONResponse(status_code=422, content={"detail": error.detail,
-                "comparison_diagnostic": error.diagnostic}, headers={"Cache-Control": "no-store"})
+        from services.member_face_enrollment import enroll_member_face
+        outcome = enroll_member_face(db, current_user, body.image)
         db.commit()
-        verified_existing = outcome["operation"] == "verified_existing"
-        return {"success": True, **outcome, "message": (
-            "Your registered face was verified. Its saved reference was not replaced."
-            if verified_existing else "Face enrolled after ID comparison. Comparison images were not retained.")}
+        return {"success": True, **outcome, "message": "Face enrolled successfully. Your live camera image was not retained."}
     import services.face_engine_service as face_engine_service
     from services.liveness_service import check_liveness
     from models.security_alert import SecurityAlert

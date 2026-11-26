@@ -138,22 +138,22 @@ def test_registration_requires_original_id_check_and_librarian(client, db_sessio
     assert client.post("/api/librarian/identity/inspect", files={"id_image": ("id.png", content, "image/png")}).status_code == 401
 
 
-def test_legacy_upload_or_display_badge_is_not_verified_identity(client, db_session):
+def test_legacy_badge_is_not_id_verification_but_online_enrollment_needs_no_id(client, db_session, monkeypatch):
     member = account(db_session)
     member.id_image_url = "/uploads/ids/legacy.png"; member.face_enrollment_display_only = True
-    db_session.commit(); sign_in(client, member)
+    db_session.commit(); sign_in(client, member); mock_live(monkeypatch)
     profile = client.get("/api/user/profile").json()
-    assert not profile["identity_verified"] and not profile["remote_face_enrollment_allowed"]
-    assert client.post("/api/auth/enroll-face", json=enrollment(photo())).status_code == 403
+    assert not profile["identity_verified"] and profile["remote_face_enrollment_allowed"]
+    assert client.post("/api/auth/enroll-face", json=enrollment(photo())).status_code == 200
+    db_session.refresh(member)
+    assert member.id_verified_at is None and not member.face_enrollment_display_only
 
 
-def test_required_id_and_current_consent(client, db_session):
-    member = account(db_session); setup_verified(db_session, member); sign_in(client, member)
-    body = enrollment(photo()); body.pop("id_image")
+def test_current_consent_is_required_without_an_id(client, db_session):
+    member = account(db_session); sign_in(client, member)
+    body = enrollment(photo()); body.pop("id_image"); body["accept_face_recognition"] = False
     assert client.post("/api/auth/enroll-face", json=body).status_code == 422
-    body = enrollment(photo()); body["accept_face_recognition"] = False
-    assert client.post("/api/auth/enroll-face", json=body).status_code == 422
-    body["accept_face_recognition"] = True; body["face_consent_version"] = "2026-11-24"
+    body["accept_face_recognition"] = True; body["face_consent_version"] = "2026-11-25"
     assert client.post("/api/auth/enroll-face", json=body).status_code == 422
 
 
@@ -170,17 +170,19 @@ def test_remote_pad_fails_closed_without_retaining_images(client, db_session, mo
 
 
 @pytest.mark.parametrize("mismatch", ["live", "uploaded", "baseline_changed"])
-def test_id_and_live_face_must_match_saved_identity(client, db_session, monkeypatch, mismatch):
-    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
-    mock_document(monkeypatch); mock_live(monkeypatch, live=face(1) if mismatch == "live" else face())
+def test_separate_id_comparator_still_rejects_mismatched_portraits(client, db_session, monkeypatch, mismatch):
+    member = account(db_session); content = setup_verified(db_session, member)
+    live = face(1) if mismatch == "live" else face()
+    mock_document(monkeypatch); mock_live(monkeypatch, live=live)
     if mismatch == "uploaded":
         monkeypatch.setattr(ids, "inspect_document", lambda raw: ids.DocumentCheck(hashlib.sha256(raw).hexdigest(), "national_id", None, None, face(1)))
     if mismatch == "baseline_changed":
         from pathlib import Path
         Path("uploads/ids/synthetic.png").write_bytes(photo("blue"))
-    result = client.post("/api/auth/enroll-face", json=enrollment(content))
-    assert result.status_code == (409 if mismatch == "baseline_changed" else 422)
-    db_session.refresh(member); assert member.face_encoding is None
+    with pytest.raises(HTTPException) as failure:
+        ids.verify_remote_identity(member, enrollment(content)["id_image"], live, "synthetic-live-camera")
+    assert failure.value.status_code == (409 if mismatch == "baseline_changed" else 422)
+    assert member.face_encoding is None
 
 
 def test_successful_remote_enrollment_keeps_template_not_comparison_files(client, db_session, monkeypatch):
@@ -193,16 +195,16 @@ def test_successful_remote_enrollment_keeps_template_not_comparison_files(client
     assert result.status_code == 200
     db_session.refresh(member)
     assert json.loads(member.face_encoding) == [0.0] * 128
-    assert member.name == "Synthetic one" and member.face_id_verified_at
-    assert member.face_consent_method == "self_id_checked"
+    assert member.name == "Synthetic one" and member.face_id_verified_at is None
+    assert member.face_consent_method == "self"
     assert member.id_document_digest == hashlib.sha256(content).hexdigest()
     assert {str(p) for p in Path("uploads").rglob("*") if p.is_file()} == before
     assert db_session.query(SecurityAlert).count() == 0
 
 
 @pytest.mark.parametrize("matches", [False, True])
-def test_remote_sface_comparison_still_enforces_matches_and_keeps_original_template(client, db_session, monkeypatch, matches):
-    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+def test_separate_sface_comparator_enforces_its_policy_without_enrolling(client, db_session, monkeypatch, matches):
+    member = account(db_session); content = setup_verified(db_session, member)
     mock_document(monkeypatch); mock_live(monkeypatch)
     calls = []
     def compare(frame, detected, **kwargs):
@@ -212,19 +214,16 @@ def test_remote_sface_comparison_still_enforces_matches_and_keeps_original_templ
         values[1 if kwargs["label"] == "live camera" and not matches else 0] = 1.0
         return {"engine": "sface", "encoding": values}
     monkeypatch.setattr(ids, "comparison_face", compare)
-    result = client.post("/api/auth/enroll-face", json=enrollment(content))
-    assert result.status_code == (200 if matches else 422)
-    if not matches:
-        assert result.headers["cache-control"] == "no-store"
-        report = result.json()["comparison_diagnostic"]
+    if matches:
+        ids.verify_remote_identity(member, enrollment(content)["id_image"], face(), "synthetic-live-camera")
+    else:
+        with pytest.raises(ids.IdentityComparisonError) as failure:
+            ids.verify_remote_identity(member, enrollment(content)["id_image"], face(), "synthetic-live-camera")
+        report = failure.value.diagnostic
         assert report["stage"] == "live_to_saved" and report["distances"]["id_to_saved"] == 0
         assert report["distances"]["live_to_saved"] == 1 and report["distances"]["live_to_id"] == 1
-        for private in ("synthetic-live-camera", member.name, member.id_image_url, member.id_document_digest):
-            assert private not in result.text
     assert calls == ["uploaded ID", "saved library ID", "live camera"]
-    db_session.refresh(member)
-    assert member.face_encoding == (json.dumps([0.0] * 128) if matches else None)
-    assert bool(member.face_id_verified_at) == matches
+    assert member.face_encoding is None and member.face_id_verified_at is None
 
 
 def test_live_pad_failure_cannot_reach_the_new_comparator(client, db_session, monkeypatch):
@@ -235,50 +234,44 @@ def test_live_pad_failure_cannot_reach_the_new_comparator(client, db_session, mo
     assert client.post("/api/auth/enroll-face", json=enrollment(content)).status_code == 422
 
 
-def test_member_cannot_supply_a_less_strict_id_policy_in_the_enrollment_request(client, db_session, monkeypatch):
+def test_separate_id_comparison_policy_is_server_selected(client, db_session, monkeypatch):
     import config
     monkeypatch.setattr(config, "ID_FACE_MAX_DISTANCE", "0.2")
-    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+    member = account(db_session); content = setup_verified(db_session, member)
     mock_document(monkeypatch); mock_live(monkeypatch)
     def compare(frame, detected, **kwargs):
         values = [0.0] * 128
         values[:2] = [.6, .8] if kwargs["label"] == "live camera" else [1.0, 0.0]
         return {"engine": "sface", "encoding": values}
     monkeypatch.setattr(ids, "comparison_face", compare)
-    body = {**enrollment(content), "id_face_max_distance": .6, "ID_FACE_MAX_DISTANCE": .6}
-    result = client.post("/api/auth/enroll-face", json=body)
-    assert result.status_code == 422
-    assert result.json()["comparison_diagnostic"]["maximum_distance"] == .2
-    db_session.refresh(member)
+    with pytest.raises(ids.IdentityComparisonError) as failure:
+        ids.verify_remote_identity(member, enrollment(content)["id_image"], face(), "synthetic-live-camera")
+    assert failure.value.diagnostic["maximum_distance"] == .2
     assert member.face_encoding is None and member.face_id_verified_at is None
 
 
 @pytest.mark.parametrize("reason", ["not_found", "multiple_faces", "different_face", "invalid_landmarks"])
-def test_live_alignment_failure_has_safe_support_details_after_id_and_pad_checks(client, db_session, monkeypatch, reason):
+def test_separate_comparator_alignment_failure_has_safe_diagnostics(client, db_session, monkeypatch, reason):
     from services.id_face_verifier import PortraitDetectionError
-    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+    member = account(db_session); content = setup_verified(db_session, member)
     mock_document(monkeypatch); mock_live(monkeypatch)
     def compare(frame, detected, **kwargs):
         if kwargs["label"] == "live camera":
             raise PortraitDetectionError(reason, "The live camera portrait needs one clear face for comparison.")
         return {"engine": "sface", "encoding": [1.0] + [0.0] * 127}
     monkeypatch.setattr(ids, "comparison_face", compare)
-    result = client.post("/api/auth/enroll-face", json=enrollment(content))
-    assert result.status_code == 422 and result.headers["cache-control"] == "no-store"
-    report = result.json()["comparison_diagnostic"]
+    with pytest.raises(ids.IdentityComparisonError) as failure:
+        ids.verify_remote_identity(member, enrollment(content)["id_image"], face(), "synthetic-live-camera")
+    report = failure.value.diagnostic
     assert report["stage"] == "live_alignment" and report["detector_issue"] == reason
     assert report["distances"] == {"id_to_saved": 0.0}
-    assert "live" in report["quality"]
     for private in ("synthetic-live-camera", member.name, member.id_image_url, member.id_document_digest):
-        assert private not in result.text
-    db_session.refresh(member)
+        assert private not in json.dumps(report)
     assert member.face_encoding is None and member.face_id_verified_at is None
-    assert member.face_consent_method is None
-    assert db_session.query(SecurityAlert).count() == 0
 
 
-def test_support_diagnostics_require_a_matching_original_id(client, db_session, monkeypatch):
-    member = account(db_session); content = setup_verified(db_session, member); sign_in(client, member)
+def test_separate_comparator_diagnostics_require_matching_original_id(client, db_session, monkeypatch):
+    member = account(db_session); content = setup_verified(db_session, member)
     mock_document(monkeypatch); mock_live(monkeypatch)
     def compare(frame, detected, **kwargs):
         assert kwargs["label"] != "live camera"
@@ -286,8 +279,9 @@ def test_support_diagnostics_require_a_matching_original_id(client, db_session, 
         values[1 if kwargs["label"] == "uploaded ID" else 0] = 1.0
         return {"engine": "sface", "encoding": values}
     monkeypatch.setattr(ids, "comparison_face", compare)
-    result = client.post("/api/auth/enroll-face", json=enrollment(content))
-    assert result.status_code == 422 and "comparison_diagnostic" not in result.json()
+    with pytest.raises(HTTPException) as failure:
+        ids.verify_remote_identity(member, enrollment(content)["id_image"], face(), "synthetic-live-camera")
+    assert failure.value.status_code == 422 and not hasattr(failure.value, "diagnostic")
 
 
 def test_private_id_reader_rejects_arbitrary_paths_and_categories():

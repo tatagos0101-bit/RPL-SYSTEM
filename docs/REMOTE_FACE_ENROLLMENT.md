@@ -1,25 +1,11 @@
-# Required member ID and online face enrollment
+# Librarian ID verification and online face enrollment
 
-Account creation is an attended library-desk process. A public `/register`
-submission produces a pending application receipt only. It cannot issue an active
-account. In `/librarian/applications`, **Register applicant in person** opens the
-same required-ID form used by **Registered Users → Register Member**.
+Account creation remains an attended library-desk process. A public `/register`
+submission produces a pending application receipt, not an active account.
+**Register applicant in person** uses the same required-ID registration form.
+The November 26 online enrollment policy is separate from that staff ID check.
 
-## Librarian registration
-
-After first-login terms/privacy acknowledgment and password setup, members are offered
-optional online Face ID setup at `/user/face-setup`. It checks the server's ID-verification
-eligibility before offering enrollment and uses the same `FaceEnrollModal` and protected
-API as Profile. Choosing **Continue without Face ID** preserves password access. The
-camera does not start until the separate biometric-consent and ID-upload requirements
-are met. Account issuance still requires the librarian's original-ID check; the facial
-capture itself can take place remotely afterward.
-
-The proposed live-ID threshold change was cancelled before release on November 26.
-This onboarding revision does not loosen ID comparison, PAD or login thresholds.
-Synthetic checks establish routing and access behavior, not real-camera or ID-matching
-accuracy. A first-time enrollment whose ID/live comparisons fail still requires a
-new valid capture or supervised librarian assistance.
+## Librarian registration and ID review
 
 1. Check that the applicant is present with an original, valid government photo ID.
 2. Upload its front as JPG, PNG or WEBP (up to 10 MB and 16 megapixels).
@@ -50,180 +36,69 @@ specimen markings, expired dates and recognized tax documents cannot be
 overridden. Unusable/multiple portraits and unavailable portrait detection still
 block verification. An OCR outage alone can use the same supervised path.
 
-An existing member without verification metadata needs **Registered Users →
-Actions → Verify ID for online enrollment**. This requires the member's presence,
-an ID check, librarian attestation and the librarian's password. A legacy upload
-or display-only enrollment badge does not count as verified identity. This action
-does not alter the member's verified name or enroll a facial template. Correcting
-an already-verified identity requires administrator review; this UI does not
-replace a verified baseline.
+Staff can use **Registered Users -> Actions -> Verify ID** to record an original-ID
+check for an existing account. It requires the member's presence, staff attestation,
+the bound ID review and the librarian's password. It does not change the member's
+verified name or enroll a facial template. A legacy upload or display badge alone
+is not verified identity. Online face enrollment no longer requires this action.
 
 ## Member enrollment from home
 
-After completing first-login password setup, an eligible member opens **Profile
-→ Enroll face online** (or **Update face online** for an older unverified enrollment). They supply a photo ID, read
-and accept the separate face-recognition notice, open the camera, capture one
-live face and confirm enrollment.
+1. Sign in and complete any required first-login password/privacy setup.
+2. Open **Profile -> Enroll face online**, **Update face online**, or the optional
+   `/user/face-setup` step offered after first-login setup.
+3. Read the separate facial-recognition terms, even after agreeing to membership
+   terms. Select **Agree and start camera**. Cancel leaves the camera off.
+4. Capture your own live face in even lighting, then select **Enroll** or
+   **Update face**. No ID upload or face-to-ID comparison is requested.
+5. On confirmed success, the page shows the enrolled account name. Password
+   access remains available if enrollment fails or the member chooses to skip it.
 
-The server requires an active authenticated account, the current consent version
-and a librarian-verified ID. It enforces the existing liveness/PAD checks and
-enrollment deduplication. It compares the uploaded ID portrait, saved verified ID
-portrait and live face using one local SFace verifier. Existing dlib/optional
-InsightFace detection, live PAD and stored sign-in templates remain unchanged.
-Small original uploads (at most 1600px on the longest edge and 1.1 MB) are sent
-without another JPEG conversion. Larger photos are bounded to 1600px and the
-request limit. The server makes its ID working frame lossless in memory.
-Online camera capture requests 1280 by 960 pixels when supported; it keeps the
-live image unmirrored while mirroring only its preview.
+The server requires the current consent version (`2026-11-26`) on every request,
+an active authenticated session, completed account setup, exactly one detected face,
+existing PAD checks and duplicate-face checks. Failed, uncertain or unavailable PAD
+never saves or replaces a template. Member-supplied account IDs and identity flags
+cannot select another account or change the librarian's ID verification.
 
-Comparison uses bounded, padded crops of the already-detected portraits and
-consistent BGR input. The bundled YuNet detector supplies five landmarks and must
-find exactly one face bound to the original detection. SFace aligns and encodes
-all three portraits with the same model. ID and live comparison crops use one
-160px short face-box edge with aspect-preserving Lanczos resampling and a 1024px
-crop cap. This antialiases large camera faces before OpenCV's native 112px
-bilinear alignment, rather than only enlarging small IDs and directly warping
-much larger camera faces. Additional detector sizing/stride padding maps its
-landmarks back to the common-scale crop and checks that original crop's bounds.
-Portraits below 64 pixels on either
-face-box edge are rejected
-with a quality message rather than treated as a different identity. These extra
-descriptors are request-local comparison data only. Successful enrollment still
-stores the original live-camera descriptor for existing sign-in compatibility.
-The new verifier is separate from dlib: its 128D descriptors are never treated as
-legacy dlib encodings or persisted as sign-in templates. It applies the existing
-cosine login distance policy by default, capped at OpenCV's published reference limit; with
-the unchanged default policy, similarity must be greater than 0.55. A separately
-reviewed server-only `ID_FACE_MAX_DISTANCE` can override ID comparisons without
-changing sign-in, entrance or duplicate-enrollment policy; it is not taken from
-member requests. Larger limits broaden accepted matches and require evaluation.
-No configured login
-threshold is reduced. See the [model provenance, safeguards and acceptance
-limits](../backend/assets/identity_face/README.md). Missing/corrupt verifier models
-or uncertain detections cannot silently fall back to a pass.
-The extra comparison work does not change entrance/login processing or apply
-image enhancement to PAD. PAD checks the original live capture before comparison.
-There is no manual success fallback. Missing, mismatched,
-uncertain or unavailable checks cannot enroll a face. The member cannot replace
-their verified identity with a new upload.
+Online enrollment is account-bound, not proof that a face matches a government ID.
+A signed-in person must enroll their own face. The old read-only registered-face
+verification operation is no longer selected; a successful update replaces the
+current account's templates. Login, entrance, PAD and deduplication thresholds are
+unchanged. The SFace ID-comparison limit was not loosened and no longer gates online
+enrollment. Enrollment never issues a new login token or station credential.
 
-### Verify an existing registered face
+## Stored information and privacy choices
 
-Members with a real, trusted enrollment see **Profile → Verify face online**.
-The server selects this operation from current records before first-enrollment
-live/ID comparisons. It requires a current-version librarian-assisted enrollment
-recorded after the original ID verification, or an enrollment that already passed
-the online ID checks. Both need an actual current template; display-only badges,
-old self-enrollment metadata and removed references do not qualify. The profile
-method is a UI hint, never permission supplied by the browser.
+A successful enrollment stores the encrypted facial template and consent version,
+time, method (`self`) and account actor. InsightFace templates retain `remote_self`
+provenance and dlib compatibility where available. Updating removes the previous
+engine templates and clears `face_id_verified_at`, so an older ID comparison is not
+misrepresented as verification of the new face. The original private ID, its staff
+verification, member name and contact verification are preserved.
 
-The member still supplies the same verified ID, accepts the notice and captures
-one live face. The original-ID digest, uploaded-to-saved-ID comparison, PAD,
-active authenticated account, existing login matching threshold/margin and
-duplicate-face checks all remain required. The live face must match this exact
-account's registered face, including model compatibility and legacy support.
-Another person's match returns a generic error without their identity.
-The profile also provides a capture-orientation hint. The existing staff camera
-stores mirrored screenshots, so verification of a staff-enrolled reference uses
-that orientation too. A first online ID-checked reference uses unmirrored pixels;
-its subsequent verification keeps that orientation. These hints cannot authorize
-a face match or override the server-selected operation.
+Live online enrollment frames are processed in memory and not saved to Storage,
+security-alert snapshots or browser persistence, including failed attempts. The
+modal clears captured previews after submission and releases camera tracks on
+capture, close and page hiding. Resuming after hiding requires a fresh agreement.
+Other supervised/security workflows retain their existing image policies.
 
-Success explicitly returns `operation=verified_existing` and
-`enrollment_changed=false`. No facial reference, consent provenance or verification
-timestamp is changed, no new enrollment is claimed, and no login credentials are
-issued. Preserving the reference avoids incremental replacement through repeated
-online attempts. Staff can replace it using the existing supervised flow.
-Comparison uploads are discarded as before. Verification cannot turn a failed
-first-time live/ID comparison into success; first-time enrollment retains all
-three SFace comparisons and the unchanged 0.45 policy. This distinction does not
-establish first-time printed-ID accuracy.
-
-Errors distinguish an uploaded-to-saved-ID mismatch, live-to-saved-ID mismatch
-and live-to-uploaded-ID mismatch, with advice for the failing capture. Responses
-never return descriptors or saved-ID images. Only after authenticated, live-PAD
-and matching-original-ID checks can a failed live comparison return a text-only diagnostic with rounded
-cosine distances, the applied limit, a fixed preprocessing version and numeric crop-quality measurements.
-Live landmark-detection failures also include a fixed issue code (no face,
-multiple faces or unusable alignment) after the same original-ID/PAD gates;
-no uncomputed live comparison score is invented. The
-member can explicitly copy its allowlisted fields using **Copy support details**.
-The report excludes identity/contact fields, ID references/digests, images and
-templates; it is not logged, persisted or automatically sent to support. It is
-cleared on a new attempt/file or closing the dialog. These processing
-changes do not establish actual TIN-card or real-camera accuracy; operational
-acceptance still requires consenting trials under library conditions.
-
-For an original ID that a librarian manually verified, unreadable comparison text
-can use that stored review provenance. This exception comes only from the saved
-account record; members cannot enable it with a request flag. Detected invalid or
-expired evidence still blocks it. A usable uploaded portrait, the unchanged
-verified-original digest, all three face comparisons, live PAD and enrollment
-deduplication remain mandatory. A manually reviewed ID never bypasses a failed,
-uncertain or unavailable face/PAD check.
-
-Remote comparison images are processed in memory and discarded after each check,
-including unsuccessful checks. They are not uploaded to Storage, attached to
-spoof alerts, logged, or stored in browser persistence. A successful check stores
-the existing encrypted facial template, consent metadata and verification time.
-The original staff-verified ID remains private. The UI clears comparison previews
-after submission and releases camera tracks on capture, close and page hiding.
-Other existing supervised/security workflows retain their documented policies.
-
-Face enrollment remains optional. Password sign-in and supervised identification
-remain available. Staff can remove enrolled face data through the existing flow.
-No new retention schedule or automatic biometric purge is introduced.
+Members may skip facial recognition and use passwords and supervised identification.
+They can ask staff to remove their enrolled templates. Removing a template does not
+close the account or erase borrowing history. No new retention schedule or automatic
+biometric purge is introduced. Existing consent records are not backfilled or
+retroactively changed; new enrollment and replacement require fresh agreement.
 
 ## Checks and limits
 
-OCR uses pinned `tesserocr` 2.13.0 with the checksummed official Tesseract integer
-LSTM text model in `backend/assets/id_ocr`. The reader loads lazily, serializes CPU
-inference and clears image/output/adaptive state after each request. It does not
-download at runtime. Identity documents are not sent to an external OCR
-or identity-verification service. The existing Docker and Vercel manifests include
-this dependency and model directory; install/sync from the updated manifest and
-lockfile. The smaller text reader replaces the first oversized OCR deployment
-package; it does not change the face or liveness engines.
+Librarian ID inspection uses the existing pinned local OCR, document suitability and
+portrait checks, with supervised password-confirmed text review when permitted.
+These checks do not authenticate documents with an issuing authority or guarantee
+that a counterfeit ID is genuine. No external identity-verification service was added.
 
-Supported text checks cover Philippine National ID, physical/digital BIR TIN photo ID, driver's license, passport,
-UMID, PRC, Postal, SSS, GSIS, voter, senior-citizen and PWD photo IDs. Poor text,
-unsupported layouts require supervised original-ID review or a clearer photo.
-Unusable portraits and ambiguous multi-portrait documents require desk assistance.
-Explicit specimen/invalid markings and readable expired
-ISO/month-name dates are rejected. Staff still inspect the actual document.
-
-TIN recognition checks the BIR issuer, a TIN-card heading and a readable printed
-number. Physical Form 1931 layouts and digital TIN IDs can have an unlabeled name;
-only an unambiguous name is suggested automatically. Tax forms, receipts and
-registration certificates do not qualify. A usable portrait is still required for
-online face comparison. The tax number is not copied into separate member fields
-or returned in the inspection response. These format checks do not query BIR/ORUS
-or authenticate its QR code. See BIR [RMC 58-2023](https://bir-cdn.bir.gov.ph/local/pdf/RMC%20No.%2058-2023%20%281%29.pdf)
-and the [RMC 120-2023 listing](https://www.bir.gov.ph/2023-Revenue-Memorandum-Circulars).
-
-**These checks do not authenticate an ID with its issuing authority or guarantee
-that an edited/counterfeit document is genuine.** OCR, document suitability, face
-comparison and PAD are separate checks. Official authenticity verification needs
-an issuing-authority integration or an evaluated identity-document verification
-provider. No such service, certification or measured recognition accuracy is
-claimed here. See [NIST's distinction between evidence validation and biometric
-verification](https://pages.nist.gov/800-63-4/sp800-63a/proofing/).
-
-## Upgrade and acceptance
-
-The additive upgrade adds nullable `users.id_document_digest`, `id_document_type`,
-`id_verified_at`, `id_verified_by_id`, `face_id_verified_at` and the unique
-`uq_users_id_document_digest` index. Run the existing reviewed migration path on
-an isolated database first. Existing ID uploads and facial templates are not
-backfilled as verified. Production keeps `AUTO_MIGRATE=false`, private Storage,
-RLS and revoked browser-role database access.
-
-The facial-recognition and privacy notices are versioned `2026-11-25`. Existing
-consent records are preserved; new enrollments require the new facial notice.
-Existing sign-in/attendance templates continue working, subject to normal account
-and consent rules. Test with synthetic documents/vectors only in automated tests.
-Before operational acceptance, staff must trial actual supported ID formats and
-consenting live captures under library lighting. Automated tests do not establish
-issuer authenticity, PostgreSQL concurrency or real-camera recognition accuracy.
-The operator retained the existing 0.45 limit pending evaluation. See the
-[validation evidence requirements and read-only score analyzer](ID_FACE_VALIDATION.md).
+This revision needs no new database migration, dependency, model or environment
+variable. Keep production `AUTO_MIGRATE=false`, private Storage, encryption keys,
+RLS and revoked browser-role table access. Synthetic tests cover authentication,
+consent, owner binding, PAD failures, deduplication, ID preservation and replacement.
+Mocked-camera browser checks cover consent, camera cleanup and enrollment feedback.
+These checks do not measure real-camera recognition accuracy or establish legal
+compliance. Consenting physical-camera acceptance remains necessary.
