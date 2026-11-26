@@ -42,6 +42,35 @@ after the generic response using a fresh database session; this is not a durable
 job queue. A process failure can lose delivery; the user can retry after cooldown.
 Provider acceptance is not proof that a message reached the inbox.
 
+## Manual overdue reminder emails
+
+On **Librarian → Due Books**, **Send overdue email** submits one message covering all
+of that member's currently overdue, unclosed loans. It uses the saved verified email;
+staff cannot provide an alternate recipient in the request. Missing, invalid or
+unverified contacts and missing SMTP configuration disable sending with an explanation.
+Deleted/non-member accounts, returned loans and loans not yet overdue are rejected on
+the server. Suspended borrowers can still receive reminders about outstanding books.
+
+The email includes each title, its due timestamp in Philippine time, elapsed days/hours
+overdue, per-book current late fees and their total. It uses the existing configured
+`FINE_PER_DAY` for completed 24-hour overdue days, including a zero fee for less than
+one completed day. Old returned-book assessments and payments are not treated as a
+current outstanding balance. Sending does not modify loans, due dates or saved fees.
+
+The existing private `OTP_SMTP_*` / `OTP_EMAIL_FROM` settings and mandatory STARTTLS
+transport are reused; no new schema or credentials are required. Provider acceptance
+is reported as **Email submitted**, not proof of inbox delivery. An accepted or
+uncertain send records a member-visible overdue reminder. Account-row serialization
+and a 60-second per-member cooldown guard simultaneous/repeated clicks across loan
+rows; the endpoint also has a 10-per-minute IP limit. A definitive provider rejection
+can be retried manually. Unknown network/database outcomes stop further attempts in
+the current page and must be checked before another deliberate send. This is not a
+durable email outbox: a process/commit failure can lose the local receipt, so exactly-once
+delivery is not claimed. No email is automatically queued or replayed, and SMS is unused.
+
+Tests use synthetic contacts and mocked SMTP. They do not establish real inbox
+delivery; inspect an explicitly authorized recipient/provider record for that check.
+
 ## Configuration and rollout
 
 Resend is selected using the existing SMTP transport, following its

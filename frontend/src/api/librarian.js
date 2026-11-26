@@ -53,7 +53,7 @@ export const deleteMemberAccount = (userId, currentPassword) =>
   client.delete(`/api/librarian/users/${userId}`, { data: { current_password: currentPassword } });
 
 export const notifyMember = (transactionId) =>
-  client.post(`/api/librarian/notify/${transactionId}`);
+  client.post(`/api/librarian/notify/${transactionId}`, null, { timeout: 60000 });
 
 // Transactions
 export const getTransactions = (params = {}) =>

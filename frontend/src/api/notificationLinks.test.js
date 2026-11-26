@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { notificationBase, notificationHref, notificationContext } from './notificationLinks.js';
 
+test('overdue email notices link to the matching borrowing records', () => {
+  for (const type of ['overdue_email_sent', 'overdue_email_unknown']) {
+    assert.equal(notificationContext({ type }, 'member').to, '/user/home#borrowed-books');
+    assert.equal(notificationContext({ type }, 'librarian').to, '/librarian/due-books');
+  }
+});
+
 test('notification details use the matching protected role route', () => {
   assert.equal(notificationHref('member', 12), '/user/notifications/12');
   assert.equal(notificationHref('librarian', 13), '/librarian/notifications/13');

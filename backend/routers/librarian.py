@@ -49,6 +49,8 @@ from models.user import User
 from services.auth_sessions import revoke_user_sessions
 from services.loan_policy import sync_overdue_loans
 from services.fines import current_fines, late_fee
+from services.overdue_email import email_reminder_unavailable, send_overdue_reminder
+from schemas.librarian import OverdueEmailResult
 from services.manual_visitor_service import serialize_entry_log
 from services.member_address_fill import fill_missing_member_addresses
 from services.reservation_policy import (
@@ -243,7 +245,10 @@ def due_books(
     for tx in txs:
         dl    = _days_left(tx.due_date)
         fine  = _calc_fine(tx.due_date)
+        reminder_reason = email_reminder_unavailable(tx.user)
         result.append(DueBookOut(
+            can_email_reminder = dl < 0 and reminder_reason is None,
+            email_reminder_reason = reminder_reason,
             copy_id = tx.copy_id,
             copy_number = tx.copy.copy_number if tx.copy else None,
             copy_qr = tx.copy.qr_code if tx.copy else None,
@@ -653,27 +658,17 @@ def librarian_enroll_face(
     return {"success": True, "message": f"Face enrolled for {member.name}"}
 
 
-# ── Overdue reminder (logs notification — real email/SMS in Phase 5) ──────────
+# ── Librarian-requested email reminder ──────────────────────────────────────
 
-@router.post("/notify/{transaction_id}")
+@router.post("/notify/{transaction_id}", response_model=OverdueEmailResult)
+@limiter.limit("10/minute")
 def notify_member(
+    request: Request,
     transaction_id: int,
     db:             Session = Depends(get_db),
     _:              User    = Depends(require_librarian),
 ):
-    tx = db.query(Transaction).filter(Transaction.id == transaction_id).first()
-    if not tx:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    sync_overdue_loans(db, user_id=tx.user_id)
-    db.refresh(tx)
-    if tx.status not in ("active", "overdue"):
-        raise HTTPException(status_code=400, detail="Transaction is not active or overdue")
-
-    dl = _days_left(tx.due_date)
-    if dl >= 0:
-        raise HTTPException(status_code=400, detail="Book is not yet overdue")
-
-    raise HTTPException(501, 'Overdue reminder delivery is unavailable. No email or SMS was sent.')
+    return send_overdue_reminder(db, transaction_id)
 
 
 # ── Reservation notifications ─────────────────────────────────────────────────

@@ -820,8 +820,13 @@ additive reporting migration before deployment; production has not been migrated
 this work. Programs/activities and detailed staff qualifications are explicitly excluded.
 
 Member, catalog, inventory and transaction screens retain their existing server
-search/pagination and independent totals. Overdue reminders
-explicitly report delivery unavailable until a provider exists. Shared native dialogs
+search/pagination and independent totals. Librarians can send manual overdue emails
+through the existing SMTP adapter to a member's verified saved email address. Each
+email lists all current overdue loans, Philippine due times, elapsed lateness and
+current daily late-fee assessments. Accepted and uncertain attempts record an in-app
+reminder and a 60-second member cooldown; uncertain outcomes are not automatically
+retried. See [delivery behavior and limits](CONTACT_VERIFICATION.md#manual-overdue-reminder-emails).
+Shared native dialogs
 provide focus containment/Escape/restoration, and an application error boundary offers
 recovery for rendering failures. Use [backend](../backend/timezone_utils.py)
 and [frontend](../frontend/src/api/dateTime.js) time helpers when changing dates;

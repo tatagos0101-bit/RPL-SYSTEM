@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 from decimal import Decimal
 from unicodedata import category
@@ -37,6 +37,8 @@ class BorrowTrendPoint(BaseModel):
 
 
 class DueBookOut(BaseModel):
+    can_email_reminder: bool = False
+    email_reminder_reason: Optional[str] = None
     copy_id: Optional[int] = None
     copy_number: Optional[int] = None
     copy_qr: Optional[str] = None
@@ -52,6 +54,14 @@ class DueBookOut(BaseModel):
     days_left:      int          # negative = overdue
     fine_amount:    Decimal
     status:         str          # "overdue" | "due-soon" | "active"
+
+
+class OverdueEmailResult(BaseModel):
+    status: Literal["accepted", "unknown", "failed"]
+    message: str
+    overdue_books: int
+    total_late_fee: Decimal
+    as_of: datetime
 
 
 class EntryLogOut(BaseModel):

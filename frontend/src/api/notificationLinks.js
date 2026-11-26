@@ -25,6 +25,10 @@ export function notificationContext(notification, role) {
     return { title: 'Loan issue reported', to: staff ? '/librarian/borrow-return' : '/user/home',
       label: staff ? 'Open Borrow / Return' : 'View my borrowed books' };
   }
+  if (['overdue_email_sent', 'overdue_email_unknown'].includes(notification.type)) {
+    return { title: 'Overdue book reminder', to: staff ? '/librarian/due-books' : '/user/home#borrowed-books',
+      label: staff ? 'Open Due Books' : 'View my borrowed books' };
+  }
   return { title: 'Library notification' };
 }
 

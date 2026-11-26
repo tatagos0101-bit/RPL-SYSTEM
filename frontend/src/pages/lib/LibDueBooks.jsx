@@ -1,8 +1,9 @@
 import CirculationDialog from '../../components/CirculationDialog';
 import FineContent from '../../components/FineContent';
-import { useState, useEffect, useCallback } from 'react';
-import { AlertTriangle, Clock, Search, Bell, CheckCircle2, RefreshCw, BookOpen, List } from 'lucide-react';
-import { getDueBooks, getFineSummary } from '../../api/librarian';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { AlertTriangle, Clock, Search, Mail, CheckCircle2, RefreshCw, BookOpen, List } from 'lucide-react';
+import { getDueBooks, getFineSummary, notifyMember as sendOverdueEmail } from '../../api/librarian';
+import { overdueEmailOutcome, overdueEmailError } from '../../api/overdueEmail';
 import useServerPage from '../../api/useServerPage';
 import PageControls from '../../components/PageControls';
 import { parseApiDateTime as toUtcDate } from '../../api/dateTime';
@@ -34,6 +35,8 @@ export default function LibDueBooks() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [operationError, setOperationError] = useState('');
+  const [emailStates, setEmailStates] = useState({});
+  const pendingEmails = useRef(new Set());
 
   const [search, setSearch] = useState('');
   const loansPage = useServerPage('/api/transactions', { status: 'active', search }, '/api/transactions/count');
@@ -60,6 +63,18 @@ export default function LibDueBooks() {
 
   const [returnLoan, setReturnLoan] = useState(null);
   const handleReturn = b => setReturnLoan(b);
+
+  const emailMember = async book => {
+    if (pendingEmails.current.has(book.user_id) || ['accepted', 'unknown', 'recent'].includes(emailStates[book.user_id]?.status)) return;
+    pendingEmails.current.add(book.user_id);
+    setEmailStates(previous => ({ ...previous, [book.user_id]: { status: 'sending', message: 'Submitting the overdue email…' } }));
+    try {
+      const { data } = await sendOverdueEmail(book.transaction_id);
+      setEmailStates(previous => ({ ...previous, [book.user_id]: overdueEmailOutcome(data) }));
+    } catch (error) {
+      setEmailStates(previous => ({ ...previous, [book.user_id]: overdueEmailError(error) }));
+    } finally { pendingEmails.current.delete(book.user_id); }
+  };
 
   const filteredDue = books.filter((b) =>
     (b.member_name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -129,7 +144,7 @@ export default function LibDueBooks() {
                   <AlertTriangle size={18} className="text-danger" />
                 </div>
                 <p className="font-semibold text-sm text-danger">
-                  {overdue} book{overdue > 1 ? 's are' : ' is'} overdue — contact members through the library’s existing process; automated delivery is unavailable.
+                  {overdue} book{overdue > 1 ? 's are' : ' is'} overdue. Send overdue email uses the member’s verified saved email. Each message includes all their current overdue books, due dates, how late they are and current late fees.
                 </p>
               </div>
             )}
@@ -181,6 +196,8 @@ export default function LibDueBooks() {
                 <div className="divide-y divide-blue-50 dark:divide-slate-800">
                   {filteredDue.map((b) => {
                     const cfg = STATUS_CFG[b.status] || STATUS_CFG['due-soon'];
+                    const email = emailStates[b.user_id];
+                    const emailBusy = ['sending', 'accepted', 'unknown', 'recent'].includes(email?.status);
                     return (
                       <div key={b.transaction_id} className={`group flex flex-col md:flex-row md:items-center gap-4 px-6 py-5 hover:bg-info-soft hover:bg-subtle transition-all duration-200 ${cfg.row}`}>
                         <div className="flex-1 min-w-0">
@@ -190,6 +207,8 @@ export default function LibDueBooks() {
                           </div>
                           <p className="text-sm text-muted font-medium">{b.book_title}</p>
                           <FineContent><p className={`mt-1 text-sm font-semibold ${Number(b.fine_amount) > 0 ? 'text-danger' : 'text-muted'}`}>Current late fee: PHP {Number(b.fine_amount || 0).toFixed(2)}</p></FineContent>
+                          {email?.message && <p role={email.status === 'failed' || email.status === 'unknown' ? 'alert' : 'status'} className={`mt-2 max-w-lg text-sm leading-relaxed ${email.status === 'accepted' ? 'text-success' : email.status === 'failed' ? 'text-danger' : 'text-warning'}`}>{email.message}</p>}
+                          {b.status === 'overdue' && b.can_email_reminder !== true && <p className="mt-2 text-xs text-muted">{b.email_reminder_reason || 'Email reminder is unavailable. Refresh the saved email details.'}</p>}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-4 text-sm min-w-0">
@@ -215,13 +234,14 @@ export default function LibDueBooks() {
                         </span>
 
                         <div className="flex flex-wrap items-center gap-2 min-w-0">
-                          <button
-                            title="Email/SMS reminder delivery is unavailable"
-                            disabled
-                            className="group/btn flex items-center gap-1.5 px-3 py-2 bg-warning-soft text-warning border border-warning rounded-lg text-sm font-semibold tracking-normal hover:bg-warning-soft transition-all duration-200 disabled:opacity-50"
-                          >
-                            <Bell size={11} /> Delivery unavailable
-                          </button>
+                          {b.status === 'overdue' && <button type="button"
+                            title={b.can_email_reminder === true ? 'Email all of this member’s overdue books, due dates and current late fees.' : b.email_reminder_reason || 'Email reminder unavailable'}
+                            disabled={b.can_email_reminder !== true || emailBusy}
+                            onClick={() => emailMember(b)}
+                            className="flex min-h-11 items-center gap-2 rounded-lg bg-action px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-action-hover disabled:cursor-not-allowed disabled:opacity-50">
+                            {email?.status === 'sending' ? <RefreshCw size={15} className="animate-spin" /> : <Mail size={15} />}
+                            {email?.status === 'sending' ? 'Sending email…' : email?.status === 'accepted' ? 'Email submitted' : email?.status === 'unknown' ? 'Delivery unconfirmed' : email?.status === 'recent' ? 'Please wait before retrying' : 'Send overdue email'}
+                          </button>}
                           <button
                             onClick={() => handleReturn(b)}
                             className="group/btn flex items-center gap-1.5 px-3 py-2 bg-success-soft text-success border border-success rounded-lg text-sm font-semibold tracking-normal hover:bg-success-soft transition-all duration-200"

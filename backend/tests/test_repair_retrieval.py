@@ -34,4 +34,4 @@ def test_search_pagination_and_totals_cover_rows_beyond_first_page(client, db_se
     totals = client.get('/api/transactions/count?status=active', headers=headers).json()
     assert totals['total'] == 1 and totals['on_time'] == 1 and totals['overdue'] == 1
     reminder = client.post(f'/api/librarian/notify/{due.id}', headers=headers)
-    assert reminder.status_code == 501 and 'No email or SMS was sent' in reminder.json()['detail']
+    assert reminder.status_code == 400 and 'No email on file' in reminder.json()['detail']
